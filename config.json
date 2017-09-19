@@ -1,0 +1,36 @@
+{
+	// listen address
+	"listen_address": "0.0.0.0",
+
+	// listen port
+	"listen_port": 28785,
+
+	// the address of the master server to report to (also the one used for global auth)
+	"master_server_address": "sauerbraten.org",
+
+	// port to use at the master server
+	"master_server_port": 28787,
+
+
+	// server description
+	"server_description": "pix's dev server",
+
+	// maximum number of clients
+	"max_clients": 12,
+
+	// server password (needed to connect to the server)
+	"server_password": "",
+
+	// local auth domains
+	// first one will be used as primary one, e.g. when you enable auth-on-connect and the server is in private mode
+	//"server_auth_domains": ["dev", "dev:registered_users", "dev:masters", "dev:admins"]
+	"server_auth_domains": [""],
+
+	// wether ot not to send client's IPs via netinfo. when set to true, the first 3 bytes of the IPs will be sent (e.g. 53.253.53.0),
+	// otherwise, "0.0.0.0" will be sent for every client.
+	"send_client_ips_via_extinfo": false,
+
+
+	// number of cpu cores to use; >= 1 recommended ;)
+	"cpu_cores": 4
+}

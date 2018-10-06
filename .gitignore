@@ -21,5 +21,5 @@ _testmain.go
 
 *.exe
 
-waiter
-genauth
+cmd/waiter/waiter
+cmd/genauth/genauth

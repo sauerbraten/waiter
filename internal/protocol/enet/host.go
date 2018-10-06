@@ -32,25 +32,24 @@ ENetHost * initServer(const char *addr, int port) {
 	return server;
 }
 
-ENetEvent serviceHost(ENetHost *host, int timeout) {
+ENetEvent serviceHost(ENetHost *host) {
 	ENetEvent event;
 
-	// Wait for an event (up to timeout milliseconds)
 	int e = 0;
-
 	do {
-		e = enet_host_check_events(host, &event);
-		if (e <= 0) {
-			e = enet_host_service(host, &event, timeout);
-		}
-	} while (e < 0);
+		e = enet_host_service(host, &event, 2); // don't block
+	} while (e <= 0 || (event.type == ENET_EVENT_TYPE_RECEIVE && & event.packet != NULL && event.packet->dataLength == 0));
+
+	// TODO: investigate why we are receiving empty packets...
 
 	return event;
 }
 */
 import "C"
 
-import "errors"
+import (
+	"errors"
+)
 
 var peers map[*C.ENetPeer]*Peer = map[*C.ENetPeer]*Peer{}
 
@@ -70,9 +69,10 @@ type Host struct {
 	enetHost *C.ENetHost
 }
 
-func (h *Host) Service(timeout int) Event {
-	var cEvent C.ENetEvent = C.serviceHost(h.enetHost, C.int(timeout))
-	return eventFromCEvent(interface{}(&cEvent))
+func (h *Host) Service() Event {
+	cEvent := C.serviceHost(h.enetHost)
+	event := eventFromCEvent(&cEvent)
+	return event
 }
 
 func (h *Host) Flush() {

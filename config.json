@@ -23,14 +23,12 @@
 
 	// local auth domains
 	// first one will be used as primary one, e.g. when you enable auth-on-connect and the server is in private mode
-	//"server_auth_domains": ["dev", "dev:registered_users", "dev:masters", "dev:admins"]
-	"server_auth_domains": [""],
+	//"auth_domains": ["dev", "dev:registered_users", "dev:masters", "dev:admins"]
+	"auth_domains": ["waiter"],
 
 	// wether ot not to send client's IPs via netinfo. when set to true, the first 3 bytes of the IPs will be sent (e.g. 53.253.53.0),
 	// otherwise, "0.0.0.0" will be sent for every client.
-	"send_client_ips_via_extinfo": false,
+	"send_client_ips_via_extinfo": true,
 
-
-	// number of cpu cores to use; >= 1 recommended ;)
-	"cpu_cores": 4
+	"message_of_the_day": "This server is written in Go and still under development. \f6Most things do not work!\f7\nVisit github.com/sauerbraten/waiter for more information and source code."
 }

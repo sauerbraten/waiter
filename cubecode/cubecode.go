@@ -1,7 +1,7 @@
-package packet
+package cubecode
 
 // cubecode to unicode conversion table
-// cubecode is a small subset of unicode where each character can be represented as 1 byte, mainly offering kyrillic and greek letters
+// cubecode is a small subset of unicode, mainly offering kyrillic and greek letters
 // example: server sends a 2, you convert 2 → 193, 193 in unicode is Á
 var cubeToUni = [256]rune{
 	0, 192, 193, 194, 195, 196, 197, 198, 199, 9, 10, 11, 12, 13, 200, 201,

@@ -8,39 +8,34 @@ import (
 )
 
 type Ban struct {
-	Network    net.IPNet
+	Network    *net.IPNet
 	Reason     string
 	ExpiryDate time.Time
-	IsGlobal   bool
+	Global     bool
 }
 
 // UnmarshalJSON implements json.Unmarshaler for Ban
 func (b *Ban) UnmarshalJSON(jsonBytes []byte) error {
-	var temp map[string]interface{}
-
-	err := json.Unmarshal(jsonBytes, &temp)
+	ban := struct {
+		Network    string `json:"network"`
+		Reason     string `json:"reason"`
+		ExpiryDate int64  `json:"expiry_date"`
+	}{}
+	err := json.Unmarshal(jsonBytes, &ban)
 	if err != nil {
 		return err
 	}
 
-	_, network, err := net.ParseCIDR(temp["network"].(string))
+	_, b.Network, err = net.ParseCIDR(ban.Network)
 	if err != nil {
 		return err
 	}
-
-	b.Network = *network
-	b.Reason = temp["reason"].(string)
-	b.ExpiryDate = time.Unix(int64(temp["expiry_date"].(float64)), 0)
-	b.IsGlobal = temp["is_global"].(bool)
+	b.Reason = ban.Reason
+	b.ExpiryDate = time.Unix(ban.ExpiryDate, 0)
 
 	return nil
 }
 
-func (b Ban) String() string {
-	format := "%v is locally banned until %v for %v"
-	if b.IsGlobal {
-		format = "%v is globally banned until %v for %v"
-	}
-
-	return fmt.Sprintf(format, b.Network.String(), b.ExpiryDate, b.Reason)
+func (b *Ban) String() string {
+	return fmt.Sprintf("%v is banned until %v (%v)", b.Network.String(), b.ExpiryDate, b.Reason)
 }

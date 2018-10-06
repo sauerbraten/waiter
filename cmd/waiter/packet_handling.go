@@ -3,30 +3,35 @@ package main
 import (
 	"log"
 
+	"github.com/sauerbraten/waiter/cubecode"
+
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
-	"github.com/sauerbraten/waiter/internal/enet"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/weapon"
+	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/weapon"
+	"github.com/sauerbraten/waiter/internal/protocol/enet"
 	"github.com/sauerbraten/waiter/internal/protocol/packet"
 )
 
 // parses a packet and decides what to do based on the network message code at the front of the packet
-func handlePacket(fromCN int32, channelID uint8, p *packet.Packet) {
+func (s *Server) handlePacket(client *Client, channelID uint8, p cubecode.Packet) {
 	// this implementation does not support channel 2 (for coop edit purposes) yet.
-	if fromCN < 0 || channelID > 1 {
+	if client == nil || channelID > 1 {
 		return
 	}
 
-	client := cm.GetClientByCN(fromCN)
-
 outer:
-	for p.HasRemaining() {
-		packetType := nmc.NetMessCode(p.GetInt32())
+	for len(p) > 0 {
+		_nmc, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read network message code (packet too short):", p)
+			return
+		}
+		packetType := nmc.NetMessCode(_nmc)
 
 		if !client.IsValidMessage(packetType) {
 			log.Println("invalid network message code:", packetType)
-			client.Disconnect(disconnectreason.MessageError)
+			s.Clients.Disconnect(client, disconnectreason.MessageError)
 			return
 		}
 
@@ -37,54 +42,129 @@ outer:
 		case nmc.Position:
 			// client sending his position and movement in the world
 			if client.GameState.State == playerstate.Alive {
-				client.GameState.Position = p
+				client.Position.Publish(packet.Encode(nmc.Position, p))
 			}
 			break outer
 
 		case nmc.JumpPad:
-			client.QueuedBroadcastMessages[0].Put(nmc.JumpPad, p.GetInt32(), p.GetInt32())
-			log.Println("processed JUMPPAD")
+			cn, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read CN from jump pad packet (packet too short):", p)
+				return
+			}
+			jumppad, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read jump pad ID from jump pad packet (packet too short):", p)
+				return
+			}
+			s.relay.BroadcastAfterPosition(client.CN, packet.Encode(nmc.JumpPad, cn, jumppad))
 
 		// channel 1 traffic
 
 		case nmc.Join:
-			// client sends intro and wants to join the game
-			if client.TryToJoin(p.GetString(), p.GetInt32(), p.GetString(), p.GetString(), p.GetString(), s) {
-				// send welcome packet
-				client.SendWelcome(s.State)
-
-				// inform other clients that a new client joined
-				client.InformOthersOfJoin()
+			name, ok := p.GetString()
+			if !ok {
+				log.Println("could not read name from join packet:", p)
+				return
 			}
-			log.Println("processed JOIN")
 
-		case nmc.AUTHTRY:
-			//domain, name := p.GetString(), p.GetString()
+			playerModel, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read player model ID from join packet:", p)
+				return
+			}
 
-		case nmc.AUTHANS:
+			hash, ok := p.GetString()
+			if !ok {
+				log.Println("could not read hash from join packet:", p)
+				return
+			}
+
+			authDomain, ok := p.GetString()
+			if !ok {
+				log.Println("could not read auth domain from join packet:", p)
+				return
+			}
+
+			authName, ok := p.GetString()
+			if !ok {
+				log.Println("could not read auth name from join packet:", p)
+				return
+			}
+
+			if !s.IsAllowedToJoin(client, hash, authDomain, authName) {
+				s.Clients.Disconnect(client, disconnectreason.Password) // TODO: check if correct
+			}
+
+			s.Clients.Join(client, name, playerModel)
+			s.Clients.SendWelcome(client)
+			s.Clients.InformOthersOfJoin(client)
+			client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, s.MessageOfTheDay))
+
+		case nmc.AuthTry:
+			log.Println("got auth try:", p)
+			domain, ok := p.GetString()
+			if !ok {
+				log.Println("could not read domain from auth try packet:", p)
+				continue
+			}
+			if domain == "" {
+				s.handleGlobalAuthRequest(client, &p)
+			} else {
+				s.handleAuthRequest(client, domain, &p)
+			}
+
+		case nmc.AuthAnswer:
+			log.Println("got auth answer:", p)
+
 			// client sends answer to auth challenge
-			log.Println("received AUTHANS")
+			domain, ok := p.GetString()
+			if !ok {
+				log.Println("could not read domain from auth answer packet:", p)
+				return
+			}
+			if domain == "" {
+				s.handleGlobalAuthAnswer(client, &p)
+			} else {
+				s.handleAuthAnswer(client, domain, &p)
+			}
 
 		case nmc.Ping:
 			// client pinging server → send pong
-			client.Send(enet.PACKET_FLAG_NONE, 1, packet.New(nmc.Pong, p.GetInt32()))
-			//log.Println("processed PING")
+			ping, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read ping from ping packet:", p)
+				return
+			}
+			client.Peer.Send(1, enet.PACKET_FLAG_NONE, packet.Encode(nmc.Pong, ping))
 
 		case nmc.ClientPing:
 			// client sending the amount of lag he measured to the server → broadcast to other clients
-			client.Ping = p.GetInt32()
-			client.QueuedBroadcastMessages[1].Put(nmc.ClientPing, client.Ping)
-			//log.Println("processed CLIENTPING")
+			ping, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read ping from client ping packet:", p)
+				return
+			}
+			client.Ping = ping
+			client.Packets.Publish(nmc.ClientPing, client.Ping)
 
 		case nmc.ChatMessage:
 			// client sending chat message → broadcast to other clients
-			client.QueuedBroadcastMessages[1].Put(nmc.ChatMessage, p.GetString())
-			log.Println("processed TEXT")
+			msg, ok := p.GetString()
+			if !ok {
+				log.Println("could not read message from chat message packet:", p)
+				return
+			}
+			client.Packets.Publish(nmc.ChatMessage, msg)
 
 		case nmc.TeamChatMessage:
 			// client sending team chat message → pass on to team immediatly
-			client.SendToTeam(enet.PACKET_FLAG_RELIABLE, 1, packet.New(nmc.TeamChatMessage, client.CN, p.GetString()))
-			log.Println("processed SAYTEAM")
+			msg, ok := p.GetString()
+			if !ok {
+				log.Println("could not read message from team chat message packet:", p)
+				return
+			}
+			s.Clients.SendToTeam(client, 1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.TeamChatMessage, client.CN, msg))
 
 		case nmc.MAPCRC:
 			// client sends crc hash of his map file
@@ -92,30 +172,68 @@ outer:
 			//clientMapName := p.GetString()
 			//clientMapCRC := p.GetInt32()
 			p.GetString()
-			p.GetInt32()
-			log.Println("processed MAPCRC")
+			p.GetInt()
+			log.Println("todo: MAPCRC")
 
 		case nmc.Spawn:
-			if client.TryToSpawn(p.GetInt32(), weapon.Weapon(p.GetInt32())) {
-				client.QueuedBroadcastMessages[1].Put(nmc.Spawn, client.GameState.ToWire())
+			lifeSequence, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read life sequence from spawn packet:", p)
+				return
 			}
-			log.Println("processed SPAWN")
+			_weapon, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read weapon ID from spawn packet:", p)
+				return
+			}
+			if client.TryToSpawn(lifeSequence, weapon.Weapon(_weapon)) {
+				client.Packets.Publish(nmc.Spawn, client.GameState.ToWire())
+			}
 
 		case nmc.ChangeWeapon:
 			// player changing weapon
-			selectedWeapon := weapon.Weapon(p.GetInt32())
-			client.GameState.SelectWeapon(selectedWeapon)
-
-			// broadcast to other clients
-			client.QueuedBroadcastMessages[1].Put(nmc.ChangeWeapon, selectedWeapon)
-			//log.Println("processed WEAPONSELECT")
+			_weapon, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read weapon ID from weapon change packet:", p)
+				return
+			}
+			requestedWeapon := weapon.Weapon(_weapon)
+			selectedWeapon, ok := client.GameState.SelectWeapon(requestedWeapon)
+			if !ok {
+				break
+			}
+			client.Packets.Publish(nmc.ChangeWeapon, selectedWeapon)
 
 		case nmc.Sound:
-			client.QueuedBroadcastMessages[1].Put(nmc.Sound, p.GetInt32())
-			log.Println("processed SOUND")
+			sound, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read sound ID from sound packet:", p)
+				return
+			}
+			client.Packets.Publish(nmc.Sound, sound)
+
+		case nmc.PAUSEGAME:
+			// TODO: check client privilege
+			pause, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read pause toggle from pause packet:", p)
+				return
+			}
+			if pause == 1 {
+				log.Println("pausing game at", s.TimeLeft/100, "seconds left")
+				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PAUSEGAME, 1, client.CN)
+				s.Pause()
+			} else {
+				log.Println("resuming game at", s.TimeLeft/100, "seconds left")
+				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PAUSEGAME, 0, client.CN)
+				s.Resume()
+			}
+
+		case nmc.ItemList:
+			// TODO: process and broadcast itemlist so clients are ok
 
 		default:
-			log.Println("received", packetType, p.Bytes(), "on channel", channelID)
+			log.Println("received", packetType, p, "on channel", channelID)
 			break outer
 		}
 	}

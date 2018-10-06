@@ -3,13 +3,13 @@ package enet
 /*
 #cgo LDFLAGS: -lenet
 #include <enet/enet.h>
+
 */
 import "C"
 
 import (
-	"errors"
+	"log"
 	"net"
-	"reflect"
 	"unsafe"
 )
 
@@ -32,9 +32,7 @@ type Peer struct {
 	Address net.UDPAddr
 	Network net.IPNet // for bans
 	State   PeerState
-	Data    unsafe.Pointer
 	cPeer   *C.ENetPeer
-	out     chan outgoingPacket
 }
 
 func peerFromCPeer(cPeer *C.ENetPeer) *Peer {
@@ -60,14 +58,10 @@ func peerFromCPeer(cPeer *C.ENetPeer) *Peer {
 			Mask: ip.DefaultMask(),
 		},
 		State: PeerState(cPeer.state),
-		Data:  cPeer.data,
 		cPeer: cPeer,
-		out:   make(chan outgoingPacket),
 	}
 
 	peers[cPeer] = p
-
-	go p.sendOutgoingPackets()
 
 	return p
 }
@@ -77,36 +71,20 @@ func (p *Peer) Disconnect(reason uint32) {
 	C.enet_peer_disconnect(p.cPeer, C.enet_uint32(reason))
 }
 
-// Note: v must be of pointer type!
-func (p *Peer) SetData(v interface{}) error {
-	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return errors.New("error setting peer data: invalid type" + reflect.TypeOf(v).String())
-	}
-
-	p.cPeer.data = unsafe.Pointer(rv.Pointer())
-	p.Data = p.cPeer.data
-
-	return nil
-}
-
-type outgoingPacket struct {
-	packet  *C.ENetPacket
-	channel uint8
-}
-
-func (p *Peer) sendOutgoingPackets() {
-	for {
-		outPacket := <-p.out
-		C.enet_peer_send(p.cPeer, C.enet_uint8(outPacket.channel), outPacket.packet)
-	}
-}
-
-func (p *Peer) Send(payload []byte, flags PacketFlag, channel uint8) {
+func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
 	if len(payload) == 0 {
 		return
 	}
 
+	flags = flags & ^PACKET_FLAG_NO_ALLOCATE // always allocate (safer with CGO usage below)
+
+	switch payload[0] {
+	case 4, 31, 32, 33, 85:
+	// do nothing
+	default:
+		log.Println("sending", payload)
+	}
+
 	packet := C.enet_packet_create(unsafe.Pointer(&payload[0]), C.size_t(len(payload)), C.enet_uint32(flags))
-	p.out <- outgoingPacket{packet, channel}
+	C.enet_peer_send(p.cPeer, C.enet_uint8(channel), packet)
 }

@@ -1,7 +1,7 @@
 package playerstate
 
 const (
-	Alive uint = iota
+	Alive uint32 = iota
 	Dead
 	Spawning
 	Lagged

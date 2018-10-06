@@ -2,6 +2,7 @@ package masterserver
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -12,42 +13,51 @@ import (
 )
 
 // master server protocol constants
+// exported constants can be sent to the master server
+// unexported constants can only be received and are handled inside this package
 const (
-	MASTER_REGISTERING_REQUEST  = "regserv"
-	MASTER_REGISTERING_SUCCEDED = "succreg"
-	MASTER_REGISTERING_FAILED   = "failreg"
+	registerServer         = "regserv"
+	registrationSuccessful = "succreg"
+	registrationFailed     = "failreg"
 
-	MASTER_ADD_GLOBAL_BAN    = "addgban"
-	MASTER_CLEAR_GLOBAL_BANS = "cleargbans"
+	addBan    = "addgban"
+	clearBans = "cleargbans"
 
-	MASTER_AUTH_REQUEST      = "reqauth"
-	MASTER_AUTH_CONFIRMATION = "confauth"
+	requestAuthChallenge = "reqauth"
+	authChallenge        = "chalauth"
+	confirmAuthAnswer    = "confauth"
+	authSuccesful        = "succauth"
+	authFailed           = "failauth"
 )
 
 type MasterServer struct {
 	In   *bufio.Scanner
 	Out  *bufio.Writer
 	Bans *bans.BanManager
+
+	requestChallengeCallbacks map[uint32]func(challenge string)
+	confirmAnswerCallbacks    map[uint32]func(sucess bool)
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
 func New(addr string, bans *bans.BanManager) (ms *MasterServer, err error) {
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
-		log.Println("could not resolve master server address ("+addr+"):", err)
-		return
+		return nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)
 	}
 
 	conn, err := net.DialTCP("tcp", nil, raddr)
 	if err != nil {
-		log.Println("failed to connect to master server:", err)
-		return
+		return nil, fmt.Errorf("error connecting to master server: %v", err)
 	}
 
 	ms = &MasterServer{
 		In:   bufio.NewScanner(conn),
 		Out:  bufio.NewWriter(conn),
 		Bans: bans,
+
+		requestChallengeCallbacks: map[uint32]func(string){},
+		confirmAnswerCallbacks:    map[uint32]func(sucess bool){},
 	}
 
 	go ms.handleIncoming()
@@ -56,11 +66,27 @@ func New(addr string, bans *bans.BanManager) (ms *MasterServer, err error) {
 }
 
 func (ms *MasterServer) Register(listenPort int) error {
-	return ms.request(MASTER_REGISTERING_REQUEST + " " + strconv.Itoa(listenPort))
+	return ms.Request("%s %d", registerServer, listenPort)
 }
 
-func (ms *MasterServer) request(req string) error {
-	_, err := ms.Out.WriteString(req + "\n")
+func (ms *MasterServer) RequestAuthChallenge(requestID uint32, name string, callback func(challenge string)) error {
+	err := ms.Request("%s %d %s", requestAuthChallenge, requestID, name)
+	if err == nil {
+		ms.requestChallengeCallbacks[requestID] = callback
+	}
+	return err
+}
+
+func (ms *MasterServer) ConfirmAuthAnswer(requestID uint32, answer string, callback func(bool)) error {
+	err := ms.Request("%s %d %s", confirmAuthAnswer, requestID, answer)
+	if err == nil {
+		ms.confirmAnswerCallbacks[requestID] = callback
+	}
+	return err
+}
+
+func (ms *MasterServer) Request(format string, args ...interface{}) error {
+	_, err := ms.Out.WriteString(fmt.Sprintf(format+"\n", args...))
 	if err != nil {
 		return err
 	}
@@ -76,14 +102,27 @@ func (ms *MasterServer) handleIncoming() {
 		msgParts := strings.Split(msg, " ")
 
 		switch msgParts[0] {
-		case MASTER_REGISTERING_SUCCEDED:
+		case registrationSuccessful:
 			log.Println("master server registration succeeded")
-		case MASTER_REGISTERING_FAILED:
+
+		case registrationFailed:
 			log.Println("master server registration failed:", strings.Join(msgParts[1:], " "))
-		case MASTER_CLEAR_GLOBAL_BANS:
+
+		case clearBans:
 			ms.Bans.ClearGlobalBans()
-		case MASTER_ADD_GLOBAL_BAN:
-			ms.handleAddGlobalBan(msgParts)
+
+		case addBan:
+			ms.handleAddGlobalBan(msgParts[1:])
+
+		case authChallenge:
+			ms.handleAuthChallenge(msgParts[1:])
+
+		case authFailed:
+			ms.handleAuthResult(false, authFailed, msgParts[1:])
+
+		case authSuccesful:
+			ms.handleAuthResult(true, authSuccesful, msgParts[1:])
+
 		default:
 			log.Println("received from master:", msg)
 		}
@@ -94,20 +133,62 @@ func (ms *MasterServer) handleIncoming() {
 	}
 }
 
-func (ms *MasterServer) handleAddGlobalBan(msgParts []string) {
-	if len(msgParts) != 2 {
-		log.Println("malformed 'addgbans' message from master server:", strings.Join(msgParts, " "))
+func (ms *MasterServer) handleAddGlobalBan(args []string) {
+	if len(args) != 1 {
+		log.Printf("malformed '%s' message from master server: '%s'\n", addBan, strings.Join(args, " "))
 		return
 	}
 
-	ipString := msgParts[1]
+	ipString := args[0]
 	numDots := strings.Count(ipString, ".")
 	for i := 0; i < 3-numDots; i++ {
 		ipString += ".0"
 	}
 
 	ip := net.ParseIP(ipString)
-	network := net.IPNet{IP: ip, Mask: ip.DefaultMask()}
+	network := &net.IPNet{IP: ip, Mask: ip.DefaultMask()}
 
 	ms.Bans.AddBan(network, "banned by master server", time.Now(), true)
+}
+
+func (ms *MasterServer) handleAuthChallenge(args []string) {
+	if len(args) != 2 {
+		log.Printf("malformed '%s' message from master server: '%s'\n", authChallenge, strings.Join(args, " "))
+		return
+	}
+
+	_requestID, err := strconv.ParseUint(args[0], 10, 32)
+	if err != nil {
+		log.Printf("malformed request ID '%s' in '%s' message from master server: '%s'\n", args[0], authChallenge, strings.Join(args, " "))
+		return
+	}
+	requestID := uint32(_requestID)
+
+	challenge := args[1]
+
+	if callback, ok := ms.requestChallengeCallbacks[requestID]; ok {
+		callback(challenge)
+	} else {
+		log.Println("unsolicited auth challenge from master server")
+	}
+}
+
+func (ms *MasterServer) handleAuthResult(sucess bool, cmd string, args []string) {
+	if len(args) != 1 {
+		log.Printf("malformed '%s' message from master server: '%s'\n", cmd, strings.Join(args, " "))
+		return
+	}
+
+	_requestID, err := strconv.ParseUint(args[0], 10, 32)
+	if err != nil {
+		log.Printf("malformed request ID '%s' in '%s' message from master server: '%s'\n", args[0], cmd, strings.Join(args, " "))
+		return
+	}
+	requestID := uint32(_requestID)
+
+	if callback, ok := ms.confirmAnswerCallbacks[requestID]; ok {
+		callback(sucess)
+	} else {
+		log.Println("unsolicited auth confirmation from master server")
+	}
 }

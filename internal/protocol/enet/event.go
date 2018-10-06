@@ -18,20 +18,24 @@ const (
 type Event struct {
 	Type      EventType
 	Peer      *Peer
-	ChannelId uint8
+	ChannelID uint8
 	Data      uint32
-	Packet    Packet
+	Packet    *Packet
 }
 
-func eventFromCEvent(cEventI interface{}) Event {
-	cEvent := cEventI.(*C.ENetEvent)
-	defer C.enet_packet_destroy(cEvent.packet)
-
-	return Event{
+func eventFromCEvent(cEvent *C.ENetEvent) Event {
+	e := Event{
 		Type:      EventType(cEvent._type),
 		Peer:      peerFromCPeer(cEvent.peer),
-		ChannelId: uint8(cEvent.channelID),
+		ChannelID: uint8(cEvent.channelID),
 		Data:      uint32(cEvent.data),
-		Packet:    packetFromCPacket(cEvent.packet),
 	}
+
+	if e.Type == EVENT_TYPE_RECEIVE {
+		e.Packet = packetFromCPacket(cEvent.packet)
+		C.enet_packet_destroy(cEvent.packet)
+	}
+
+	return e
+
 }

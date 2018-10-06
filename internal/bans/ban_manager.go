@@ -9,12 +9,12 @@ import (
 )
 
 type BanManager struct {
-	bans map[string]Ban
+	bans map[string]*Ban
 }
 
-func (bm *BanManager) addBan(ban Ban) {
+func (bm *BanManager) addBan(ban *Ban) {
 	// never overwrite global bans with non-global bans
-	if existing, ok := bm.bans[ban.Network.String()]; ok && existing.IsGlobal && !ban.IsGlobal {
+	if existing, ok := bm.bans[ban.Network.String()]; ok && existing.Global && !ban.Global {
 		return
 	}
 
@@ -22,12 +22,12 @@ func (bm *BanManager) addBan(ban Ban) {
 
 	bm.bans[ban.Network.String()] = ban
 }
-func (bm *BanManager) AddBan(network net.IPNet, reason string, expiryDate time.Time, isGlobal bool) {
-	bm.addBan(Ban{
+func (bm *BanManager) AddBan(network *net.IPNet, reason string, expiryDate time.Time, global bool) {
+	bm.addBan(&Ban{
 		Network:    network,
 		Reason:     reason,
 		ExpiryDate: expiryDate,
-		IsGlobal:   isGlobal,
+		Global:     global,
 	})
 }
 
@@ -37,7 +37,7 @@ func FromFile(fileName string) (*BanManager, error) {
 		return nil, err
 	}
 
-	var bansFromFile []Ban
+	var bansFromFile []*Ban
 	dec := json.NewDecoder(file)
 
 	err = dec.Decode(&bansFromFile)
@@ -46,7 +46,7 @@ func FromFile(fileName string) (*BanManager, error) {
 	}
 
 	bm := &BanManager{
-		bans: map[string]Ban{},
+		bans: map[string]*Ban{},
 	}
 
 	for _, ban := range bansFromFile {
@@ -58,7 +58,7 @@ func FromFile(fileName string) (*BanManager, error) {
 
 func (bm *BanManager) ClearGlobalBans() {
 	for cidr, ban := range bm.bans {
-		if ban.IsGlobal {
+		if ban.Global {
 			bm.ClearBan(cidr)
 		}
 	}
@@ -68,18 +68,16 @@ func (bm *BanManager) ClearBan(cidr string) {
 	delete(bm.bans, cidr)
 }
 
-func (bm *BanManager) GetBan(ip net.IP) (ban Ban, ok bool) {
-	for cidr, ban := range bm.bans {
-		if ban.Network.Contains(ip) {
+func (bm *BanManager) GetBan(ip net.IP) (ban *Ban, ok bool) {
+	for cidr, b := range bm.bans {
+		if b.Network.Contains(ip) {
 			// check if the ban already expired
-			if !ban.IsGlobal && ban.ExpiryDate.Before(time.Now()) {
+			if b.ExpiryDate.Before(time.Now()) {
 				bm.ClearBan(cidr)
-				break
 			} else {
-				return ban, true
+				ban, ok = b, true
 			}
 		}
 	}
-
 	return
 }

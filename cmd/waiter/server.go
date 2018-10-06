@@ -3,63 +3,40 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/client"
-	"github.com/sauerbraten/waiter/internal/client/playerstate"
-	"github.com/sauerbraten/waiter/internal/enet"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
-	"github.com/sauerbraten/waiter/internal/server/maprotation"
+	"github.com/sauerbraten/waiter/internal/auth"
+	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/maprotation"
+	"github.com/sauerbraten/waiter/internal/protocol/enet"
 )
 
-var (
-	// channel to pause the game
-	pauseChannel = make(chan bool)
-
-	// channel to interrupt the game (for example when a master changes mode or map mid-game)
-	interruptChannel = make(chan bool)
-)
-
-const (
-	MAP_TIME int32 = 180000 // 3 minutes for testing and debugging purposes
-)
-
-func countDown() {
-	endTimer := time.NewTimer(time.Duration(s.State.TimeLeft) * time.Millisecond)
-	gameTicker := time.NewTicker(1 * time.Millisecond)
-	paused := false
-
-	for {
-		select {
-		case <-gameTicker.C:
-			s.State.TimeLeft--
-
-		case shouldPause := <-pauseChannel:
-			if shouldPause && !paused {
-				endTimer.Stop()
-				gameTicker.Stop()
-				paused = true
-			} else if !shouldPause && paused {
-				endTimer.Reset(time.Duration(s.State.TimeLeft) * time.Millisecond)
-				gameTicker = time.NewTicker(1 * time.Millisecond)
-				paused = false
-			}
-
-		case <-interruptChannel:
-			endTimer.Stop()
-			gameTicker.Stop()
-
-		case <-endTimer.C:
-			endTimer.Stop()
-			gameTicker.Stop()
-			go intermission()
-			return
-		}
-	}
+type Server struct {
+	*Config
+	*State
+	*GameTimer
+	relay   *Relay
+	Clients *ClientManager
+	Auth    *auth.Manager
 }
 
-func intermission() {
+func (s *Server) IsAllowedToJoin(c *Client, hash string, authDomain string, authName string) bool {
+	// TODO: check server password hash
+
+	// check for mandatory connect auth
+	if c.AuthRequiredBecause > disconnectreason.None {
+		if authDomain != s.AuthDomains[0] {
+			return false
+		}
+
+		// TODO: try to authenticate the client
+	}
+
+	return true
+}
+
+func (s *Server) Intermission() {
 	// notify all clients
-	cm.Broadcast(enet.PACKET_FLAG_RELIABLE, 1, packet.New(nmc.TimeLeft, 0))
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.TimeLeft, 0)
 
 	// start 5 second timer
 	end := time.After(5 * time.Second)
@@ -70,32 +47,18 @@ func intermission() {
 	<-end
 
 	// start new 10 minutes timer
-	s.State.TimeLeft = MAP_TIME
-	go countDown()
+	s.GameTimer.Reset()
+	go s.GameTimer.run()
 
 	// change map
-	changeMap(maprotation.NextMap(s.State.Map))
+	s.ChangeMap(maprotation.NextMap(s.GameMode, s.Map))
 }
 
-func changeMap(mapName string) {
-	s.State.NotGotItems = true
-	s.State.Map = mapName
-	cm.Broadcast(enet.PACKET_FLAG_RELIABLE, 1, packet.New(nmc.MapChange, s.State.Map, s.State.GameMode, s.State.NotGotItems))
-	cm.Broadcast(enet.PACKET_FLAG_RELIABLE, 1, packet.New(nmc.TimeLeft, s.State.TimeLeft/1000))
-	cm.ForEach(func(c *client.Client) {
-		if c.InUse && c.GameState.State != playerstate.Spectator {
-
-			c.GameState.Reset()
-			c.SendSpawnState(s.State)
-		}
-	})
-
-	sendMOTD()
-}
-
-func sendMOTD() {
-	// send development notice
-	p := packet.New(nmc.ServerMessage, "This server is written in Go and still under development. \f6Most things do not work!")
-	p.Put(nmc.ServerMessage, "Visit github.com/sauerbraten/waiter for more information and source code.")
-	cm.Broadcast(enet.PACKET_FLAG_RELIABLE, 1, p)
+func (s *Server) ChangeMap(mapName string) {
+	s.NotGotItems = true
+	s.Map = mapName
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.MapChange, s.Map, s.GameMode, s.NotGotItems)
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.TimeLeft, s.TimeLeft/1000)
+	s.Clients.MapChange()
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, s.MessageOfTheDay)
 }

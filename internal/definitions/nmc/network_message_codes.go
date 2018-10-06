@@ -13,7 +13,7 @@ const (
 	Leave // = CDIS
 	Shoot
 	Explode
-	Suicide
+	Suicide // 10
 	Died
 	Damage
 	HitPush
@@ -23,7 +23,7 @@ const (
 	SpawnState
 	Spawn
 	ForceDeath
-	ChangeWeapon // GUNSELECT
+	ChangeWeapon // 20
 	Taunt
 	MapChange
 	VoteMap
@@ -33,7 +33,7 @@ const (
 	ITEMACC
 	Teleport
 	JumpPad
-	Ping
+	Ping // 30
 	Pong
 	ClientPing
 	TimeLeft // = TIMEUP
@@ -43,7 +43,7 @@ const (
 	Resume
 	EDITMODE
 	EDITENT
-	EDITF
+	EDITF // 40
 	EDITT
 	EDITM
 	FLIP
@@ -53,7 +53,7 @@ const (
 	REPLACE
 	DELCUBE
 	REMIP
-	NEWMAP
+	NEWMAP // 50
 	GETMAP
 	SENDMAP
 	CLIPBOARD
@@ -63,7 +63,7 @@ const (
 	ClearBans
 	CurrentMaster
 	Spectator
-	SetMaster
+	SetMaster // 60
 	SetTeam
 	Bases
 	BaseInfo
@@ -73,7 +73,7 @@ const (
 	ANNOUNCE
 	ListDemos
 	SendDemoList
-	GetDemo
+	GetDemo // 70
 	SendDemo
 	DemoPlayback
 	RecordDemo
@@ -83,17 +83,17 @@ const (
 	ReturnFlag
 	ResetFlag
 	InvisibleFlag
-	TryDropFlag
+	TryDropFlag // 80
 	DropFlag
 	ScoreFlag
 	InitFlags
 	TeamChatMessage
 	Client
-	AUTHTRY
-	AUTHKICK
-	AUTHCHAL
-	AUTHANS
-	REQAUTH
+	AuthTry
+	AuthKick
+	AuthChallenge
+	AuthAnswer
+	REQAUTH // 90
 	PAUSEGAME
 	GAMESPEED
 	ADDBOT
@@ -103,7 +103,7 @@ const (
 	BOTLIMIT
 	BOTBALANCE
 	MAPCRC
-	CHECKMAPS
+	CHECKMAPS // 100
 	SWITCHNAME
 	SWITCHMODEL
 	SWITCHTEAM
@@ -113,7 +113,7 @@ const (
 	DROPTOKENS
 	DEPOSITTOKENS
 	STEALTOKENS
-	SERVCMD
+	SERVCMD // 110
 	DEMOPACKET
 	//NUMMSG
 )
@@ -154,7 +154,7 @@ var ServerOnlyNMCs []NetMessCode = []NetMessCode{
 	ResetFlag,
 	InvisibleFlag,
 	Client,
-	AUTHCHAL,
+	AuthChallenge,
 	INITAI,
 	EXPIRETOKENS,
 	DROPTOKENS,

@@ -2,25 +2,20 @@ package main
 
 import (
 	"log"
-	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/sauerbraten/jsonfile"
 
+	"github.com/sauerbraten/waiter/cubecode"
+	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/bans"
-	"github.com/sauerbraten/waiter/internal/broadcast"
-	"github.com/sauerbraten/waiter/internal/client"
-	"github.com/sauerbraten/waiter/internal/enet"
-	"github.com/sauerbraten/waiter/internal/extinfo"
+	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
+	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
+	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/masterserver"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/gamemode"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/mastermode"
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
-	"github.com/sauerbraten/waiter/internal/server"
-	"github.com/sauerbraten/waiter/internal/server/config"
+	"github.com/sauerbraten/waiter/internal/protocol/enet"
 )
 
 var (
@@ -31,10 +26,10 @@ var (
 	mustFlush = false
 
 	// global server state
-	s *server.Server
+	s *Server
 
 	// client manager
-	cm *client.ClientManager
+	cs *ClientManager
 
 	// ban manager
 	bm *bans.BanManager
@@ -44,38 +39,44 @@ var (
 )
 
 func init() {
-	var conf *config.Config
+	var conf *Config
 	err := jsonfile.ParseFile("config.json", &conf)
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	runtime.GOMAXPROCS(conf.CPUCores)
 
 	bm, err = bans.FromFile("bans.json")
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	cm = &client.ClientManager{}
+	var users []*auth.User
+	err = jsonfile.ParseFile("users.json", &users)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-	s = &server.Server{
+	cs = &ClientManager{}
+
+	s = &Server{
 		Config: conf,
-		State: &server.State{
+		State: &State{
 			MasterMode:  mastermode.Open,
 			GameMode:    gamemode.Effic,
-			Map:         "hashi",
-			TimeLeft:    MAP_TIME,
-			NotGotItems: true,
-			HasMaster:   false,
+			Map:         maprotation.NextMap(gamemode.Effic, ""),
+			NotGotItems: false,
 			UpSince:     time.Now(),
-			NumClients:  cm.NumberOfClientsConnected,
+			NumClients:  cs.NumberOfClientsConnected,
 		},
+		GameTimer: NewGameTimer(func() { s.Intermission() }),
+		relay:     NewRelay(),
+		Clients:   cs,
+		Auth:      auth.NewManager(users),
 	}
 
 	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), bm)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println("could not connect to master server:", err)
 	}
 }
 
@@ -88,50 +89,32 @@ func main() {
 
 	log.Println("server running on port", s.Config.ListenPort)
 
-	infoServer := extinfo.NewInfoServer(s, cm)
-
-	go infoServer.ServeStateInfo()
-
-	go countDown()
-
-	log.Println("registering at master server")
-	err = ms.Register(s.Config.ListenPort)
-	if err != nil {
-		log.Println(err)
+	extInfoServer := &ExtInfoServer{
+		Config:    s.Config,
+		State:     s.State,
+		GameTimer: s.GameTimer,
+		Clients:   s.Clients,
 	}
+	go extInfoServer.ServeStateInfoForever()
 
-	buildChannel0Packet := func(c *client.Client) *packet.Packet {
-		p := packet.New(c.GameState.Position, c.QueuedBroadcastMessages[0])
-		c.ClearBroadcastMessageQueue(0)
-		return p
-	}
+	go s.GameTimer.run()
 
-	buildChannel1Packet := func(c *client.Client) *packet.Packet {
-		p := c.QueuedBroadcastMessages[1]
-		if p.Len() == 0 {
-			return packet.Empty
+	go s.relay.loop()
+
+	if ms != nil {
+		log.Println("registering at master server")
+		err = ms.Register(s.Config.ListenPort)
+		if err != nil {
+			log.Println(err)
 		}
-
-		p = packet.New(nmc.Client, c.CN, p.Len(), p)
-		c.ClearBroadcastMessageQueue(1)
-		return p
 	}
-
-	go broadcast.Forever(33*time.Millisecond, enet.PACKET_FLAG_NO_ALLOCATE, 0, cm, buildChannel0Packet)
-	go broadcast.Forever(33*time.Millisecond, enet.PACKET_FLAG_NO_ALLOCATE|enet.PACKET_FLAG_RELIABLE, 1, cm, buildChannel1Packet)
 
 	for {
-		event := host.Service(2)
+		event := host.Service()
 
 		switch event.Type {
 		case enet.EVENT_TYPE_CONNECT:
-			log.Println("ENet: connected:", event.Peer.Address.String())
-			client := cm.Add(event.Peer)
-
-			err := event.Peer.SetData(&client.CN)
-			if err != nil {
-				log.Println("enet:", err)
-			}
+			log.Println("enet: connected:", event.Peer.Address.String())
 
 			if ban, ok := bm.GetBan(event.Peer.Address.IP); ok {
 				log.Println("peer's IP is banned:", ban)
@@ -139,20 +122,34 @@ func main() {
 				continue
 			}
 
-			client.SendServerConfig(s.Config)
+			client := cs.Add(event.Peer)
+
+			client.Position, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
+
+			cs.SendServerConfig(client, s.Config)
 
 		case enet.EVENT_TYPE_DISCONNECT:
-			log.Println("ENet: disconnected:", event.Peer.Address.String())
-			client := cm.GetClientByCN(*(*int32)(event.Peer.Data))
-			client.Leave()
+			log.Println("enet: disconnected:", event.Peer.Address.String())
+			client := s.Clients.GetClientByPeer(event.Peer)
+			if client == nil {
+				continue
+			}
+			s.relay.RemoveClient(client.CN)
+			cs.Leave(client)
 
 		case enet.EVENT_TYPE_RECEIVE:
 			// TODO: fix this maybe?
 			if len(event.Packet.Data) == 0 {
+				log.Println("received empty packet on channel", event.ChannelID, "from", event.Peer.Address)
 				continue
 			}
 
-			handlePacket(*(*int32)(event.Peer.Data), event.ChannelId, packet.New(event.Packet.Data))
+			client := s.Clients.GetClientByPeer(event.Peer)
+			if client == nil {
+				continue
+			}
+
+			s.handlePacket(client, event.ChannelID, cubecode.Packet(event.Packet.Data))
 		}
 
 		host.Flush()

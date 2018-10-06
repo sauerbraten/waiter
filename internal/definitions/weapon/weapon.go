@@ -1,7 +1,9 @@
 package weapon
 
 import (
-	"github.com/sauerbraten/waiter/internal/protocol/definitions/gamemode"
+	"math/rand"
+
+	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 )
 
 type Weapon int32
@@ -14,7 +16,12 @@ const (
 	Rifle
 	GrenadeLauncher
 	Pistol
+	numWeapons
 )
+
+func Random() Weapon {
+	return Weapon(rand.Int31n(int32(numWeapons)))
+}
 
 var WeaponsWithAmmo []Weapon = []Weapon{
 	Shotgun,
@@ -51,34 +58,50 @@ var Weapons map[WeaponNum]Weapon = map[WeaponNum]Weapon{
 }
 */
 
-// Ammunition (sets)
-// mode → weapon → ammo
-var SpawnAmmo = map[gamemode.GameMode]map[Weapon]int32{
-	gamemode.FFA: map[Weapon]int32{
-		Shotgun:         0,
-		Minigun:         0,
-		RocketLauncher:  0,
-		Rifle:           0,
-		GrenadeLauncher: 1,
-		Pistol:          40,
-	},
-	gamemode.Effic: map[Weapon]int32{
-		Shotgun:         20,
-		Minigun:         20,
-		RocketLauncher:  10,
-		Rifle:           10,
-		GrenadeLauncher: 20,
-		Pistol:          0,
-	},
-	gamemode.Insta: map[Weapon]int32{
-		Shotgun:         0,
-		Minigun:         0,
-		RocketLauncher:  0,
-		Rifle:           100,
-		GrenadeLauncher: 0,
-		Pistol:          0,
-	},
-	// TODO: other modes
+func SpawnAmmo(mode gamemode.GameMode) map[Weapon]int32 {
+	switch mode {
+	case gamemode.Insta, gamemode.InstaTeam, gamemode.InstaCTF, gamemode.InstaProtect, gamemode.InstaHold, gamemode.InstaCollect:
+		return map[Weapon]int32{
+			Shotgun:         0,
+			Minigun:         0,
+			RocketLauncher:  0,
+			Rifle:           100,
+			GrenadeLauncher: 0,
+			Pistol:          0,
+		}
+
+	case gamemode.Tactics, gamemode.TacticsTeam:
+		ammo := map[Weapon]int32{
+			Pistol:          40,
+			GrenadeLauncher: 1,
+			// TODO
+		}
+		return ammo
+
+	case gamemode.Effic, gamemode.EfficTeam, gamemode.EfficCTF, gamemode.EfficProtect, gamemode.EfficHold, gamemode.EfficCollect:
+		return map[Weapon]int32{
+			Shotgun:         20,
+			Minigun:         20,
+			RocketLauncher:  10,
+			Rifle:           10,
+			GrenadeLauncher: 20,
+			Pistol:          0,
+		}
+
+	case gamemode.FFA, gamemode.Teamplay, gamemode.Capture, gamemode.RegenCapture, gamemode.CTF, gamemode.Protect, gamemode.Hold, gamemode.Collect:
+		return map[Weapon]int32{
+			Shotgun:         0,
+			Minigun:         0,
+			RocketLauncher:  0,
+			Rifle:           0,
+			GrenadeLauncher: 1,
+			Pistol:          40,
+		}
+
+	default:
+		println("unhandled gamemode:", mode)
+		panic("fix this!")
+	}
 }
 
 // Flattens m into a slice by putting values in the order specified by keys.

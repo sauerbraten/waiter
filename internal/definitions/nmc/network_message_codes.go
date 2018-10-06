@@ -119,7 +119,7 @@ const (
 )
 
 // A list of NMCs which can only be sent by a server, never by a client.
-var ServerOnlyNMCs []NetMessCode = []NetMessCode{
+var ServerOnlyNMCs = []NetMessCode{
 	ServerInfo,
 	InitializeClient,
 	Welcome,
@@ -160,6 +160,17 @@ var ServerOnlyNMCs []NetMessCode = []NetMessCode{
 	DROPTOKENS,
 	STEALTOKENS,
 	DEMOPACKET,
+}
+
+var AliveOnlyNMCs = []NetMessCode{
+	Shoot,
+	Suicide,
+	Damage,
+	ChangeWeapon,
+	Taunt,
+	Teleport,
+	JumpPad,
+	Position,
 }
 
 func networkMessageLength(nmc NetMessCode) int {

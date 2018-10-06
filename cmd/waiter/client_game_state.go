@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
@@ -24,8 +26,8 @@ type GameState struct {
 
 	LastSpawn    int32
 	LifeSequence int32
-	LastShot     int32
-	LastDeath    int32
+	LastShot     time.Time
+	LastDeath    time.Time
 
 	// fields that change at intermission
 	Frags      int32
@@ -104,8 +106,8 @@ func (gs *GameState) Reset() {
 
 	gs.LastSpawn = 0
 	gs.LifeSequence = 0
-	gs.LastShot = 0
-	gs.LastDeath = 0
+	gs.LastShot = time.Time{}
+	gs.LastDeath = time.Time{}
 
 	gs.Frags = 0
 	gs.Deaths = 0

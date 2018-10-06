@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/sauerbraten/waiter/cubecode"
 
@@ -203,6 +204,107 @@ outer:
 				break
 			}
 			client.Packets.Publish(nmc.ChangeWeapon, selectedWeapon)
+
+		case nmc.Shoot:
+			id, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read shot ID from shoot packet:", p)
+				return
+			}
+
+			weapon, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read weapon ID from shoot packet:", p)
+				return
+			}
+
+			// TODO: check weapon reload time
+			// TODO: check ammo
+			// TODO: check weapon range
+
+			from := [3]float32{}
+			for i := 0; i < 3; i++ {
+				coord, ok := p.GetInt()
+				if !ok {
+					log.Println("could not read shot origin ('from') from shoot packet:", p)
+					return
+				}
+				from[i] = float32(coord) / 16.0
+			}
+
+			to := [3]float32{}
+			for i := 0; i < 3; i++ {
+				coord, ok := p.GetInt()
+				if !ok {
+					log.Println("could not read shot destination ('to') from shoot packet:", p)
+					return
+				}
+				to[i] = float32(coord) / 16.0
+			}
+
+			numHits, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read number of hits from shoot packet:", p)
+				return
+			}
+
+			log.Println("processed shot with id =", id, "weapon =", weapon, "from =", from, "to =", to, "numHits =", numHits)
+
+			for i := int32(0); i < numHits; i++ {
+				target, ok := p.GetInt()
+				if !ok {
+					log.Println("could not read target of hit", i+1, "from shoot packet:", p)
+					return
+				}
+
+				lifeSequence, ok := p.GetInt()
+				if !ok {
+					log.Println("could not read life sequence of hit", i+1, "from shoot packet:", p)
+					return
+				}
+
+				_distance, ok := p.GetInt()
+				if !ok {
+					log.Println("could not read distance of hit", i+1, "from shoot packet:", p)
+					return
+				}
+				distance := float32(_distance) / 16.0
+
+				rays, ok := p.GetInt()
+				if !ok {
+					log.Println("could not read rays of hit", i+1, "from shoot packet:", p)
+					return
+				}
+
+				dir := [3]float32{}
+				for i := 0; i < 3; i++ {
+					angle, ok := p.GetInt()
+					if !ok {
+						log.Println("could not read shot destination ('to') from shoot packet:", p)
+						return
+					}
+					dir[i] = float32(angle) / 100.0
+				}
+
+				log.Println("  hit =", i+1, "target =", target, "life sequence =", lifeSequence, "distance =", distance, "rays =", rays, "dir =", dir)
+			}
+
+			s.Clients.Broadcast(exclude(client), 1, enet.PACKET_FLAG_RELIABLE,
+				nmc.ShotEffects,
+				client.CN,
+				weapon,
+				id,
+				int32(from[0]*16.0),
+				int32(from[1]*16.0),
+				int32(from[2]*16.0),
+				int32(to[0]*16.0),
+				int32(to[1]*16.0),
+				int32(to[2]*16.0),
+			)
+
+			client.GameState.LastShot = time.Now()
+
+			// TODO: apply damage of hits
 
 		case nmc.Sound:
 			sound, ok := p.GetInt()

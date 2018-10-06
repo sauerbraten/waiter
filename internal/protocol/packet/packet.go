@@ -32,10 +32,12 @@ func Encode(args ...interface{}) cubecode.Packet {
 			p.PutInt(int32(v))
 
 		case uint32:
-			p.PutUint(v)
+			// you'll have to be explicit and call p.PutUint() if you
+			// really want that!
+			p.PutInt(int32(v))
 
 		case byte:
-			p.PutInt(int32(v))
+			p = append(p, v)
 
 		case armour.Armour:
 			p.PutInt(int32(v))
@@ -64,6 +66,9 @@ func Encode(args ...interface{}) cubecode.Packet {
 		case []byte:
 			p = append(p, v...)
 
+		case cubecode.Packet:
+			p = append(p, v...)
+
 		case net.IP:
 			p = append(p, v...)
 
@@ -76,9 +81,6 @@ func Encode(args ...interface{}) cubecode.Packet {
 
 		case string:
 			p.PutString(v)
-
-		case cubecode.Packet:
-			p = append(p, v...)
 
 		default:
 			log.Printf("unhandled type %T of arg %v\n", v, v)

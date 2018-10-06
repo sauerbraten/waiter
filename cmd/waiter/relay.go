@@ -68,7 +68,9 @@ func (r *Relay) loop() {
 				r.flush(
 					r.clientPackets,
 					func(cn uint32, pkt []byte) []byte {
-						return packet.Encode(nmc.Client, cn, uint32(len(pkt)))
+						p := packet.Encode(nmc.Client, cn)
+						p.PutUint(uint32(len(pkt)))
+						return p
 					},
 					1,
 					enet.PACKET_FLAG_RELIABLE,

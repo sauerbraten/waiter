@@ -5,21 +5,22 @@ A game server for Cube 2: Sauerbraten, written in Go.
 
 ## To Do
 
-- implement more network events
-- get global auth to work
-- implement local auth, too
+Next step is to implement more network events to support effic mode completely, then efficctf, then insta and instactf. After that, faf, then capture and regen capture would be the next goals.
 
 
 ## Project Structure
 
-Most functionality is organized into internal packages. [`/cmd/waiter`](/cmd/waiter/) contains the actual command to start a server, i.e. configuration file parsing, initialization of all components, and handling of incoming packets. Protocol definitions like network message codes can be found in [`internal/protocol/definitions`](/internal/protocol/definitions/).
+Most functionality is organized into internal packages. [`/cmd/waiter/`](/cmd/waiter/) contains the actual command to start a server, i.e. configuration file parsing, initialization of all components, and handling of incoming packets. Protocol definitions like network message codes can be found in [`internal/definitions`](/internal/definitions/).
 
 Other interesting packages:
 
-- [`internal/enet`](internal/enet)
-- [`internal/client`](internal/client)
-- [`internal/extinfo`](internal/extinfo)
+- [`cubecode`](cubecode)
+- [`internal/auth`](internal/auth)
+- [`internal/protocol/enet`](internal/protocol/enet)
+- [`internal/definitions`](internal/definitions)
 - [`internal/masterserver`](internal/masterserver)
+
+In [`/cmd/authgen/`](/cmd/authgen/), there is a command to generate auth keys for users. This server uses a different representation for public keys, so the output of `/genauthkey` in the vanilla client will be useless.
 
 
 ## License

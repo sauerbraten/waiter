@@ -20,7 +20,7 @@ Other interesting packages:
 - [`internal/definitions`](internal/definitions)
 - [`internal/masterserver`](internal/masterserver)
 
-In [`/cmd/authgen/`](/cmd/authgen/), there is a command to generate auth keys for users. This server uses a different representation for public keys, so the output of `/genauthkey` in the vanilla client will be useless.
+In [`/cmd/genauth/`](/cmd/genauth/), there is a command to generate auth keys for users. This server uses a different representation for public keys, so the output of `/genauthkey` in the vanilla client will be useless.
 
 
 ## License

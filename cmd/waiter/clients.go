@@ -35,7 +35,10 @@ func (cm *ClientManager) Add(peer *enet.Peer) *Client {
 	return c
 }
 
-func (cm *ClientManager) GetClientByCN(cn int32) *Client {
+func (cm *ClientManager) GetClientByCN(cn uint32) *Client {
+	if int(cn) < 0 || int(cn) >= len(cm.cs) {
+		return nil
+	}
 	return cm.cs[cn]
 }
 
@@ -152,6 +155,8 @@ func (cm *ClientManager) Join(c *Client, name string, playerModel int32) {
 
 	if s.MasterMode == mastermode.Locked {
 		c.GameState.State = playerstate.Spectator
+	} else {
+		c.GameState.State = playerstate.Alive
 	}
 
 	log.Printf("join: %s (%d)\n", name, c.CN)
@@ -195,23 +200,14 @@ func (cm *ClientManager) InformOthersOfDisconnect(c *Client, reason disconnectre
 	// TOOD: send a server message with the disconnect reason in case it's not a normal leave
 }
 
-// Tells the player how to spawn (with what amount of health, armmo, armour, etc.).
-func (cm *ClientManager) SendSpawnState(c *Client) {
-	c.GameState.Spawn(s.GameMode)
-	c.GameState.LifeSequence = (c.GameState.LifeSequence + 1) % 128
-
-	cm.Send(c, 1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, c.CN, c.GameState.ToWire()))
-
-	c.GameState.LastSpawn = s.TimeLeft
-}
-
 func (cm *ClientManager) MapChange() {
 	for _, c := range cm.cs {
 		if !c.InUse {
 			continue
 		}
 		c.GameState.Reset()
-		cm.SendSpawnState(c)
+		c.GameState.Spawn(s.GameMode)
+		c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, c.CN, c.GameState.ToWire()))
 	}
 }
 

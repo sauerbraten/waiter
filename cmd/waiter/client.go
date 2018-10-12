@@ -6,6 +6,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
+	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/protocol/enet"
 	"github.com/sauerbraten/waiter/internal/utils"
 )
@@ -41,20 +42,6 @@ func NewClient(cn uint32, peer *enet.Peer) *Client {
 	}
 }
 
-// Tries to let the player spawn, returns wether that worked or not.
-func (c *Client) TryToSpawn(lifeSequence int32, selectedWeapon weapon.Weapon) bool {
-	if (c.GameState.State != playerstate.Alive && c.GameState.State != playerstate.Dead) || lifeSequence != c.GameState.LifeSequence || c.GameState.LastSpawn < 0 {
-		// client may not spawn
-		return false
-	}
-
-	c.GameState.State = playerstate.Alive
-	c.GameState.SelectedWeapon = selectedWeapon
-	c.GameState.LastSpawn = -1
-
-	return true
-}
-
 // IsValidMessage hecks if this client is allowed to send a certain type of message to us.
 func (c *Client) IsValidMessage(networkMessageCode nmc.NetMessCode) bool {
 	if !c.Joined {
@@ -81,6 +68,15 @@ func (c *Client) IsValidMessage(networkMessageCode nmc.NetMessCode) bool {
 	}
 
 	return true
+}
+
+func (c *Client) applyDamage(attacker *Client, damage int32, weapon weapon.ID, direction *geom.Vector) {
+	c.GameState.applyDamage(damage)
+	if attacker != c && attacker.Team != c.Team {
+		attacker.GameState.Damage += damage
+	}
+
+	// TODO
 }
 
 // Resets the client object. Keeps the client's CN, so low CNs can be reused.

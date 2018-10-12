@@ -277,7 +277,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 			}
 		})
 	} else {
-		c := eis.Clients.GetClientByCN(cn)
+		c := eis.Clients.GetClientByCN(uint32(cn))
 		q = append(q,
 			ClientInfoResponseTypeInfo,
 			c.CN,

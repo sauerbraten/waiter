@@ -12,6 +12,19 @@ const (
 	None = -1
 )
 
+func Absorption(typ Armour) int32 {
+	switch typ {
+	case Blue:
+		return 25
+	case Green:
+		return 50
+	case Yellow:
+		return 75
+	default:
+		return 0
+	}
+}
+
 func SpawnArmour(mode gamemode.GameMode) (Armour, int32) {
 	switch mode {
 	case gamemode.Insta, gamemode.InstaTeam, gamemode.InstaCTF, gamemode.InstaProtect, gamemode.InstaHold, gamemode.InstaCollect:

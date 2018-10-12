@@ -5,7 +5,7 @@ A game server for Cube 2: Sauerbraten, written in Go.
 
 ## To Do
 
-Next step is to implement more network events to support effic mode completely, then efficctf, then insta and instactf. After that, faf, then capture and regen capture would be the next goals.
+Next step is to implement more network events to support effic mode completely, then efficctf, then insta and instactf. After that, ffa, then capture and regen capture would be the next goals.
 
 
 ## Project Structure

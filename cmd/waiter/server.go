@@ -4,10 +4,12 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/auth"
+	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/protocol/enet"
+	"github.com/sauerbraten/waiter/internal/protocol/packet"
 )
 
 type Server struct {
@@ -61,4 +63,22 @@ func (s *Server) ChangeMap(mapName string) {
 	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.TimeLeft, s.TimeLeft/1000)
 	s.Clients.MapChange()
 	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, s.MessageOfTheDay)
+}
+
+func (s *Server) HandleDeath(fragger, victim *Client) {
+	victim.GameState.Deaths++
+	fragValue := 1
+	if fragger == victim {
+		fragValue = -1
+	}
+	fragger.GameState.Frags += fragValue
+	// TODO: effectiveness
+
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, 0)) // TODO: team modes
+
+	victim.Position.Publish()
+	victim.GameState.State = playerstate.Dead
+	victim.GameState.LastDeath = time.Now()
+
+	// TODO teamkills
 }

@@ -21,7 +21,7 @@ const (
 	ExplodeEffects
 	TrySpawn
 	SpawnState
-	Spawn
+	ConfirmSpawn
 	ForceDeath
 	ChangeWeapon // 20
 	Taunt

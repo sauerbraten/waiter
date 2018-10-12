@@ -10,6 +10,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
+	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/protocol/enet"
 	"github.com/sauerbraten/waiter/internal/protocol/packet"
 )
@@ -176,7 +177,15 @@ outer:
 			p.GetInt()
 			log.Println("todo: MAPCRC")
 
-		case nmc.Spawn:
+		case nmc.TrySpawn:
+			if client.GameState.State != playerstate.Dead || !client.GameState.LastSpawn.IsZero() {
+				return
+			}
+			client.GameState.Respawn()
+			client.GameState.Spawn(s.GameMode)
+			client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, client.CN, client.GameState.ToWire()))
+
+		case nmc.ConfirmSpawn:
 			lifeSequence, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read life sequence from spawn packet:", p)
@@ -187,9 +196,17 @@ outer:
 				log.Println("could not read weapon ID from spawn packet:", p)
 				return
 			}
-			if client.TryToSpawn(lifeSequence, weapon.Weapon(_weapon)) {
-				client.Packets.Publish(nmc.Spawn, client.GameState.ToWire())
+
+			if (client.GameState.State != playerstate.Alive && client.GameState.State != playerstate.Dead) || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawn.IsZero() {
+				// client may not spawn
+				return
 			}
+
+			client.GameState.State = playerstate.Alive
+			client.GameState.SelectedWeapon = weapon.ByID[weapon.ID(_weapon)]
+			client.GameState.LastSpawn = time.Time{}
+
+			client.Packets.Publish(nmc.ConfirmSpawn, client.GameState.ToWire())
 
 		case nmc.ChangeWeapon:
 			// player changing weapon
@@ -198,12 +215,12 @@ outer:
 				log.Println("could not read weapon ID from weapon change packet:", p)
 				return
 			}
-			requestedWeapon := weapon.Weapon(_weapon)
-			selectedWeapon, ok := client.GameState.SelectWeapon(requestedWeapon)
+			requested := weapon.ID(_weapon)
+			selected, ok := client.GameState.SelectWeapon(requested)
 			if !ok {
 				break
 			}
-			client.Packets.Publish(nmc.ChangeWeapon, selectedWeapon)
+			client.Packets.Publish(nmc.ChangeWeapon, selected)
 
 		case nmc.Shoot:
 			id, ok := p.GetInt()
@@ -212,34 +229,43 @@ outer:
 				return
 			}
 
-			weapon, ok := p.GetInt()
+			weaponID, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read weapon ID from shoot packet:", p)
 				return
 			}
+			wpn, ok := weapon.ByID[weapon.ID(weaponID)]
+			if !ok {
+				log.Println("invalid weapon ID in shoot packet:", weaponID)
+				return
+			}
 
-			// TODO: check weapon reload time
-			// TODO: check ammo
-			// TODO: check weapon range
+			if time.Now().Before(client.GameState.GunReloadEnd) || client.GameState.Ammo[wpn.ID] <= 0 {
+				continue
+			}
 
-			from := [3]float32{}
+			from := &geom.Vector{}
 			for i := 0; i < 3; i++ {
 				coord, ok := p.GetInt()
 				if !ok {
 					log.Println("could not read shot origin ('from') from shoot packet:", p)
 					return
 				}
-				from[i] = float32(coord) / 16.0
+				from[i] = float64(coord) / 16.0
 			}
 
-			to := [3]float32{}
+			to := &geom.Vector{}
 			for i := 0; i < 3; i++ {
 				coord, ok := p.GetInt()
 				if !ok {
 					log.Println("could not read shot destination ('to') from shoot packet:", p)
 					return
 				}
-				to[i] = float32(coord) / 16.0
+				to[i] = float64(coord) / 16.0
+			}
+
+			if dist := geom.Distance(from, to); dist > wpn.Range+1.0 {
+				log.Println("shot distance out of weapon's range: distane =", dist, "range =", wpn.Range+1)
 			}
 
 			numHits, ok := p.GetInt()
@@ -248,14 +274,14 @@ outer:
 				return
 			}
 
-			log.Println("processed shot with id =", id, "weapon =", weapon, "from =", from, "to =", to, "numHits =", numHits)
-
+			hits := make([]hit, 0, numHits)
 			for i := int32(0); i < numHits; i++ {
-				target, ok := p.GetInt()
+				_target, ok := p.GetInt()
 				if !ok {
 					log.Println("could not read target of hit", i+1, "from shoot packet:", p)
 					return
 				}
+				target := uint32(_target)
 
 				lifeSequence, ok := p.GetInt()
 				if !ok {
@@ -268,7 +294,7 @@ outer:
 					log.Println("could not read distance of hit", i+1, "from shoot packet:", p)
 					return
 				}
-				distance := float32(_distance) / 16.0
+				distance := float64(_distance) / 16.0
 
 				rays, ok := p.GetInt()
 				if !ok {
@@ -276,34 +302,75 @@ outer:
 					return
 				}
 
-				dir := [3]float32{}
+				dir := &geom.Vector{}
 				for i := 0; i < 3; i++ {
 					angle, ok := p.GetInt()
 					if !ok {
 						log.Println("could not read shot destination ('to') from shoot packet:", p)
 						return
 					}
-					dir[i] = float32(angle) / 100.0
+					dir[i] = float64(angle) / 100.0
 				}
 
-				log.Println("  hit =", i+1, "target =", target, "life sequence =", lifeSequence, "distance =", distance, "rays =", rays, "dir =", dir)
+				hits = append(hits, hit{
+					target:       target,
+					lifeSequence: lifeSequence,
+					distance:     distance,
+					rays:         rays,
+					dir:          dir,
+				})
 			}
 
 			s.Clients.Broadcast(exclude(client), 1, enet.PACKET_FLAG_RELIABLE,
 				nmc.ShotEffects,
 				client.CN,
-				weapon,
+				wpn.ID,
 				id,
-				int32(from[0]*16.0),
-				int32(from[1]*16.0),
-				int32(from[2]*16.0),
-				int32(to[0]*16.0),
-				int32(to[1]*16.0),
-				int32(to[2]*16.0),
+				int32(from[0]*geom.DMF),
+				int32(from[1]*geom.DMF),
+				int32(from[2]*geom.DMF),
+				int32(to[0]*geom.DMF),
+				int32(to[1]*geom.DMF),
+				int32(to[2]*geom.DMF),
 			)
 
 			client.GameState.LastShot = time.Now()
+			client.GameState.ShotDamage += wpn.Damage * wpn.Rays // TODO: quad damage
 
+			switch wpn.ID {
+			case weapon.GrenadeLauncher, weapon.RocketLauncher:
+				// TODO: save somewhere
+			default:
+				// apply damage
+				rays := int32(0)
+				for _, h := range hits {
+					target := s.Clients.GetClientByCN(h.target)
+					if target == nil ||
+						target.GameState.State != playerstate.Alive ||
+						target.GameState.LifeSequence != h.lifeSequence ||
+						h.rays < 1 ||
+						h.distance > wpn.Range+1.0 {
+						continue
+					}
+					rays += h.rays
+					if rays > wpn.Rays {
+						continue
+					}
+					damage := h.rays * wpn.Damage
+					// TODO: quad damage
+					target.applyDamage(client, damage, wpn.ID, h.dir)
+					s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.Damage, target.CN, client.CN, damage, target.GameState.Armour, target.GameState.Health)
+					// TODO: setpushed ???
+					h.dir.Scale(geom.DNF)
+					p := []interface{}{nmc.HitPush, target.CN, wpn.ID, damage, h.dir[0], h.dir[1], h.dir[2]}
+					if target.GameState.Health <= 0 {
+						s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, p...)
+						s.HandleDeath(client, target)
+					} else {
+						client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(p...))
+					}
+				}
+			}
 			// TODO: apply damage of hits
 
 		case nmc.Sound:
@@ -322,11 +389,11 @@ outer:
 				return
 			}
 			if pause == 1 {
-				log.Println("pausing game at", s.TimeLeft/100, "seconds left")
+				log.Println("pausing game at", s.TimeLeft/1000, "seconds left")
 				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PAUSEGAME, 1, client.CN)
 				s.Pause()
 			} else {
-				log.Println("resuming game at", s.TimeLeft/100, "seconds left")
+				log.Println("resuming game at", s.TimeLeft/1000, "seconds left")
 				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PAUSEGAME, 0, client.CN)
 				s.Resume()
 			}
@@ -341,4 +408,12 @@ outer:
 	}
 
 	return
+}
+
+type hit struct {
+	target       uint32
+	lifeSequence int32
+	distance     float64
+	rays         int32
+	dir          *geom.Vector
 }

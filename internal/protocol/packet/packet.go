@@ -36,6 +36,9 @@ func Encode(args ...interface{}) cubecode.Packet {
 			// really want that!
 			p.PutInt(int32(v))
 
+		case float64:
+			p.PutInt(int32(v))
+
 		case byte:
 			p = append(p, v)
 
@@ -57,7 +60,7 @@ func Encode(args ...interface{}) cubecode.Packet {
 		case sound.Sound:
 			p.PutInt(int32(v))
 
-		case weapon.Weapon:
+		case weapon.ID:
 			p.PutInt(int32(v))
 
 		case disconnectreason.DisconnectReason:

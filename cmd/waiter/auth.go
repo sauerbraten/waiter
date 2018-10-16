@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/sauerbraten/waiter/cubecode"
+	"github.com/sauerbraten/waiter/cubecode/sstrings"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
@@ -73,16 +74,7 @@ func (s *Server) handleAuthAnswer(client *Client, domain string, p *cubecode.Pac
 		return
 	}
 	log.Println("sucessful auth by", client.CN)
-	client.Privilege = prvlg
-	client.AuthRequiredBecause = disconnectreason.None
-	pup := s.Clients.PrivilegedUsersPacket()
-	if pup != nil {
-		s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, pup)
-	}
-	switch client.Privilege {
-	case privilege.None:
-		s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '\fs\f5%s\fr'", client.Name, client.Privilege, name))
-	}
+	s.setPrivilege(client, prvlg, name)
 }
 
 func (s *Server) handleGlobalAuthAnswer(client *Client, p *cubecode.Packet) {
@@ -115,20 +107,22 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *cubecode.Packet) {
 	err := ms.ConfirmAuthAnswer(requestID, answer, callback)
 	if err != nil {
 		s.Auth.ClearAuthRequest(requestID)
-		client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, "not connected to authentication server"))
+		client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Error("not connected to authentication server")))
 		return
 	}
 }
 
 func (s *Server) setPrivilege(client *Client, prvlg privilege.Privilege, name string) {
 	client.Privilege = prvlg
-	client.AuthRequiredBecause = disconnectreason.None
-	pup := s.Clients.PrivilegedUsersPacket()
-	if pup != nil {
-		s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, pup)
+	if prvlg > privilege.None {
+		client.AuthRequiredBecause = disconnectreason.None
 	}
+	pup, _ := s.Clients.PrivilegedUsersPacket()
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, pup)
 	switch client.Privilege {
 	case privilege.None:
-		s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '\fs\f5%s\fr'", client.Name, client.Privilege, name))
+		// todo
+	default:
+		s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '%s'", client.Name, client.Privilege, sstrings.Magenta(name)))
 	}
 }

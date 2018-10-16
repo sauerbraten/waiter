@@ -113,7 +113,10 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level
-	p = append(p, cm.PrivilegedUsersPacket())
+	pup, empty := cm.PrivilegedUsersPacket()
+	if !empty {
+		p = append(p, pup)
+	}
 
 	// tell the client what team he was put in by the server
 	p = append(p, nmc.SetTeam, c.CN, c.Team, -1)
@@ -220,22 +223,18 @@ func (cm *ClientManager) PrivilegedUsers() (privileged []*Client) {
 	return
 }
 
-func (cm *ClientManager) PrivilegedUsersPacket() cubecode.Packet {
-	p := []interface{}{nmc.CurrentMaster, s.MasterMode}
+func (cm *ClientManager) PrivilegedUsersPacket() (p cubecode.Packet, noPrivilegedUsers bool) {
+	q := []interface{}{nmc.CurrentMaster, s.MasterMode}
 
 	cm.ForEach(func(c *Client) {
 		if c.Privilege > privilege.None {
-			p = append(p, c.CN, c.Privilege)
+			q = append(q, c.CN, c.Privilege)
 		}
 	})
 
-	p = append(p, -1)
+	q = append(q, -1)
 
-	if len(p) <= 3 {
-		return nil
-	}
-
-	return packet.Encode(p...)
+	return packet.Encode(q...), len(q) <= 3
 }
 
 // Returns the number of connected clients.

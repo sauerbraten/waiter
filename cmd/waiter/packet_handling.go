@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/sauerbraten/waiter/cubecode"
+	"github.com/sauerbraten/waiter/cubecode/sstrings"
 
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
+	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
@@ -130,6 +133,38 @@ outer:
 			} else {
 				s.handleAuthAnswer(client, domain, &p)
 			}
+
+		case nmc.SetMaster:
+			_cn, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read cn from setmaster packet:", p)
+				return
+			}
+			cn := uint32(_cn)
+			toggle, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read toggle from setmaster packet:", p)
+				return
+			}
+			_, ok = p.GetString() // password is not used in this implementation, only auth
+			if !ok {
+				log.Println("could not read password from setmaster packet:", p)
+				return
+			}
+			if toggle != 0 {
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("server only supports claiming master using /auth")))
+				return
+			}
+			target := s.Clients.GetClientByCN(cn)
+			if target == nil {
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail(fmt.Sprintf("no client with CN %d", cn))))
+				return
+			}
+			if client != target && client.Privilege <= target.Privilege {
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("you can't do that")))
+				return
+			}
+			s.setPrivilege(target, privilege.None, "")
 
 		case nmc.Ping:
 			// client pinging server → send pong

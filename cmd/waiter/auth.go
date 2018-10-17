@@ -74,7 +74,7 @@ func (s *Server) handleAuthAnswer(client *Client, domain string, p *cubecode.Pac
 		return
 	}
 	log.Println("sucessful auth by", client.CN)
-	s.setPrivilege(client, prvlg, name)
+	s.setAuthPrivilege(client, prvlg, name)
 }
 
 func (s *Server) handleGlobalAuthAnswer(client *Client, p *cubecode.Packet) {
@@ -100,7 +100,7 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *cubecode.Packet) {
 			if client == nil || client.SessionID != sessionID || !sucess {
 				return
 			}
-			s.setPrivilege(client, privilege.Auth, name)
+			s.setAuthPrivilege(client, privilege.Auth, name)
 		}
 	}(client.SessionID)
 
@@ -112,17 +112,16 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *cubecode.Packet) {
 	}
 }
 
-func (s *Server) setPrivilege(client *Client, prvlg privilege.Privilege, name string) {
+func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.Privilege, name string) {
+	s.setPrivilege(client, prvlg)
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '%s'", s.Clients.UniqueName(client), client.Privilege, sstrings.Magenta(name)))
+}
+
+func (s *Server) setPrivilege(client *Client, prvlg privilege.Privilege) {
 	client.Privilege = prvlg
 	if prvlg > privilege.None {
 		client.AuthRequiredBecause = disconnectreason.None
 	}
 	pup, _ := s.Clients.PrivilegedUsersPacket()
 	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, pup)
-	switch client.Privilege {
-	case privilege.None:
-		// todo
-	default:
-		s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '%s'", client.Name, client.Privilege, sstrings.Magenta(name)))
-	}
 }

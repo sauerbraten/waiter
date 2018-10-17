@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"strconv"
 
 	"github.com/sauerbraten/waiter/cubecode"
+	"github.com/sauerbraten/waiter/cubecode/sstrings"
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
@@ -209,6 +211,9 @@ func (cm *ClientManager) MapChange() {
 			continue
 		}
 		c.GameState.Reset()
+		if c.GameState.State == playerstate.Spectator {
+			continue
+		}
 		c.GameState.Spawn(s.GameMode)
 		c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, c.CN, c.GameState.ToWire()))
 	}
@@ -254,5 +259,20 @@ func (cm *ClientManager) ForEach(do func(c *Client)) {
 			continue
 		}
 		do(c)
+	}
+}
+
+func (cm *ClientManager) UniqueName(c *Client) string {
+	unique := true
+	cm.ForEach(func(_c *Client) {
+		if _c != c && _c.Name == c.Name {
+			unique = false
+		}
+	})
+
+	if unique {
+		return c.Name
+	} else {
+		return c.Name + sstrings.Magenta(" ("+strconv.FormatUint(uint64(c.CN), 10)+")")
 	}
 }

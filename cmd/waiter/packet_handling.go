@@ -11,6 +11,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
@@ -151,7 +152,7 @@ outer:
 				log.Println("could not read password from setmaster packet:", p)
 				return
 			}
-			if toggle != 0 {
+			if cn == client.CN && toggle != 0 {
 				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("server only supports claiming master using /auth")))
 				return
 			}
@@ -164,7 +165,40 @@ outer:
 				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("you can't do that")))
 				return
 			}
-			s.setPrivilege(target, privilege.None, "")
+			switch toggle {
+			case 0:
+				oldPrivilege := target.Privilege
+				s.setPrivilege(target, privilege.None)
+				var msg string
+				if client != target {
+					msg = fmt.Sprintf("%s took away %s privileges from %s", s.Clients.UniqueName(client), oldPrivilege, s.Clients.UniqueName(target))
+				} else {
+					msg = fmt.Sprintf("%s relinquished %s", s.Clients.UniqueName(client), oldPrivilege)
+				}
+				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
+
+			default:
+				s.setPrivilege(target, privilege.Master)
+				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s gave %s privileges to %s", s.Clients.UniqueName(client), privilege.Master, s.Clients.UniqueName(target)))
+			}
+
+		case nmc.MasterMode:
+			_mm, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read mastermode from mastermode packet:", p)
+				return
+			}
+			mm := mastermode.MasterMode(_mm)
+			if mm < mastermode.Open || mm > mastermode.Private {
+				log.Println("invalid mastermode", mm, "requested")
+				return
+			}
+			if client.Privilege == privilege.None {
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("you can't do that")))
+				return
+			}
+			s.MasterMode = mm
+			s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.MasterMode, mm)
 
 		case nmc.Ping:
 			// client pinging server → send pong

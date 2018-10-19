@@ -98,9 +98,9 @@ func (cm *ClientManager) SendServerConfig(c *Client, config *Config) {
 		c.CN,
 		protocol.Version,
 		c.SessionID,
-		config.ServerPassword != "",
+		false,
 		config.ServerDescription,
-		config.AuthDomains[0],
+		config.PrimaryAuthDomain,
 	)
 
 	cm.Send(c, 1, enet.PACKET_FLAG_RELIABLE, p)

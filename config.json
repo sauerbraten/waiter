@@ -18,17 +18,13 @@
 	// maximum number of clients
 	"max_clients": 12,
 
-	// server password (needed to connect to the server)
-	"server_password": "",
-
-	// local auth domains
-	// first one will be used as primary one, e.g. when you enable auth-on-connect and the server is in private mode
-	//"auth_domains": ["dev", "dev:registered_users", "dev:masters", "dev:admins"]
-	"auth_domains": ["waiter"],
-
 	// wether ot not to send client's IPs via netinfo. when set to true, the first 3 bytes of the IPs will be sent (e.g. 53.253.53.0),
 	// otherwise, "0.0.0.0" will be sent for every client.
 	"send_client_ips_via_extinfo": true,
 
-	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things do not work!\fr\nvisit github.com/sauerbraten/waiter for more information and source code"
+	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things do not work!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
+
+	"game_duration_in_minutes": 5,
+
+	"primary_auth_domain": "waiter"
 }

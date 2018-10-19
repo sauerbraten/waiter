@@ -73,39 +73,33 @@ outer:
 				log.Println("could not read name from join packet:", p)
 				return
 			}
-
 			playerModel, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read player model ID from join packet:", p)
 				return
 			}
-
-			hash, ok := p.GetString()
+			_, ok = p.GetString() // this server does not support a server password
 			if !ok {
 				log.Println("could not read hash from join packet:", p)
 				return
 			}
-
 			authDomain, ok := p.GetString()
 			if !ok {
 				log.Println("could not read auth domain from join packet:", p)
 				return
 			}
-
 			authName, ok := p.GetString()
 			if !ok {
 				log.Println("could not read auth name from join packet:", p)
 				return
 			}
-
-			if !s.IsAllowedToJoin(client, hash, authDomain, authName) {
-				s.Clients.Disconnect(client, disconnectreason.Password) // TODO: check if correct
-			}
-
 			s.Clients.Join(client, name, playerModel)
 			s.Clients.SendWelcome(client)
 			s.Clients.InformOthersOfJoin(client)
 			client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, s.MessageOfTheDay))
+			if authDomain != "" && authName != "" {
+				s.handleAuthRequest(client, authDomain, authName)
+			}
 
 		case nmc.AuthTry:
 			log.Println("got auth try:", p)
@@ -114,15 +108,18 @@ outer:
 				log.Println("could not read domain from auth try packet:", p)
 				continue
 			}
+			name, ok := p.GetString()
+			if !ok {
+				log.Println("could not read name from auth try packet:", p)
+				return
+			}
 			if domain == "" {
-				s.handleGlobalAuthRequest(client, &p)
+				s.handleGlobalAuthRequest(client, name)
 			} else {
-				s.handleAuthRequest(client, domain, &p)
+				s.handleAuthRequest(client, domain, name)
 			}
 
 		case nmc.AuthAnswer:
-			log.Println("got auth answer:", p)
-
 			// client sends answer to auth challenge
 			domain, ok := p.GetString()
 			if !ok {
@@ -289,7 +286,7 @@ outer:
 			if !ok {
 				break
 			}
-			client.Packets.Publish(nmc.ChangeWeapon, selected)
+			client.Packets.Publish(nmc.ChangeWeapon, selected.ID)
 
 		case nmc.Shoot:
 			id, ok := p.GetInt()

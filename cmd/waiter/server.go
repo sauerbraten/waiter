@@ -5,7 +5,6 @@ import (
 
 	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
-	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/protocol/enet"
@@ -19,21 +18,6 @@ type Server struct {
 	relay   *Relay
 	Clients *ClientManager
 	Auth    *auth.Manager
-}
-
-func (s *Server) IsAllowedToJoin(c *Client, hash string, authDomain string, authName string) bool {
-	// TODO: check server password hash
-
-	// check for mandatory connect auth
-	if c.AuthRequiredBecause > disconnectreason.None {
-		if authDomain != s.AuthDomains[0] {
-			return false
-		}
-
-		// TODO: try to authenticate the client
-	}
-
-	return true
 }
 
 func (s *Server) Intermission() {

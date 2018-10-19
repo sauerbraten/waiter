@@ -6,19 +6,19 @@ import (
 	"github.com/sauerbraten/waiter/internal/pausableticker"
 )
 
-const DefaultMapDuration = 1 * time.Minute // for testing and debugging purposes
-
 type GameTimer struct {
 	TimeLeft int32 // in milliseconds
 
 	ticker       *pausableticker.Ticker
+	duration     time.Duration
 	intermission func()
 }
 
-func NewGameTimer(intermission func()) *GameTimer {
+func NewGameTimer(duration time.Duration, intermission func()) *GameTimer {
 	return &GameTimer{
-		TimeLeft:     int32(DefaultMapDuration / time.Millisecond),
+		TimeLeft:     int32(duration / time.Millisecond),
 		ticker:       pausableticker.NewTicker(100 * time.Millisecond),
+		duration:     duration,
 		intermission: intermission,
 	}
 }
@@ -41,7 +41,7 @@ func (t *GameTimer) Stop() {
 
 func (t *GameTimer) Reset() {
 	t.Stop()
-	*t = *NewGameTimer(t.intermission) // swap out the GameTimer t points to
+	*t = *NewGameTimer(t.duration, t.intermission) // swap out the GameTimer t points to
 }
 
 func (t *GameTimer) run() {

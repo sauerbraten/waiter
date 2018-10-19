@@ -13,13 +13,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/protocol/packet"
 )
 
-func (s *Server) handleAuthRequest(client *Client, domain string, p *cubecode.Packet) {
-	name, ok := p.GetString()
-	if !ok {
-		log.Println("could not read name from auth try packet:", p)
-		return
-	}
-
+func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
 	challenge, requestID, err := s.Auth.GenerateChallenge(client.CN, domain, name)
 	if err != nil {
 		log.Println(err)
@@ -29,13 +23,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, p *cubecode.Pa
 	client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.AuthChallenge, domain, requestID, challenge))
 }
 
-func (s *Server) handleGlobalAuthRequest(client *Client, p *cubecode.Packet) {
-	name, ok := p.GetString()
-	if !ok {
-		log.Println("could not read name from auth try packet:", p)
-		return
-	}
-
+func (s *Server) handleGlobalAuthRequest(client *Client, name string) {
 	requestID := s.Auth.RegisterAuthRequest(client.CN, "", name, privilege.Auth)
 
 	callback := func(sessionID int32) func(string) {

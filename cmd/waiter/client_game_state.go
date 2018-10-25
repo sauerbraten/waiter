@@ -52,7 +52,7 @@ func (gs *GameState) ToWire() []byte {
 }
 
 // Sets GameState properties to the initial values depending on the mode.
-func (gs *GameState) Spawn(mode gamemode.GameMode) {
+func (gs *GameState) Spawn(mode gamemode.ID) {
 	gs.QuadTimeLeft = 0
 	gs.GunReloadEnd = time.Time{}
 	gs.Tokens = 0
@@ -107,6 +107,15 @@ func (gs *GameState) applyDamage(damage int32) {
 	gs.Armour -= damageToArmour
 	damage -= damageToArmour
 	gs.Health -= damage
+}
+
+func (gs *GameState) Die() {
+	if gs.State != playerstate.Alive {
+		return
+	}
+	gs.State = playerstate.Dead
+	gs.Deaths++
+	gs.LastDeath = time.Now()
 }
 
 // Resets a client's game state.

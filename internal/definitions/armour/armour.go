@@ -25,7 +25,7 @@ func Absorption(typ Armour) int32 {
 	}
 }
 
-func SpawnArmour(mode gamemode.GameMode) (Armour, int32) {
+func SpawnArmour(mode gamemode.ID) (Armour, int32) {
 	switch mode {
 	case gamemode.Insta, gamemode.InstaTeam, gamemode.InstaCTF, gamemode.InstaProtect, gamemode.InstaHold, gamemode.InstaCollect:
 		return None, 0

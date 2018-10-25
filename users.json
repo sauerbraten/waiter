@@ -1,11 +1,11 @@
 [
 	{
-        "name": "pix",
-        "domain": "waiter",
-        "public_key": {
-                "x": "6a3913aa4e4a7a45aa890d289dfe099ed7825a80927c2edb",
-                "y": "4dc4740fd32e91326cdcb2c8ee9d5eed4bb080def0e2b329"
-        },
-        "privilege": "admin"
+                "name": "pix",
+                "domain": "waiter",
+                "public_key": {
+                        "x": "6a3913aa4e4a7a45aa890d289dfe099ed7825a80927c2edb",
+                        "y": "4dc4740fd32e91326cdcb2c8ee9d5eed4bb080def0e2b329"
+                },
+                "privilege": "admin"
 	}
 ]

@@ -18,6 +18,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	mrand "math/rand"
 
@@ -71,6 +72,7 @@ func (m *Manager) LookupAuthName(requestID uint32) (string, bool) {
 func (m *Manager) ClearAuthRequest(requestID uint32) { delete(m.pending, requestID) }
 
 func (m *Manager) GenerateChallenge(cn uint32, domain, name string) (challenge string, requestID uint32, err error) {
+	log.Println("generating challenge for", name, domain)
 	u, ok := m.users[UserIdentifier{Name: name, Domain: domain}]
 	if !ok {
 		return "", 0, errors.New("auth: user not found")

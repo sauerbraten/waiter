@@ -7,11 +7,11 @@ import (
 
 	"github.com/sauerbraten/jsonfile"
 
-	"github.com/sauerbraten/waiter/cubecode"
+	"github.com/sauerbraten/waiter/protocol"
+
 	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/bans"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/masterserver"
@@ -62,8 +62,8 @@ func init() {
 		Config: conf,
 		State: &State{
 			MasterMode:  mastermode.Open,
-			GameMode:    gamemode.Effic,
-			Map:         maprotation.NextMap(gamemode.Effic, ""),
+			GameMode:    GameModeByID(conf.FallbackGameMode),
+			Map:         maprotation.NextMap(conf.FallbackGameMode, ""),
 			NotGotItems: false,
 			UpSince:     time.Now(),
 			NumClients:  cs.NumberOfClientsConnected,
@@ -149,7 +149,7 @@ func main() {
 				continue
 			}
 
-			s.handlePacket(client, event.ChannelID, cubecode.Packet(event.Packet.Data))
+			s.handlePacket(client, event.ChannelID, protocol.Packet(event.Packet.Data))
 		}
 
 		host.Flush()

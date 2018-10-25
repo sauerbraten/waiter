@@ -7,28 +7,36 @@ const (
 	DMF = 16.0
 )
 
-type Vector [3]float64
+type Vector struct {
+	x, y, z float64
+}
+
+func NewVector(x, y, z float64) *Vector {
+	return &Vector{x, y, z}
+}
+
+func (v *Vector) X() float64 { return v.x }
+func (v *Vector) Y() float64 { return v.y }
+func (v *Vector) Z() float64 { return v.z }
+
+func (v *Vector) IsZero() bool { return v.x == 0 && v.y == 0 && v.z == 0 }
 
 func (v *Vector) Magnitude() float64 {
-	return math.Sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])
+	return math.Sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
 }
 
 func (v *Vector) Sub(o *Vector) *Vector {
-	v[0] -= o[0]
-	v[1] -= o[1]
-	v[2] -= o[2]
+	v.x -= o.x
+	v.y -= o.y
+	v.z -= o.z
 	return v
 }
 
 func (v *Vector) Mul(k float64) *Vector {
-	v[0] *= k
-	v[1] *= k
-	v[2] *= k
+	v.x *= k
+	v.y *= k
+	v.z *= k
 	return v
-}
-
-func Distance(from, to *Vector) float64 {
-	return from.Sub(to).Magnitude()
 }
 
 func (v *Vector) Scale(k float64) *Vector {
@@ -36,4 +44,8 @@ func (v *Vector) Scale(k float64) *Vector {
 		v.Mul(k / mag)
 	}
 	return v
+}
+
+func Distance(from, to *Vector) float64 {
+	return from.Sub(to).Magnitude()
 }

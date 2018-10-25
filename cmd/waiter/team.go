@@ -2,7 +2,8 @@ package main
 
 type Team struct {
 	Name    string
-	Score   int
+	Frags   int
+	Score   func() int
 	Players []*Client
 }
 
@@ -11,7 +12,7 @@ type ByScore []*Team
 
 func (teams ByScore) Len() int           { return len(teams) }
 func (teams ByScore) Swap(i, j int)      { teams[i], teams[j] = teams[j], teams[i] }
-func (teams ByScore) Less(i, j int) bool { return teams[i].Score < teams[j].Score }
+func (teams ByScore) Less(i, j int) bool { return teams[i].Score() < teams[j].Score() }
 
 // sorts teams ascending by the number of players
 type BySize []*Team

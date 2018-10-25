@@ -4,7 +4,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/sauerbraten/waiter/cubecode"
+	"github.com/sauerbraten/waiter/protocol"
+
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
@@ -15,8 +16,8 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 )
 
-func Encode(args ...interface{}) cubecode.Packet {
-	p := make(cubecode.Packet, 0, len(args))
+func Encode(args ...interface{}) protocol.Packet {
+	p := make(protocol.Packet, 0, len(args))
 
 	for _, arg := range args {
 		switch v := arg.(type) {
@@ -45,7 +46,7 @@ func Encode(args ...interface{}) cubecode.Packet {
 		case armour.Armour:
 			p.PutInt(int32(v))
 
-		case gamemode.GameMode:
+		case gamemode.ID:
 			p.PutInt(int32(v))
 
 		case mastermode.MasterMode:
@@ -69,7 +70,7 @@ func Encode(args ...interface{}) cubecode.Packet {
 		case []byte:
 			p = append(p, v...)
 
-		case cubecode.Packet:
+		case protocol.Packet:
 			p = append(p, v...)
 
 		case net.IP:

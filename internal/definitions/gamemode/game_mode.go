@@ -1,9 +1,9 @@
 package gamemode
 
-type GameMode int32
+type ID int32
 
 const (
-	FFA GameMode = iota
+	FFA ID = iota
 	CoopEdit
 	Teamplay
 	Insta

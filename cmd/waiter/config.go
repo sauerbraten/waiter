@@ -1,6 +1,10 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
+)
 
 const (
 	GLOBAL_AUTH_DOMAIN = ""
@@ -13,6 +17,7 @@ type Config struct {
 	MasterServerAddress string `json:"master_server_address"`
 	MasterServerPort    int    `json:"master_server_port"`
 
+	FallbackGameMode        gamemode.ID   `json:"fallback_game_mode"`
 	ServerDescription       string        `json:"server_description"`
 	MaxClients              int           `json:"max_clients"`
 	SendClientIPsViaExtinfo bool          `json:"send_client_ips_via_extinfo"`

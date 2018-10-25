@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sauerbraten/waiter/cubecode"
-	"github.com/sauerbraten/waiter/cubecode/sstrings"
+	"github.com/sauerbraten/waiter/protocol"
+	"github.com/sauerbraten/waiter/protocol/cubecode"
+
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
@@ -43,7 +44,7 @@ func (s *Server) handleGlobalAuthRequest(client *Client, name string) {
 	}
 }
 
-func (s *Server) handleAuthAnswer(client *Client, domain string, p *cubecode.Packet) {
+func (s *Server) handleAuthAnswer(client *Client, domain string, p *protocol.Packet) {
 	requestID, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read request ID from auth answer packet:", p)
@@ -61,11 +62,11 @@ func (s *Server) handleAuthAnswer(client *Client, domain string, p *cubecode.Pac
 		}
 		return
 	}
-	log.Println("sucessful auth by", client.CN)
+	log.Printf("successful auth by %s (%d)\n", name, client.CN)
 	s.setAuthPrivilege(client, prvlg, name)
 }
 
-func (s *Server) handleGlobalAuthAnswer(client *Client, p *cubecode.Packet) {
+func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 	_requestID, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read request ID from auth answer packet:", p)
@@ -95,14 +96,14 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *cubecode.Packet) {
 	err := ms.ConfirmAuthAnswer(requestID, answer, callback)
 	if err != nil {
 		s.Auth.ClearAuthRequest(requestID)
-		client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Error("not connected to authentication server")))
+		client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Error("not connected to authentication server")))
 		return
 	}
 }
 
 func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.Privilege, name string) {
 	s.setPrivilege(client, prvlg)
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '%s'", s.Clients.UniqueName(client), client.Privilege, sstrings.Magenta(name)))
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '%s'", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name)))
 }
 
 func (s *Server) setPrivilege(client *Client, prvlg privilege.Privilege) {

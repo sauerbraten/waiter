@@ -1,4 +1,4 @@
-package sstrings
+package cubecode
 
 // from engine/rendertext.cpp
 const (

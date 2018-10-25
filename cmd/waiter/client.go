@@ -79,6 +79,11 @@ func (c *Client) applyDamage(attacker *Client, damage int32, weapon weapon.ID, d
 	// TODO
 }
 
+func (c *Client) Die() {
+	c.Position.Publish()
+	c.GameState.Die()
+}
+
 // Resets the client object. Keeps the client's CN, so low CNs can be reused.
 func (c *Client) Reset() {
 	c.Name = ""

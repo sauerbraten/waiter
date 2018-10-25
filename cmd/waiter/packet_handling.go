@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/sauerbraten/waiter/cubecode"
-	"github.com/sauerbraten/waiter/cubecode/sstrings"
+	"github.com/sauerbraten/waiter/protocol"
+	"github.com/sauerbraten/waiter/protocol/cubecode"
 
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
@@ -20,7 +20,7 @@ import (
 )
 
 // parses a packet and decides what to do based on the network message code at the front of the packet
-func (s *Server) handlePacket(client *Client, channelID uint8, p cubecode.Packet) {
+func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet) {
 	// this implementation does not support channel 2 (for coop edit purposes) yet.
 	if client == nil || channelID > 1 {
 		return
@@ -150,16 +150,16 @@ outer:
 				return
 			}
 			if cn == client.CN && toggle != 0 {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("server only supports claiming master using /auth")))
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("server only supports claiming master using /auth")))
 				return
 			}
 			target := s.Clients.GetClientByCN(cn)
 			if target == nil {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail(fmt.Sprintf("no client with CN %d", cn))))
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("no client with CN %d", cn))))
 				return
 			}
 			if client != target && client.Privilege <= target.Privilege {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("you can't do that")))
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("you can't do that")))
 				return
 			}
 			switch toggle {
@@ -191,7 +191,7 @@ outer:
 				return
 			}
 			if client.Privilege == privilege.None {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, sstrings.Fail("you can't do that")))
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("you can't do that")))
 				return
 			}
 			s.MasterMode = mm
@@ -248,7 +248,7 @@ outer:
 				return
 			}
 			client.GameState.Respawn()
-			client.GameState.Spawn(s.GameMode)
+			client.GameState.Spawn(s.GameMode.ID())
 			client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, client.CN, client.GameState.ToWire()))
 
 		case nmc.ConfirmSpawn:
@@ -289,155 +289,24 @@ outer:
 			client.Packets.Publish(nmc.ChangeWeapon, selected.ID)
 
 		case nmc.Shoot:
-			id, ok := p.GetInt()
+			wpn, id, from, to, hits, ok := parseShoot(client, &p)
 			if !ok {
-				log.Println("could not read shot ID from shoot packet:", p)
 				return
 			}
+			log.Println(wpn, id, from, to, hits, ok)
+			s.HandleShoot(client, wpn, id, from, to, hits)
+			break
 
-			weaponID, ok := p.GetInt()
+		case nmc.Explode:
+			millis, wpn, id, hits, ok := parseExplode(client, &p)
 			if !ok {
-				log.Println("could not read weapon ID from shoot packet:", p)
 				return
 			}
-			wpn, ok := weapon.ByID[weapon.ID(weaponID)]
-			if !ok {
-				log.Println("invalid weapon ID in shoot packet:", weaponID)
-				return
-			}
+			log.Println(millis, wpn, id, hits, ok)
+			s.HandleExplode(client, millis, wpn, id, hits)
 
-			if time.Now().Before(client.GameState.GunReloadEnd) || client.GameState.Ammo[wpn.ID] <= 0 {
-				continue
-			}
-
-			from := &geom.Vector{}
-			for i := 0; i < 3; i++ {
-				coord, ok := p.GetInt()
-				if !ok {
-					log.Println("could not read shot origin ('from') from shoot packet:", p)
-					return
-				}
-				from[i] = float64(coord) / 16.0
-			}
-
-			to := &geom.Vector{}
-			for i := 0; i < 3; i++ {
-				coord, ok := p.GetInt()
-				if !ok {
-					log.Println("could not read shot destination ('to') from shoot packet:", p)
-					return
-				}
-				to[i] = float64(coord) / 16.0
-			}
-
-			if dist := geom.Distance(from, to); dist > wpn.Range+1.0 {
-				log.Println("shot distance out of weapon's range: distane =", dist, "range =", wpn.Range+1)
-			}
-
-			numHits, ok := p.GetInt()
-			if !ok {
-				log.Println("could not read number of hits from shoot packet:", p)
-				return
-			}
-
-			hits := make([]hit, 0, numHits)
-			for i := int32(0); i < numHits; i++ {
-				_target, ok := p.GetInt()
-				if !ok {
-					log.Println("could not read target of hit", i+1, "from shoot packet:", p)
-					return
-				}
-				target := uint32(_target)
-
-				lifeSequence, ok := p.GetInt()
-				if !ok {
-					log.Println("could not read life sequence of hit", i+1, "from shoot packet:", p)
-					return
-				}
-
-				_distance, ok := p.GetInt()
-				if !ok {
-					log.Println("could not read distance of hit", i+1, "from shoot packet:", p)
-					return
-				}
-				distance := float64(_distance) / 16.0
-
-				rays, ok := p.GetInt()
-				if !ok {
-					log.Println("could not read rays of hit", i+1, "from shoot packet:", p)
-					return
-				}
-
-				dir := &geom.Vector{}
-				for i := 0; i < 3; i++ {
-					angle, ok := p.GetInt()
-					if !ok {
-						log.Println("could not read shot destination ('to') from shoot packet:", p)
-						return
-					}
-					dir[i] = float64(angle) / 100.0
-				}
-
-				hits = append(hits, hit{
-					target:       target,
-					lifeSequence: lifeSequence,
-					distance:     distance,
-					rays:         rays,
-					dir:          dir,
-				})
-			}
-
-			s.Clients.Broadcast(exclude(client), 1, enet.PACKET_FLAG_RELIABLE,
-				nmc.ShotEffects,
-				client.CN,
-				wpn.ID,
-				id,
-				int32(from[0]*geom.DMF),
-				int32(from[1]*geom.DMF),
-				int32(from[2]*geom.DMF),
-				int32(to[0]*geom.DMF),
-				int32(to[1]*geom.DMF),
-				int32(to[2]*geom.DMF),
-			)
-
-			client.GameState.LastShot = time.Now()
-			client.GameState.ShotDamage += wpn.Damage * wpn.Rays // TODO: quad damage
-
-			switch wpn.ID {
-			case weapon.GrenadeLauncher, weapon.RocketLauncher:
-				// TODO: save somewhere
-			default:
-				// apply damage
-				rays := int32(0)
-				for _, h := range hits {
-					target := s.Clients.GetClientByCN(h.target)
-					if target == nil ||
-						target.GameState.State != playerstate.Alive ||
-						target.GameState.LifeSequence != h.lifeSequence ||
-						h.rays < 1 ||
-						h.distance > wpn.Range+1.0 {
-						continue
-					}
-					rays += h.rays
-					if rays > wpn.Rays {
-						continue
-					}
-					damage := h.rays * wpn.Damage
-					// TODO: quad damage
-					target.applyDamage(client, damage, wpn.ID, h.dir)
-					s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.Damage, target.CN, client.CN, damage, target.GameState.Armour, target.GameState.Health)
-					// TODO: setpushed ???
-					h.dir.Scale(geom.DNF)
-					p := []interface{}{nmc.HitPush, target.CN, wpn.ID, damage, h.dir[0], h.dir[1], h.dir[2]}
-					if target.GameState.Health <= 0 {
-						s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, p...)
-						s.HandleDeath(client, target)
-					} else {
-						client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(p...))
-					}
-				}
-			}
-			// TODO: apply damage of hits
+		case nmc.Suicide:
+			s.handleSuicide(client)
 
 		case nmc.Sound:
 			sound, ok := p.GetInt()
@@ -476,10 +345,125 @@ outer:
 	return
 }
 
-type hit struct {
-	target       uint32
-	lifeSequence int32
-	distance     float64
-	rays         int32
-	dir          *geom.Vector
+func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {
+	id, ok := p.GetInt()
+	if !ok {
+		log.Println("could not read shot ID from shoot packet:", p)
+		return
+	}
+	weaponID, ok := p.GetInt()
+	if !ok {
+		log.Println("could not read weapon ID from shoot packet:", p)
+		return
+	}
+	wpn, ok = weapon.ByID[weapon.ID(weaponID)]
+	if !ok {
+		log.Println("invalid weapon ID in shoot packet:", weaponID)
+		return
+	}
+	if time.Now().Before(client.GameState.GunReloadEnd) || client.GameState.Ammo[wpn.ID] <= 0 {
+		return
+	}
+	_from := [3]float64{}
+	for i := range _from {
+		coord, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read shot origin ('from') from shoot packet:", p)
+			return
+		}
+		_from[i] = float64(coord)
+	}
+	from = geom.NewVector(_from[0], _from[1], _from[2]).Mul(1 / geom.DMF)
+	_to := [3]float64{}
+	for i := range _to {
+		coord, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read shot destination ('to') from shoot packet:", p)
+			return
+		}
+		_to[i] = float64(coord)
+	}
+	to = geom.NewVector(_to[0], _to[1], _to[2]).Mul(1 / geom.DMF)
+	if dist := geom.Distance(from, to); dist > wpn.Range+1.0 {
+		log.Println("shot distance out of weapon's range: distane =", dist, "range =", wpn.Range+1)
+	}
+	numHits, ok := p.GetInt()
+	if !ok {
+		log.Println("could not read number of hits from shoot packet:", p)
+		return
+	}
+	hits, success = parseHits(numHits, p)
+	return
+}
+
+func parseExplode(client *Client, p *protocol.Packet) (millis int32, wpn weapon.Weapon, id int32, hits []hit, success bool) {
+	millis, ok := p.GetInt()
+	if !ok {
+		log.Println("could not read millis from explode packet:", p)
+		return
+	}
+	weaponID, ok := p.GetInt()
+	if !ok {
+		log.Println("could not read weapon ID from explode packet:", p)
+		return
+	}
+	wpn, ok = weapon.ByID[weapon.ID(weaponID)]
+	id, ok = p.GetInt()
+	if !ok {
+		log.Println("could not read explosion ID from explode packet:", p)
+		return
+	}
+	numHits, ok := p.GetInt()
+	if !ok {
+		log.Println("could not read number of hits from explode packet:", p)
+		return
+	}
+	hits, success = parseHits(numHits, p)
+	return
+}
+
+func parseHits(num int32, p *protocol.Packet) (hits []hit, ok bool) {
+	hits = make([]hit, num)
+	for i := range hits {
+		_target, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read target of hit", i+1, "from shoot/explode packet:", p)
+			return nil, false
+		}
+		target := uint32(_target)
+		lifeSequence, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read life sequence of hit", i+1, "from shoot/explode packet:", p)
+			return nil, false
+		}
+		_distance, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read distance of hit", i+1, "from shoot/explode packet:", p)
+			return nil, false
+		}
+		distance := float64(_distance) / geom.DMF
+		rays, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read rays of hit", i+1, "from shoot/explode packet:", p)
+			return nil, false
+		}
+		_dir := [3]float64{}
+		for i := range _dir {
+			angle, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read direction of hit", i+1, "from shoot/explode packet:", p)
+				return nil, false
+			}
+			_dir[i] = float64(angle)
+		}
+		dir := geom.NewVector(_dir[0], _dir[1], _dir[2]).Mul(1 / geom.DNF)
+		hits[i] = hit{
+			target:       target,
+			lifeSequence: lifeSequence,
+			distance:     distance,
+			rays:         rays,
+			dir:          dir,
+		}
+	}
+	return hits, true
 }

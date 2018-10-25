@@ -4,14 +4,14 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/sauerbraten/waiter/cubecode"
-	"github.com/sauerbraten/waiter/cubecode/sstrings"
+	"github.com/sauerbraten/waiter/protocol"
+	"github.com/sauerbraten/waiter/protocol/cubecode"
+
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/protocol"
 	"github.com/sauerbraten/waiter/internal/protocol/enet"
 	"github.com/sauerbraten/waiter/internal/protocol/packet"
 )
@@ -110,7 +110,7 @@ func (cm *ClientManager) SendServerConfig(c *Client, config *Config) {
 func (cm *ClientManager) SendWelcome(c *Client) {
 	p := []interface{}{
 		nmc.Welcome,
-		nmc.MapChange, s.Map, s.GameMode, s.NotGotItems, // currently played mode & map
+		nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems, // currently played mode & map
 		nmc.TimeLeft, s.TimeLeft / 1000, // time left in this round
 	}
 
@@ -156,7 +156,7 @@ func (cm *ClientManager) Join(c *Client, name string, playerModel int32) {
 	c.Name = name
 	c.PlayerModel = playerModel
 
-	c.GameState.Spawn(s.GameMode)
+	c.GameState.Spawn(s.GameMode.ID())
 
 	if s.MasterMode == mastermode.Locked {
 		c.GameState.State = playerstate.Spectator
@@ -214,7 +214,7 @@ func (cm *ClientManager) MapChange() {
 		if c.GameState.State == playerstate.Spectator {
 			continue
 		}
-		c.GameState.Spawn(s.GameMode)
+		c.GameState.Spawn(s.GameMode.ID())
 		c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, c.CN, c.GameState.ToWire()))
 	}
 }
@@ -228,7 +228,7 @@ func (cm *ClientManager) PrivilegedUsers() (privileged []*Client) {
 	return
 }
 
-func (cm *ClientManager) PrivilegedUsersPacket() (p cubecode.Packet, noPrivilegedUsers bool) {
+func (cm *ClientManager) PrivilegedUsersPacket() (p protocol.Packet, noPrivilegedUsers bool) {
 	q := []interface{}{nmc.CurrentMaster, s.MasterMode}
 
 	cm.ForEach(func(c *Client) {
@@ -270,9 +270,8 @@ func (cm *ClientManager) UniqueName(c *Client) string {
 		}
 	})
 
-	if unique {
-		return c.Name
-	} else {
-		return c.Name + sstrings.Magenta(" ("+strconv.FormatUint(uint64(c.CN), 10)+")")
+	if !unique {
+		return c.Name + cubecode.Magenta(" ("+strconv.FormatUint(uint64(c.CN), 10)+")")
 	}
+	return c.Name
 }

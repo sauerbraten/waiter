@@ -12,6 +12,9 @@
 	"master_server_port": 28787,
 
 
+	// default game mode (3 = insta, 5 = effic)
+	"fallback_game_mode": 5,
+
 	// server description
 	"server_description": "pix's dev server",
 
@@ -24,7 +27,7 @@
 
 	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things do not work!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
 
-	"game_duration_in_minutes": 5,
+	"game_duration_in_minutes": 1,
 
 	"primary_auth_domain": "waiter"
 }

@@ -1,9 +1,7 @@
-package cubecode
+package protocol
 
 import (
-	"bytes"
-	"regexp"
-	"strings"
+	"github.com/sauerbraten/waiter/protocol/cubecode"
 )
 
 // Packet represents a Sauerbraten UDP packet.
@@ -36,7 +34,7 @@ func (p *Packet) PutUint(v uint32) {
 // PutInt writes a string to the packet buffer, encoding it with Sauer's conversion table at the same time.
 func (p *Packet) PutString(s string) {
 	for _, c := range s {
-		p.PutInt(uni2Cube[c])
+		p.PutInt(cubecode.FromUnicode(c))
 	}
 	(*p) = append(*p, 0x00)
 }
@@ -121,22 +119,16 @@ func (p *Packet) GetUint() (v uint32, ok bool) {
 
 // GetString returns a string of the next bytes up to 0x00.
 func (p *Packet) GetString() (s string, ok bool) {
-	end := bytes.IndexByte(*p, 0x00)
-	if end < 0 {
-		return s, false
+	var cpoint int32
+	for {
+		cpoint, ok = p.GetInt()
+		if !ok {
+			return s, false
+		}
+		if cpoint == 0 {
+			return s, true
+		}
+		s += string(cubecode.ToUnicode(cpoint))
 	}
-	for _, i := range (*p)[:end] {
-		s += string(cubeToUni[i])
-	}
-	(*p) = (*p)[end+1:]
 	return s, true
-}
-
-// Matches sauer color codes (sauer uses form feed followed by a digit, e.g. \f3 for red)
-var sauerStringsSanitizer = regexp.MustCompile("\\f.")
-
-// SanitizeString returns the string, cleared of sauer color codes like \f3 for red.
-func SanitizeString(s string) string {
-	s = sauerStringsSanitizer.ReplaceAllLiteralString(s, "")
-	return strings.TrimSpace(s)
 }

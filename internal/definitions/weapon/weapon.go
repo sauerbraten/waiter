@@ -44,21 +44,21 @@ type Weapon struct {
 	Range           float64
 	Rays            int32
 	HitPush         int32
-	ExplosionRadius int32
+	ExplosionRadius float64
 	TimeToLive      int32
 }
 
 var ByID = map[ID]Weapon{
-	Saw:             Weapon{Saw, sound.Saw, 250, 50, 0, 0, 0, 14, 1, 80, 0, 0},
-	Shotgun:         Weapon{Shotgun, sound.Shotgun, 1400, 10, 400, 0, 20, 1024, 20, 80, 0, 0},
-	Minigun:         Weapon{Minigun, sound.Minigun, 100, 30, 100, 0, 7, 1024, 1, 80, 0, 0},
-	RocketLauncher:  Weapon{RocketLauncher, sound.RocketLaunch, 800, 120, 0, 320, 10, 1024, 1, 160, 40, 0},
-	Rifle:           Weapon{Rifle, sound.Rifle, 1500, 100, 0, 0, 30, 2048, 1, 80, 0, 0},
-	GrenadeLauncher: Weapon{GrenadeLauncher, sound.GrenadeLaunch, 600, 90, 0, 200, 10, 1024, 1, 250, 45, 1500},
-	Pistol:          Weapon{Pistol, sound.Pistol, 500, 35, 50, 0, 7, 1024, 1, 80, 0, 0},
+	Saw:             Weapon{Saw, sound.Saw, 250, 50, 0, 0, 0, 14, 1, 80, 0.0, 0},
+	Shotgun:         Weapon{Shotgun, sound.Shotgun, 1400, 10, 400, 0, 20, 1024, 20, 80, 0.0, 0},
+	Minigun:         Weapon{Minigun, sound.Minigun, 100, 30, 100, 0, 7, 1024, 1, 80, 0.0, 0},
+	RocketLauncher:  Weapon{RocketLauncher, sound.RocketLaunch, 800, 120, 0, 320, 10, 1024, 1, 160, 40.0, 0},
+	Rifle:           Weapon{Rifle, sound.Rifle, 1500, 100, 0, 0, 30, 2048, 1, 80, 0.0, 0},
+	GrenadeLauncher: Weapon{GrenadeLauncher, sound.GrenadeLaunch, 600, 90, 0, 200, 10, 1024, 1, 250, 45.0, 1500},
+	Pistol:          Weapon{Pistol, sound.Pistol, 500, 35, 50, 0, 7, 1024, 1, 80, 0.0, 0},
 }
 
-func SpawnAmmo(mode gamemode.GameMode) map[ID]int32 {
+func SpawnAmmo(mode gamemode.ID) map[ID]int32 {
 	switch mode {
 	case gamemode.Insta, gamemode.InstaTeam, gamemode.InstaCTF, gamemode.InstaProtect, gamemode.InstaHold, gamemode.InstaCollect:
 		return map[ID]int32{
@@ -116,3 +116,8 @@ func FlattenAmmo(m map[ID]int32) (values []int32) {
 
 	return
 }
+
+const (
+	ExplosionDistanceScale   = 1.5
+	ExplosionSelfDamageScale = 0.5
+)

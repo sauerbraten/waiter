@@ -1,4 +1,4 @@
-package packet
+package cubecode
 
 // conversion table: cubecode → unicode (i.e. using the cubecode code point as index)
 // cubecode is a small subset of unicode containing selected characters from the Basic Latin, Latin-1 Supplement,
@@ -65,10 +65,17 @@ var cubeToUni = [256]rune{
 	'Ґ', 'ґ',
 }
 
+func ToUnicode(cpoint int32) rune {
+	if !(-1 < cpoint && cpoint < 256) {
+		return '�'
+	}
+	return cubeToUni[cpoint]
+}
+
 // conversion table: unicode → cubecode (i.e. using the unicode code point as key)
 // reverse of cubeToUni.
 // example: you want to send 'ø', uni2Cube['ø'] → 152, 152 should be encoded in the packet using PutInt().
-var uni2Cube = map[rune]int32{
+var uniToCube = map[rune]int32{
 	// Basic Latin (deliberately omitting most control characters)
 	'\x00': 0,
 	// Latin-1 Supplement (letters only)
@@ -333,4 +340,8 @@ var uni2Cube = map[rune]int32{
 	'є': 253,
 	'Ґ': 254,
 	'ґ': 255,
+}
+
+func FromUnicode(r rune) int32 {
+	return uniToCube[r]
 }

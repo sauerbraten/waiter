@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sauerbraten/cubecode"
+	"github.com/sauerbraten/waiter/protocol"
 
-	"github.com/sauerbraten/waiter/internal/protocol"
 	"github.com/sauerbraten/waiter/internal/protocol/packet"
 	"github.com/sauerbraten/waiter/internal/utils"
 )
@@ -62,7 +61,7 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 	log.Println("listening for info requests on", laddr.String())
 
 	for {
-		p := make(cubecode.Packet, 16)
+		p := make(protocol.Packet, 16)
 		n, raddr, err := conn.ReadFromUDP(p)
 		if err != nil {
 			log.Println(err)
@@ -131,7 +130,7 @@ func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, p
 	}
 	q = append(q,
 		protocol.Version,
-		eis.GameMode,
+		eis.GameMode.ID(),
 		eis.TimeLeft/1000,
 		eis.MaxClients,
 		eis.MasterMode,

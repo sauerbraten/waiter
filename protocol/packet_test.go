@@ -1,4 +1,4 @@
-package cubecode
+package protocol
 
 import "testing"
 

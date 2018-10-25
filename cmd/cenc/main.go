@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
-	"github.com/sauerbraten/cubecode"
 )
 
 func main() {
@@ -16,7 +14,7 @@ func main() {
 		return
 	}
 
-	p := make(cubecode.Packet, 0, 1024)
+	p := make(protocol.Packet, 0, 1024)
 
 	switch os.Args[1] {
 	case "i", "int":

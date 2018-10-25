@@ -84,7 +84,11 @@ func (r *Relay) loop() {
 
 		case cn := <-r.incPositionsNotifs:
 			r.receive(cn, r.incPositions, func(pos []byte) {
-				r.positions[cn] = pos
+				if len(pos) == 0 {
+					delete(r.positions, cn)
+				} else {
+					r.positions[cn] = pos
+				}
 			})
 
 		case cn := <-r.incClientPacketsNotifs:
@@ -138,7 +142,7 @@ func (r *Relay) RemoveClient(cn uint32) error {
 	return nil
 }
 
-func (r *Relay) BroadcastAfterPosition(cn uint32, p []byte) {
+func (r *Relay) FlushPositionAndSend(cn uint32, p []byte) {
 	r.μ.Lock()
 	defer r.μ.Unlock()
 

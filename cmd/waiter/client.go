@@ -54,7 +54,7 @@ func (c *Client) IsValidMessage(networkMessageCode nmc.NetMessCode) bool {
 	}
 
 	if c.GameState.State != playerstate.Alive {
-		for _, aoNMC := range nmc.ServerOnlyNMCs {
+		for _, aoNMC := range nmc.AliveOnlyNMCs {
 			if aoNMC == networkMessageCode {
 				return false
 			}

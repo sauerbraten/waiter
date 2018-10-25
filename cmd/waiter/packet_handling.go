@@ -63,7 +63,30 @@ outer:
 				log.Println("could not read jump pad ID from jump pad packet (packet too short):", p)
 				return
 			}
-			s.relay.BroadcastAfterPosition(client.CN, packet.Encode(nmc.JumpPad, cn, jumppad))
+			s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.JumpPad, cn, jumppad))
+
+		case nmc.Teleport:
+			_cn, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read CN from teleport packet (packet too short):", p)
+				return
+			}
+			cn := uint32(_cn)
+			if cn != client.CN {
+				// we don't support bots
+				return
+			}
+			teleport, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read teleport ID from teleport packet (packet too short):", p)
+				return
+			}
+			teledest, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read teledest ID from teleport packet (packet too short):", p)
+				return
+			}
+			s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.Teleport, cn, teleport, teledest))
 
 		// channel 1 traffic
 
@@ -293,7 +316,6 @@ outer:
 			if !ok {
 				return
 			}
-			log.Println(wpn, id, from, to, hits, ok)
 			s.HandleShoot(client, wpn, id, from, to, hits)
 			break
 
@@ -302,7 +324,6 @@ outer:
 			if !ok {
 				return
 			}
-			log.Println(millis, wpn, id, hits, ok)
 			s.HandleExplode(client, millis, wpn, id, hits)
 
 		case nmc.Suicide:
@@ -364,26 +385,18 @@ func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32
 	if time.Now().Before(client.GameState.GunReloadEnd) || client.GameState.Ammo[wpn.ID] <= 0 {
 		return
 	}
-	_from := [3]float64{}
-	for i := range _from {
-		coord, ok := p.GetInt()
-		if !ok {
-			log.Println("could not read shot origin ('from') from shoot packet:", p)
-			return
-		}
-		_from[i] = float64(coord)
+	_from, ok := parseVector(p)
+	if !ok {
+		log.Println("could not read shot origin vector ('from') from shoot packet:", p)
+		return
 	}
-	from = geom.NewVector(_from[0], _from[1], _from[2]).Mul(1 / geom.DMF)
-	_to := [3]float64{}
-	for i := range _to {
-		coord, ok := p.GetInt()
-		if !ok {
-			log.Println("could not read shot destination ('to') from shoot packet:", p)
-			return
-		}
-		_to[i] = float64(coord)
+	from = _from.Mul(1 / geom.DMF)
+	_to, ok := parseVector(p)
+	if !ok {
+		log.Println("could not read shot destination vector ('to') from shoot packet:", p)
+		return
 	}
-	to = geom.NewVector(_to[0], _to[1], _to[2]).Mul(1 / geom.DMF)
+	to = _to.Mul(1 / geom.DMF)
 	if dist := geom.Distance(from, to); dist > wpn.Range+1.0 {
 		log.Println("shot distance out of weapon's range: distane =", dist, "range =", wpn.Range+1)
 	}
@@ -447,16 +460,12 @@ func parseHits(num int32, p *protocol.Packet) (hits []hit, ok bool) {
 			log.Println("could not read rays of hit", i+1, "from shoot/explode packet:", p)
 			return nil, false
 		}
-		_dir := [3]float64{}
-		for i := range _dir {
-			angle, ok := p.GetInt()
-			if !ok {
-				log.Println("could not read direction of hit", i+1, "from shoot/explode packet:", p)
-				return nil, false
-			}
-			_dir[i] = float64(angle)
+		_dir, ok := parseVector(p)
+		if !ok {
+			log.Println("could not read direction vector of hit", i+1, "from shoot/explode packet:", p)
+			return nil, false
 		}
-		dir := geom.NewVector(_dir[0], _dir[1], _dir[2]).Mul(1 / geom.DNF)
+		dir := _dir.Mul(1 / geom.DNF)
 		hits[i] = hit{
 			target:       target,
 			lifeSequence: lifeSequence,
@@ -466,4 +475,17 @@ func parseHits(num int32, p *protocol.Packet) (hits []hit, ok bool) {
 		}
 	}
 	return hits, true
+}
+
+func parseVector(p *protocol.Packet) (*geom.Vector, bool) {
+	xyz := [3]float64{}
+	for i := range xyz {
+		coord, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read", "xzy"[i], "coordinate from packet:", p)
+			return nil, false
+		}
+		xyz[i] = float64(coord)
+	}
+	return geom.NewVector(xyz[0], xyz[1], xyz[2]), true
 }

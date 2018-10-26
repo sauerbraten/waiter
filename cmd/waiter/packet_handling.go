@@ -36,7 +36,7 @@ outer:
 		packetType := nmc.NetMessCode(_nmc)
 
 		if !client.IsValidMessage(packetType) {
-			log.Println("invalid network message code:", packetType)
+			log.Println("invalid network message code", packetType, "from CN", client.CN)
 			s.Clients.Disconnect(client, disconnectreason.MessageError)
 			return
 		}
@@ -125,7 +125,7 @@ outer:
 			}
 
 		case nmc.AuthTry:
-			log.Println("got auth try:", p)
+			// client wants us to send him a challenge
 			domain, ok := p.GetString()
 			if !ok {
 				log.Println("could not read domain from auth try packet:", p)
@@ -196,7 +196,6 @@ outer:
 					msg = fmt.Sprintf("%s relinquished %s", s.Clients.UniqueName(client), oldPrivilege)
 				}
 				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
-
 			default:
 				s.setPrivilege(target, privilege.Master)
 				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s gave %s privileges to %s", s.Clients.UniqueName(client), privilege.Master, s.Clients.UniqueName(target)))
@@ -317,7 +316,6 @@ outer:
 				return
 			}
 			s.HandleShoot(client, wpn, id, from, to, hits)
-			break
 
 		case nmc.Explode:
 			millis, wpn, id, hits, ok := parseExplode(client, &p)

@@ -206,17 +206,14 @@ func (cm *ClientManager) InformOthersOfDisconnect(c *Client, reason disconnectre
 }
 
 func (cm *ClientManager) MapChange() {
-	for _, c := range cm.cs {
-		if !c.InUse {
-			continue
-		}
+	cm.ForEach(func(c *Client) {
 		c.GameState.Reset()
 		if c.GameState.State == playerstate.Spectator {
-			continue
+			return
 		}
 		c.GameState.Spawn(s.GameMode.ID())
 		c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, c.CN, c.GameState.ToWire()))
-	}
+	})
 }
 
 func (cm *ClientManager) PrivilegedUsers() (privileged []*Client) {

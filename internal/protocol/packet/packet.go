@@ -17,6 +17,10 @@ import (
 )
 
 func Encode(args ...interface{}) protocol.Packet {
+	if len(args) == 0 {
+		return nil
+	}
+
 	p := make(protocol.Packet, 0, len(args))
 
 	for _, arg := range args {

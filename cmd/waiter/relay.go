@@ -50,9 +50,7 @@ func (r *Relay) loop() {
 				// publish positions
 				r.flush(
 					r.positions,
-					func(cn uint32, pkt []byte) []byte {
-						return nil
-					},
+					func(cn uint32, pkt []byte) []byte { return nil },
 					0,
 					enet.PACKET_FLAG_NONE,
 				)

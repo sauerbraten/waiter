@@ -62,8 +62,8 @@ func (s *Server) handleAuthAnswer(client *Client, domain string, p *protocol.Pac
 		}
 		return
 	}
-	log.Printf("successful auth by %s (%d)\n", name, client.CN)
-	s.setAuthPrivilege(client, prvlg, name)
+	log.Printf("successful auth by %s (%d) as %s [%s]\n", client.Name, client.CN, name, domain)
+	s.setAuthPrivilege(client, prvlg, domain, name)
 }
 
 func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
@@ -89,7 +89,8 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 			if client == nil || client.SessionID != sessionID || !sucess {
 				return
 			}
-			s.setAuthPrivilege(client, privilege.Auth, name)
+			log.Printf("successful gauth by %s (%d) as %s\n", client.Name, client.CN, name)
+			s.setAuthPrivilege(client, privilege.Auth, "", name)
 		}
 	}(client.SessionID)
 
@@ -101,9 +102,13 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 	}
 }
 
-func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.Privilege, name string) {
+func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.Privilege, domain, name string) {
 	s.setPrivilege(client, prvlg)
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s claimed %s as '%s'", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name)))
+	msg := fmt.Sprintf("%s claimed %s as %s", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name))
+	if domain != "" {
+		msg = fmt.Sprintf("%s claimed %s as %s [%s]", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name), cubecode.Green(domain))
+	}
+	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
 }
 
 func (s *Server) setPrivilege(client *Client, prvlg privilege.Privilege) {

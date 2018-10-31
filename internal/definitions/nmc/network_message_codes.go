@@ -162,17 +162,6 @@ var ServerOnlyNMCs = []NetMessCode{
 	DEMOPACKET,
 }
 
-var AliveOnlyNMCs = []NetMessCode{
-	Shoot,
-	Suicide,
-	Damage,
-	ChangeWeapon,
-	Taunt,
-	Teleport,
-	JumpPad,
-	Position,
-}
-
 func networkMessageLength(nmc NetMessCode) int {
 	return []int{
 		0,

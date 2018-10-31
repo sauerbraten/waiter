@@ -63,7 +63,9 @@ outer:
 				log.Println("could not read jump pad ID from jump pad packet (packet too short):", p)
 				return
 			}
-			s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.JumpPad, cn, jumppad))
+			if client.GameState.State == playerstate.Alive {
+				s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.JumpPad, cn, jumppad))
+			}
 
 		case nmc.Teleport:
 			_cn, ok := p.GetInt()
@@ -86,7 +88,9 @@ outer:
 				log.Println("could not read teledest ID from teleport packet (packet too short):", p)
 				return
 			}
-			s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.Teleport, cn, teleport, teledest))
+			if client.GameState.State == playerstate.Alive {
+				s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.Teleport, cn, teleport, teledest))
+			}
 
 		// channel 1 traffic
 

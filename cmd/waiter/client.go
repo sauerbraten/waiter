@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
@@ -51,14 +50,6 @@ func (c *Client) IsValidMessage(networkMessageCode nmc.NetMessCode) bool {
 		return networkMessageCode == nmc.Join || networkMessageCode == nmc.Ping
 	} else if networkMessageCode == nmc.Join {
 		return false
-	}
-
-	if c.GameState.State != playerstate.Alive {
-		for _, aoNMC := range nmc.AliveOnlyNMCs {
-			if aoNMC == networkMessageCode {
-				return false
-			}
-		}
 	}
 
 	for _, soNMC := range nmc.ServerOnlyNMCs {

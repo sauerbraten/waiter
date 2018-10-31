@@ -11,6 +11,8 @@ import (
 	"log"
 	"net"
 	"unsafe"
+
+	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 )
 
 type PeerState uint
@@ -78,11 +80,20 @@ func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
 
 	flags = flags & ^PACKET_FLAG_NO_ALLOCATE // always allocate (safer with CGO usage below)
 
-	switch payload[0] {
-	case 4, 31, 32, 33, 85:
+	switch nmc.NetMessCode(payload[0]) {
+	case nmc.Position,
+		nmc.Leave,
+		nmc.Died,
+		nmc.SpawnState,
+		nmc.MapChange,
+		nmc.Pong,
+		nmc.ClientPing,
+		nmc.TimeLeft,
+		nmc.ServerMessage,
+		nmc.Client:
 	// do nothing
 	default:
-		log.Println("sending", payload)
+		log.Println("sending", payload, "to", p.Address.String())
 	}
 
 	packet := C.enet_packet_create(unsafe.Pointer(&payload[0]), C.size_t(len(payload)), C.enet_uint32(flags))

@@ -3,6 +3,20 @@
 A game server for Cube 2: Sauerbraten, written in Go.
 
 
+## Installing
+
+Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Run `go install github.com/sauerbraten/waiter/cmd/waiter` to install the `waiter` command in your `$GOPATH/bin`.
+
+The server requires `config.json`, `bans.json` and `users.json` to be placed in the working directory.
+
+
+## Building
+
+Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Clone the repository, `cd cmd/waiter`, then `go build`.
+
+You can then start the server with `./waiter`.
+
+
 ## To Do
 
 Next step is to implement more network events to support effic mode completely, then efficctf, then insta and instactf. After that, ffa, then capture and regen capture would be the next goals.
@@ -27,7 +41,7 @@ In [`/cmd/genauth/`](/cmd/genauth/), there is a command to generate auth keys fo
 
 This code is licensed under a BSD License:
 
-Copyright (c) 2014-2017 Alexander Willing. All rights reserved.
+Copyright (c) 2014-2018 Alexander Willing. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:

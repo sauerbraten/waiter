@@ -184,7 +184,7 @@ func (eis *ExtInfoServer) sendUptime(conn *net.UDPConn, raddr *net.UDPAddr, incl
 }
 
 func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *net.UDPAddr) {
-	q := []interface{}{
+	header := []interface{}{
 		InfoTypeExtended,
 		ExtInfoTypeClientInfo,
 		cn,
@@ -193,6 +193,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 	}
 
 	if cn < -1 || int(cn) > eis.NumClients() {
+		q := header
 		q = append(q, ExtInfoError)
 		p := packet.Encode(q...)
 		log.Println("sending", p)
@@ -209,7 +210,11 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 		return
 	}
 
-	q = append(q, ExtInfoNoError, ClientInfoResponseTypeCNs)
+	header = append(header, ExtInfoNoError)
+
+	q := make([]interface{}, len(header)+1+12)
+	copy(q, header)
+	q = append(q, ClientInfoResponseTypeCNs)
 
 	if cn == -1 {
 		eis.Clients.ForEach(func(c *Client) { q = append(q, c.CN) })
@@ -228,7 +233,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 		log.Println("packet length and sent length didn't match!", p)
 	}
 
-	q = q[:0]
+	q = q[:len(header)]
 	p = nil
 
 	if cn == -1 {
@@ -267,7 +272,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 				log.Println("packet length and sent length didn't match!", p)
 			}
 
-			q = q[:0]
+			q = q[:len(header)]
 			p = nil
 		})
 	} else {

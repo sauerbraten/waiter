@@ -88,7 +88,6 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 				log.Println("malformed info request: could not read extinfo request type:", p)
 				continue
 			}
-			log.Println(extReqType)
 			switch extReqType {
 			case ExtInfoTypeUptime:
 				includeMod := false

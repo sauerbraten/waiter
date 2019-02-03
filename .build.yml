@@ -1,7 +1,7 @@
 image: alpine/edge
 packages:
   - go
-  -enet-dev
+  - enet-dev
   - rsync
 sources:
   - https://github.com/sauerbraten/waiter.git

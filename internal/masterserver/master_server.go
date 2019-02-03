@@ -31,8 +31,9 @@ const (
 )
 
 type MasterServer struct {
-	In   *bufio.Scanner
-	Out  *bufio.Writer
+	In  *bufio.Scanner
+	Out *bufio.Writer
+
 	Bans *bans.BanManager
 
 	requestChallengeCallbacks map[uint32]func(challenge string)
@@ -40,7 +41,7 @@ type MasterServer struct {
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func New(addr string, bans *bans.BanManager) (ms *MasterServer, err error) {
+func New(addr string, listenPort int, bans *bans.BanManager) (ms *MasterServer, err error) {
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)
@@ -60,13 +61,20 @@ func New(addr string, bans *bans.BanManager) (ms *MasterServer, err error) {
 		confirmAnswerCallbacks:    map[uint32]func(sucess bool){},
 	}
 
+	go ms.keepRegistered(listenPort)
 	go ms.handleIncoming()
 
 	return
 }
 
-func (ms *MasterServer) Register(listenPort int) error {
-	return ms.Request("%s %d", registerServer, listenPort)
+func (ms *MasterServer) keepRegistered(listenPort int) {
+	for range time.Tick(1 * time.Hour) {
+		log.Println("registering at master server")
+		err := ms.Request("%s %d", registerServer, listenPort)
+		if err != nil {
+			log.Println("registering at master server failed:", err)
+		}
+	}
 }
 
 func (ms *MasterServer) RequestAuthChallenge(requestID uint32, name string, callback func(challenge string)) error {

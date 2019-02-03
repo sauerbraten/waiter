@@ -18,6 +18,8 @@ import (
 	"github.com/sauerbraten/waiter/internal/protocol/enet"
 )
 
+const gitRevision = "<filled in by CI service>"
+
 var (
 	// global enet host var (to call Flush() on)
 	host *enet.Host
@@ -74,7 +76,7 @@ func init() {
 		Auth:      auth.NewManager(users),
 	}
 
-	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), bm)
+	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
@@ -100,14 +102,6 @@ func main() {
 	go s.GameTimer.run()
 
 	go s.relay.loop()
-
-	if ms != nil {
-		log.Println("registering at master server")
-		err = ms.Register(s.Config.ListenPort)
-		if err != nil {
-			log.Println(err)
-		}
-	}
 
 	for {
 		event := host.Service()

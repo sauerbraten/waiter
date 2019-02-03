@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/sauerbraten/waiter/protocol"
@@ -248,6 +249,9 @@ outer:
 			if !ok {
 				log.Println("could not read message from chat message packet:", p)
 				return
+			}
+			if strings.HasPrefix(msg, "!rev") {
+				client.Peer.Send(1, enet.PACKET_FLAG_NONE, packet.Encode(nmc.ServerMessage, "running "+gitRevision))
 			}
 			client.Packets.Publish(nmc.ChatMessage, msg)
 

@@ -1,0 +1,29 @@
+image: alpine/edge
+packages:
+  - go
+  - rsync
+sources:
+  - https://github.com/sauerbraten/waiter.git
+environment:
+  DEPLOY: chef.sauerworld.org
+  GOPATH: $HOME
+secrets:
+  - 98c1b481-b37f-452f-872a-8f8fa1833249
+tasks:
+  - prepare_gopath: |
+      mkdir -p src/github.com/sauerbraten
+      mv waiter src/github.com/sauerbraten/
+  - version: |
+      cd src/github.com/sauerbraten/waiter/cmd/waiter
+      sed -i "s/<filled in by CI service>/$(git rev-parse --short HEAD)/" main.go
+  - build: |
+      cd src/github.com/sauerbraten/waiter/cmd/waiter
+      go get
+      go build -ldflags "-linkmode external -extldflags -static" -a
+  - deploy: |
+      cd src/github.com/sauerbraten/waiter
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq bans.json config.json users.json ci@$DEPLOY:~/waiter/
+      cd cmd/waiter
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq waiter ci@$DEPLOY:~/waiter/
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall waiter || true'
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd waiter; nohup ./waiter &>> log.txt &'

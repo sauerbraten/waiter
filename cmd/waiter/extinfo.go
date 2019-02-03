@@ -73,8 +73,6 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 		}
 		p = p[:n]
 
-		log.Println(p)
-
 		// process requests
 
 		reqType, ok := p.GetInt()
@@ -195,7 +193,6 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 	if cn < -1 || int(cn) > eis.NumClients() {
 		q = append(q, ExtInfoError)
 		p := packet.Encode(q...)
-		log.Println("sending", p)
 
 		n, err := conn.WriteToUDP(p, raddr)
 		if err != nil {
@@ -222,7 +219,6 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 	}
 
 	p := packet.Encode(q...)
-	log.Println("sending", p)
 	n, err := conn.WriteToUDP(p, raddr)
 	if err != nil {
 		log.Println(err)

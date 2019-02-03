@@ -266,6 +266,9 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 			if n != len(p) {
 				log.Println("packet length and sent length didn't match!", p)
 			}
+
+			q = q[:0]
+			p = nil
 		})
 	} else {
 		c := eis.Clients.GetClientByCN(uint32(cn))

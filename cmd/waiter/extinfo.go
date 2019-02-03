@@ -256,7 +256,6 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 			}
 
 			p = packet.Encode(q...)
-			log.Println("sending", p)
 			n, err = conn.WriteToUDP(p, raddr)
 			if err != nil {
 				log.Println(err)
@@ -296,7 +295,6 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 		}
 
 		p = packet.Encode(q...)
-		log.Println("sending", p)
 
 		n, err = conn.WriteToUDP(p, raddr)
 		if err != nil {

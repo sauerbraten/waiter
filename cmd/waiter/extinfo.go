@@ -73,6 +73,8 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 		}
 		p = p[:n]
 
+		log.Println(p)
+
 		// process requests
 
 		reqType, ok := p.GetInt()
@@ -88,6 +90,7 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 				log.Println("malformed info request: could not read extinfo request type:", p)
 				continue
 			}
+			log.Println(extReqType)
 			switch extReqType {
 			case ExtInfoTypeUptime:
 				includeMod := false
@@ -102,6 +105,7 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 					log.Println("malformed info request: could not read CN from client info request:", p)
 					continue
 				}
+				log.Println("client info requested for", cn)
 				eis.sendPlayerStats(cn, conn, raddr)
 			case ExtInfoTypeTeamScores:
 				// TODO
@@ -191,6 +195,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 	if cn < -1 || int(cn) > eis.NumClients() {
 		q = append(q, ExtInfoError)
 		p := packet.Encode(q...)
+		log.Println("sending", p)
 
 		n, err := conn.WriteToUDP(p, raddr)
 		if err != nil {
@@ -204,22 +209,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 		return
 	}
 
-	q = append(q, ExtInfoNoError)
-
-	p := packet.Encode(q...)
-	n, err := conn.WriteToUDP(p, raddr)
-	if err != nil {
-		log.Println(err)
-	}
-
-	if n != len(p) {
-		log.Println("packet length and sent length didn't match!", p)
-	}
-
-	q = q[:0]
-	p = nil
-
-	q = append(q, ClientInfoResponseTypeCNs)
+	q = append(q, ExtInfoNoError, ClientInfoResponseTypeCNs)
 
 	if cn == -1 {
 		eis.Clients.ForEach(func(c *Client) { q = append(q, c.CN) })
@@ -227,8 +217,9 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 		q = append(q, cn)
 	}
 
-	p = packet.Encode(q...)
-	n, err = conn.WriteToUDP(p, raddr)
+	p := packet.Encode(q...)
+	log.Println("sending", p)
+	n, err := conn.WriteToUDP(p, raddr)
 	if err != nil {
 		log.Println(err)
 	}
@@ -255,7 +246,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 				c.GameState.Damage*100/utils.Max(c.GameState.ShotDamage, 1),
 				c.GameState.Health,
 				c.GameState.Armour,
-				c.GameState.SelectedWeapon,
+				c.GameState.SelectedWeapon.ID,
 				c.Privilege,
 				c.GameState.State,
 			)
@@ -266,6 +257,7 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 			}
 
 			p = packet.Encode(q...)
+			log.Println("sending", p)
 			n, err = conn.WriteToUDP(p, raddr)
 			if err != nil {
 				log.Println(err)
@@ -302,6 +294,8 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 		}
 
 		p = packet.Encode(q...)
+		log.Println("sending", p)
+
 		n, err = conn.WriteToUDP(p, raddr)
 		if err != nil {
 			log.Println(err)

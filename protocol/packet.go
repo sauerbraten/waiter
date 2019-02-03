@@ -58,13 +58,13 @@ func (p *Packet) GetInt() (int32, bool) {
 	switch b {
 	default:
 		// most often, the value is only one byte
-		return int32(b), true
+		return int32(int8(b)), true
 	case 0x80:
 		// value is contained in the next two bytes
 		if len(*p) < 2 {
 			return -1, false
 		}
-		v := int32((*p)[0]) + int32((*p)[1])<<8
+		v := int32((*p)[0]) + int32(int8((*p)[1]))<<8
 		(*p) = (*p)[2:]
 		return v, true
 
@@ -73,7 +73,7 @@ func (p *Packet) GetInt() (int32, bool) {
 		if len(*p) < 4 {
 			return -1, false
 		}
-		v := int32((*p)[0]) + int32((*p)[1])<<8 + int32((*p)[2])<<16 + int32((*p)[3])<<24
+		v := int32((*p)[0]) + int32((*p)[1])<<8 + int32((*p)[2])<<16 + int32(int8((*p)[3]))<<24
 		(*p) = (*p)[4:]
 		return v, true
 	}

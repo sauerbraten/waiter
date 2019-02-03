@@ -68,12 +68,14 @@ func New(addr string, listenPort int, bans *bans.BanManager) (ms *MasterServer, 
 }
 
 func (ms *MasterServer) keepRegistered(listenPort int) {
-	for range time.Tick(1 * time.Hour) {
+	t := time.NewTicker(1 * time.Hour)
+	for {
 		log.Println("registering at master server")
 		err := ms.Request("%s %d", registerServer, listenPort)
 		if err != nil {
 			log.Println("registering at master server failed:", err)
 		}
+		<-t.C
 	}
 }
 

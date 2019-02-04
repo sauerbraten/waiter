@@ -198,7 +198,7 @@ outer:
 				if client != target {
 					msg = fmt.Sprintf("%s took away %s privileges from %s", s.Clients.UniqueName(client), oldPrivilege, s.Clients.UniqueName(target))
 				} else {
-					msg = fmt.Sprintf("%s relinquished %s", s.Clients.UniqueName(client), oldPrivilege)
+					msg = fmt.Sprintf("%s relinquished %s privileges", s.Clients.UniqueName(client), oldPrivilege)
 				}
 				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
 			default:
@@ -223,6 +223,9 @@ outer:
 			}
 			s.MasterMode = mm
 			s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.MasterMode, mm)
+
+		case nmc.VoteMap:
+			// TODO
 
 		case nmc.Ping:
 			// client pinging server → send pong
@@ -264,7 +267,7 @@ outer:
 			}
 			s.Clients.SendToTeam(client, 1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.TeamChatMessage, client.CN, msg))
 
-		case nmc.MAPCRC:
+		case nmc.MapCRC:
 			// client sends crc hash of his map file
 			// TODO
 			//clientMapName := p.GetString()
@@ -343,8 +346,12 @@ outer:
 			}
 			client.Packets.Publish(nmc.Sound, sound)
 
-		case nmc.PAUSEGAME:
-			// TODO: check client privilege
+		case nmc.PauseGame:
+			if s.MasterMode < mastermode.Locked {
+				if client.Privilege == privilege.None {
+					return
+				}
+			}
 			pause, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read pause toggle from pause packet:", p)
@@ -352,11 +359,11 @@ outer:
 			}
 			if pause == 1 {
 				log.Println("pausing game at", s.TimeLeft/1000, "seconds left")
-				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PAUSEGAME, 1, client.CN)
+				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PauseGame, 1, client.CN)
 				s.Pause()
 			} else {
 				log.Println("resuming game at", s.TimeLeft/1000, "seconds left")
-				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PAUSEGAME, 0, client.CN)
+				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PauseGame, 0, client.CN)
 				s.Resume()
 			}
 

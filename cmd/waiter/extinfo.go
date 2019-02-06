@@ -44,7 +44,6 @@ type ExtInfoServer struct {
 }
 
 func (eis *ExtInfoServer) ServeStateInfoForever() {
-	// listen for incoming traffic
 	laddr, err := net.ResolveUDPAddr("udp", eis.ListenAddress+":"+strconv.Itoa(eis.ListenPort+1))
 	if err != nil {
 		log.Println(err)
@@ -68,12 +67,14 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 			continue
 		}
 		if n > 5 {
-			log.Println("malformed info request:", p)
+			log.Println("malformed info request:", p[:n])
 			continue
 		}
 		p = p[:n]
 
-		// process requests
+		// prepare response header (we need to replay the request)
+		respHeader := make([]byte, n)
+		copy(respHeader, p)
 
 		reqType, ok := p.GetInt()
 		if !ok {
@@ -90,37 +91,28 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 			}
 			switch extReqType {
 			case ExtInfoTypeUptime:
-				includeMod := false
-				if len(p) != 0 {
-					b, ok := p.GetByte()
-					includeMod = ok && b > 0
-				}
-				eis.sendUptime(conn, raddr, includeMod)
+				eis.sendUptime(conn, raddr, respHeader)
 			case ExtInfoTypeClientInfo:
 				cn, ok := p.GetInt()
 				if !ok {
 					log.Println("malformed info request: could not read CN from client info request:", p)
 					continue
 				}
-				log.Println("client info requested for", cn)
-				eis.sendPlayerStats(cn, conn, raddr)
+				eis.sendPlayerStats(cn, conn, raddr, respHeader)
 			case ExtInfoTypeTeamScores:
 				// TODO
 			default:
 				log.Println("erroneous extinfo type queried:", reqType)
 			}
 		default:
-			// basic info was requested → reqType is the ping we need to play back to the client
-			eis.sendBasicInfo(conn, raddr, reqType)
+			eis.sendBasicInfo(conn, raddr, respHeader)
 		}
 	}
 }
 
-func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, pong int32) {
-	log.Println("basic info requested by", raddr.String())
-
+func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, respHeader []byte) {
 	q := []interface{}{
-		pong,
+		respHeader,
 		eis.NumClients(),
 	}
 
@@ -155,16 +147,15 @@ func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, p
 	}
 }
 
-func (eis *ExtInfoServer) sendUptime(conn *net.UDPConn, raddr *net.UDPAddr, includeMod bool) {
+func (eis *ExtInfoServer) sendUptime(conn *net.UDPConn, raddr *net.UDPAddr, respHeader []byte) {
 	q := []interface{}{
-		InfoTypeExtended,
-		ExtInfoTypeUptime,
+		respHeader,
 		ExtInfoACK,
 		ExtInfoVersion,
 		int32(time.Since(eis.UpSince) / time.Second),
 	}
 
-	if includeMod {
+	if len(respHeader) > 2 {
 		q = append(q, ServerMod)
 	}
 
@@ -180,11 +171,9 @@ func (eis *ExtInfoServer) sendUptime(conn *net.UDPConn, raddr *net.UDPAddr, incl
 	}
 }
 
-func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *net.UDPAddr) {
+func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *net.UDPAddr, respHeader []byte) {
 	q := []interface{}{
-		InfoTypeExtended,
-		ExtInfoTypeClientInfo,
-		cn,
+		respHeader,
 		ExtInfoACK,
 		ExtInfoVersion,
 	}

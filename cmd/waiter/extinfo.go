@@ -239,9 +239,9 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 				c.GameState.State,
 			)
 			if eis.SendClientIPsViaExtinfo {
-				q = append(q, []byte(c.Peer.Address.IP[:3])) // only 3 first bytes
+				q = append(q, []byte(c.Peer.Address.IP.To4()[:3]))
 			} else {
-				q = append(q, 0, 0, 0) // 3 times 0x0
+				q = append(q, 0, 0, 0)
 			}
 
 			p = packet.Encode(q...)

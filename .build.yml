@@ -9,7 +9,7 @@ environment:
   DEPLOY: p1x.pw
   GOPATH: $HOME
 secrets:
-  - 98c1b481-b37f-452f-872a-8f8fa1833249
+  - 41a695fb-4229-450d-9aa4-5499f6bcea81
 tasks:
   - prepare_gopath: |
       mkdir -p src/github.com/sauerbraten

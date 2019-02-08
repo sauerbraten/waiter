@@ -3,7 +3,7 @@
 A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 
     /connect p1x.pw
-    
+
 
 ## Installing
 
@@ -34,7 +34,7 @@ Most functionality is organized into internal packages. [`/cmd/waiter/`](/cmd/wa
 
 Other interesting packages:
 
-- [`protocol`](protocol) & [`protocol/cubecode`](protocol/cubecode)
+- [`pkg/protocol`](pkg/protocol) & [`pkg/protocol/cubecode`](pkg/protocol/cubecode)
 - [`internal/auth`](internal/auth)
 - [`internal/protocol/enet`](internal/protocol/enet)
 - [`internal/masterserver`](internal/masterserver)

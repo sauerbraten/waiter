@@ -1,25 +1,31 @@
 # Waiter
 
-A game server for Cube 2: Sauerbraten, written in Go.
+A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 
+    /connect p1x.pw
+    
 
 ## Installing
 
-Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Run `go install github.com/sauerbraten/waiter/cmd/waiter` to install the `waiter` command in your `$GOPATH/bin`.
+Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Run `go install github.com/sauerbraten/waiter/cmd/waiter` to install the `waiter` command in your `$GOPATH/bin` (which should by in your `$PATH`).
 
 The server requires `config.json`, `bans.json` and `users.json` to be placed in the working directory.
 
 
 ## Building
 
-Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Clone the repository, `cd cmd/waiter`, then `go build`.
+Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Clone the repository, `cd waiter/cmd/waiter`, then `go build`.
 
 You can then start the server with `./waiter`.
 
 
 ## To Do
 
-Next step is to implement more network events to support effic mode completely, then efficctf, then insta and instactf. After that, ffa, then capture and regen capture would be the next goals.
+Figure out why projectiles (grenades and rockets) are not rendered for players other than the one shooting.
+
+Then, implement mode/map change (forced, voting maybe later). With that, the goal is to support insta and effic games completely so waiter can be used for duels at least.
+
+Future goals will be efficctf and instactf (flag spawns & events), then ffa (all the other items), then capture and regen capture (capture base events).
 
 
 ## Project Structure
@@ -28,20 +34,24 @@ Most functionality is organized into internal packages. [`/cmd/waiter/`](/cmd/wa
 
 Other interesting packages:
 
-- [`cubecode`](cubecode)
+- [`protocol`](protocol) & [`protocol/cubecode`](protocol/cubecode)
 - [`internal/auth`](internal/auth)
 - [`internal/protocol/enet`](internal/protocol/enet)
-- [`internal/definitions`](internal/definitions)
 - [`internal/masterserver`](internal/masterserver)
 
-In [`/cmd/genauth/`](/cmd/genauth/), there is a command to generate auth keys for users. This server uses a different representation for public keys, so the output of `/genauthkey` in the vanilla client will be useless.
+In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for users. This server uses a different representation for public keys, so the output of `/genauthkey` in the vanilla client will be useless.
+
+
+## Why?
+
+I started this mainly as a challenge to myself and because I have ideas to improve the integration of Sauerbraten servers with other services and interfaces. For example, making the server state available via WebSockets directly, instead of the UDP-based extinfo protocol, and integrating a third-party auth system (spanning multiple servers). Writing a server that makes it easy to modify gameplay is not one of the goals of this project, neither is plugin support, although it might happen at some point. If you want that, now, use pisto's great [spaghettimod](https://github.com/pisto/spaghettimod).
 
 
 ## License
 
 This code is licensed under a BSD License:
 
-Copyright (c) 2014-2018 Alexander Willing. All rights reserved.
+Copyright (c) 2014-2019 Alexander Willing. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:

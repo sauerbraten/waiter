@@ -7,7 +7,7 @@ import (
 
 	"github.com/sauerbraten/jsonfile"
 
-	"github.com/sauerbraten/waiter/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol"
 
 	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/bans"
@@ -15,7 +15,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/masterserver"
-	"github.com/sauerbraten/waiter/internal/protocol/enet"
+	"github.com/sauerbraten/waiter/internal/net/enet"
 )
 
 const gitRevision = "<filled in by CI service>"
@@ -112,7 +112,7 @@ func main() {
 
 			if ban, ok := bm.GetBan(event.Peer.Address.IP); ok {
 				log.Println("peer's IP is banned:", ban)
-				event.Peer.Disconnect(uint32(disconnectreason.Banned))
+				event.Peer.Disconnect(uint32(disconnectreason.IPBanned))
 				continue
 			}
 

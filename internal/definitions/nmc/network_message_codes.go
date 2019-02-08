@@ -1,9 +1,9 @@
 package nmc
 
-type NetMessCode int32 // network message code
+type ID int32 // network message code
 
 const (
-	Join NetMessCode = iota // = CONNECT
+	Join ID = iota // = CONNECT
 	ServerInfo
 	Welcome
 	InitializeClient
@@ -119,7 +119,7 @@ const (
 )
 
 // A list of NMCs which can only be sent by a server, never by a client.
-var ServerOnlyNMCs = []NetMessCode{
+var ServerOnlyNMCs = []ID{
 	ServerInfo,
 	InitializeClient,
 	Welcome,
@@ -162,7 +162,7 @@ var ServerOnlyNMCs = []NetMessCode{
 	DEMOPACKET,
 }
 
-func networkMessageLength(nmc NetMessCode) int {
+func networkMessageLength(nmc ID) int {
 	return []int{
 		0,
 		0,

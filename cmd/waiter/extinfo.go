@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sauerbraten/waiter/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol"
 
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/utils"
 )
 

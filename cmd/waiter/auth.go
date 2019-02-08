@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sauerbraten/waiter/protocol"
-	"github.com/sauerbraten/waiter/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/protocol/enet"
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
 func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
@@ -102,7 +102,7 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 	}
 }
 
-func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.Privilege, domain, name string) {
+func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.ID, domain, name string) {
 	s.setPrivilege(client, prvlg)
 	msg := fmt.Sprintf("%s claimed %s privileges as %s", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name))
 	if domain != "" {
@@ -111,7 +111,7 @@ func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.Privilege, dom
 	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
 }
 
-func (s *Server) setPrivilege(client *Client, prvlg privilege.Privilege) {
+func (s *Server) setPrivilege(client *Client, prvlg privilege.ID) {
 	client.Privilege = prvlg
 	if prvlg > privilege.None {
 		client.AuthRequiredBecause = disconnectreason.None

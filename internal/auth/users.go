@@ -14,8 +14,8 @@ type UserIdentifier struct {
 
 type User struct {
 	UserIdentifier
-	PublicKey publicKey           `json:"public_key"`
-	Privilege privilege.Privilege `json:"-"`
+	PublicKey publicKey    `json:"public_key"`
+	Privilege privilege.ID `json:"-"`
 }
 
 func (u *User) MarshalJSON() ([]byte, error) {

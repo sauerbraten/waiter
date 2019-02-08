@@ -4,16 +4,16 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/sauerbraten/waiter/protocol"
-	"github.com/sauerbraten/waiter/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/protocol/enet"
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
 type ClientManager struct {
@@ -174,7 +174,7 @@ func (cm *ClientManager) Leave(c *Client) {
 }
 
 // Tells other clients that the client disconnected, giving a disconnect reason in case it's not a normal leave.
-func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.DisconnectReason) {
+func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 	if !c.InUse {
 		return
 	}
@@ -183,7 +183,7 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.Disconnec
 	cm.InformOthersOfDisconnect(c, reason)
 
 	if reason != disconnectreason.None {
-		log.Printf("disconnected: %s (%d) - %s", c.Name, c.CN, disconnectreason.String[reason])
+		log.Printf("disconnected: %s (%d) - %s", c.Name, c.CN, reason)
 	}
 
 	c.Peer.Disconnect(uint32(reason))
@@ -200,7 +200,7 @@ func (cm *ClientManager) InformOthersOfJoin(c *Client) {
 }
 
 // Informs all other clients that a client left the game.
-func (cm *ClientManager) InformOthersOfDisconnect(c *Client, reason disconnectreason.DisconnectReason) {
+func (cm *ClientManager) InformOthersOfDisconnect(c *Client, reason disconnectreason.ID) {
 	cm.Broadcast(exclude(c), 1, enet.PACKET_FLAG_RELIABLE, nmc.Leave, c.CN)
 	// TOOD: send a server message with the disconnect reason in case it's not a normal leave
 }

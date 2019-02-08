@@ -1,9 +1,9 @@
 package sound
 
-type Sound int32
+type ID int32
 
 const (
-	Jump Sound = iota
+	Jump ID = iota
 	Land
 	Rifle
 	Saw

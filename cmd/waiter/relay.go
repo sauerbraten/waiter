@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/protocol/enet"
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
 type sendFunc func(channel uint8, flags enet.PacketFlag, payload []byte)

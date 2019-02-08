@@ -4,9 +4,10 @@ import (
 	"log"
 	"net"
 
-	"github.com/sauerbraten/waiter/protocol"
-
 	"github.com/sauerbraten/waiter/internal/client/privilege"
+
+	"github.com/sauerbraten/waiter/pkg/protocol"
+
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
@@ -47,28 +48,28 @@ func Encode(args ...interface{}) protocol.Packet {
 		case byte:
 			p = append(p, v)
 
-		case armour.Armour:
+		case armour.ID:
 			p.PutInt(int32(v))
 
 		case gamemode.ID:
 			p.PutInt(int32(v))
 
-		case mastermode.MasterMode:
+		case mastermode.ID:
 			p.PutInt(int32(v))
 
-		case nmc.NetMessCode:
+		case nmc.ID:
 			p.PutInt(int32(v))
 
-		case privilege.Privilege:
+		case privilege.ID:
 			p.PutInt(int32(v))
 
-		case sound.Sound:
+		case sound.ID:
 			p.PutInt(int32(v))
 
 		case weapon.ID:
 			p.PutInt(int32(v))
 
-		case disconnectreason.DisconnectReason:
+		case disconnectreason.ID:
 			p.PutInt(int32(v))
 
 		case []byte:

@@ -7,7 +7,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
 // The game state of a client.
@@ -17,7 +17,7 @@ type GameState struct {
 	Health         int32
 	MaxHealth      int32
 	Armour         int32
-	ArmourType     armour.Armour
+	ArmourType     armour.ID
 	QuadTimeLeft   int32 // in milliseconds
 	SelectedWeapon weapon.Weapon
 	GunReloadEnd   time.Time

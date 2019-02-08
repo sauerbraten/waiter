@@ -80,7 +80,7 @@ func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
 
 	flags = flags & ^PACKET_FLAG_NO_ALLOCATE // always allocate (safer with CGO usage below)
 
-	switch nmc.NetMessCode(payload[0]) {
+	switch nmc.ID(payload[0]) {
 	case nmc.Position,
 		nmc.Leave,
 		nmc.Died,

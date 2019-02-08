@@ -1,7 +1,7 @@
 package protocol
 
 import (
-	"github.com/sauerbraten/waiter/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
 // Packet represents a Sauerbraten UDP packet.

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/waiter/protocol"
-	"github.com/sauerbraten/waiter/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
@@ -16,8 +16,8 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/internal/protocol/enet"
-	"github.com/sauerbraten/waiter/internal/protocol/packet"
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
 // parses a packet and decides what to do based on the network message code at the front of the packet
@@ -34,9 +34,9 @@ outer:
 			log.Println("could not read network message code (packet too short):", p)
 			return
 		}
-		packetType := nmc.NetMessCode(_nmc)
+		packetType := nmc.ID(_nmc)
 
-		if !client.IsValidMessage(packetType) {
+		if !isValidMessage(client, packetType) {
 			log.Println("invalid network message code", packetType, "from CN", client.CN)
 			s.Clients.Disconnect(client, disconnectreason.MessageError)
 			return
@@ -212,7 +212,7 @@ outer:
 				log.Println("could not read mastermode from mastermode packet:", p)
 				return
 			}
-			mm := mastermode.MasterMode(_mm)
+			mm := mastermode.ID(_mm)
 			if mm < mastermode.Open || mm > mastermode.Private {
 				log.Println("invalid mastermode", mm, "requested")
 				return
@@ -377,6 +377,26 @@ outer:
 	}
 
 	return
+}
+
+// checks if the client is allowed to send a certain type of message to us.
+func isValidMessage(c *Client, networkMessageCode nmc.ID) bool {
+	if !c.Joined {
+		if c.AuthRequiredBecause > disconnectreason.None {
+			return networkMessageCode == nmc.AuthAnswer || networkMessageCode == nmc.Ping
+		}
+		return networkMessageCode == nmc.Join || networkMessageCode == nmc.Ping
+	} else if networkMessageCode == nmc.Join {
+		return false
+	}
+
+	for _, soNMC := range nmc.ServerOnlyNMCs {
+		if soNMC == networkMessageCode {
+			return false
+		}
+	}
+
+	return true
 }
 
 func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {

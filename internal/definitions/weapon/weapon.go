@@ -35,7 +35,7 @@ var WeaponsWithAmmo = []ID{
 
 type Weapon struct {
 	ID              ID
-	Sound           sound.Sound
+	Sound           sound.ID
 	ReloadTime      int32
 	Damage          int32
 	Spread          int32

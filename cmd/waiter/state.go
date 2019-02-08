@@ -7,7 +7,7 @@ import (
 )
 
 type State struct {
-	MasterMode mastermode.MasterMode
+	MasterMode mastermode.ID
 	GameMode   GameMode
 	Map        string
 

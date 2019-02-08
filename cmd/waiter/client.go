@@ -3,10 +3,9 @@ package main
 import (
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/internal/protocol/enet"
+	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/utils"
 )
 
@@ -16,11 +15,11 @@ type Client struct {
 	Name                string
 	Team                string
 	PlayerModel         int32
-	Privilege           privilege.Privilege
+	Privilege           privilege.ID
 	GameState           *GameState
-	Joined              bool                              // true if the player is actually in the game
-	AuthRequiredBecause disconnectreason.DisconnectReason // e.g. server is in private mode
-	IsBot               bool                              // wether this is a bot or not
+	Joined              bool                // true if the player is actually in the game
+	AuthRequiredBecause disconnectreason.ID // e.g. server is in private mode
+	IsBot               bool                // wether this is a bot or not
 	BotSkill            int32
 	InUse               bool // true if this client's *enet.Peer is in use (i.e. the client object belongs to a connection)
 	Peer                *enet.Peer
@@ -39,26 +38,6 @@ func NewClient(cn uint32, peer *enet.Peer) *Client {
 		Team:      "good", // TODO: select weaker team
 		GameState: NewGameState(),
 	}
-}
-
-// IsValidMessage hecks if this client is allowed to send a certain type of message to us.
-func (c *Client) IsValidMessage(networkMessageCode nmc.NetMessCode) bool {
-	if !c.Joined {
-		if c.AuthRequiredBecause > disconnectreason.None {
-			return networkMessageCode == nmc.AuthAnswer || networkMessageCode == nmc.Ping
-		}
-		return networkMessageCode == nmc.Join || networkMessageCode == nmc.Ping
-	} else if networkMessageCode == nmc.Join {
-		return false
-	}
-
-	for _, soNMC := range nmc.ServerOnlyNMCs {
-		if soNMC == networkMessageCode {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (c *Client) applyDamage(attacker *Client, damage int32, weapon weapon.ID, direction *geom.Vector) {

@@ -2,16 +2,16 @@ package privilege
 
 import "strings"
 
-type Privilege int32
+type ID int32
 
 const (
-	None Privilege = iota
+	None ID = iota
 	Master
 	Auth
 	Admin
 )
 
-func Parse(s string) Privilege {
+func Parse(s string) ID {
 	switch strings.ToLower(s) {
 	case "none":
 		return None
@@ -26,7 +26,7 @@ func Parse(s string) Privilege {
 	}
 }
 
-func (p Privilege) String() string {
+func (p ID) String() string {
 	switch p {
 	case None:
 		return "none"

@@ -32,7 +32,7 @@ type request struct {
 	domain   string
 	name     string
 	cn       uint32
-	prvlg    privilege.Privilege
+	prvlg    privilege.ID
 	solution string
 }
 
@@ -52,7 +52,7 @@ func NewManager(users []*User) *Manager {
 	return m
 }
 
-func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, prvlg privilege.Privilege) (requestID uint32) {
+func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, prvlg privilege.ID) (requestID uint32) {
 	requestID = mrand.Uint32()
 	req := &request{
 		id:     requestID,
@@ -91,7 +91,7 @@ func (m *Manager) GenerateChallenge(cn uint32, domain, name string) (challenge s
 	return challenge, requestID, nil
 }
 
-func (m *Manager) CheckAnswer(requestID, cn uint32, domain string, answer string) (bool, string, privilege.Privilege) {
+func (m *Manager) CheckAnswer(requestID, cn uint32, domain string, answer string) (bool, string, privilege.ID) {
 	defer m.ClearAuthRequest(requestID)
 	req, ok := m.pending[requestID]
 	if !ok {

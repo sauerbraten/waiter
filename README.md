@@ -36,7 +36,7 @@ Other interesting packages:
 
 - [`pkg/protocol`](pkg/protocol) & [`pkg/protocol/cubecode`](pkg/protocol/cubecode)
 - [`internal/auth`](internal/auth)
-- [`internal/protocol/enet`](internal/protocol/enet)
+- [`internal/net/enet`](internal/net/enet)
 - [`internal/masterserver`](internal/masterserver)
 
 In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for users. This server uses a different representation for public keys, so the output of `/genauthkey` in the vanilla client will be useless.

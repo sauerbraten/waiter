@@ -40,7 +40,6 @@ func (dr ID) String() string {
 		return "overflow"
 	case WrongPassword:
 		return "invalid password"
-
 	default:
 		return ""
 	}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
@@ -38,13 +39,14 @@ func (s *Server) Intermission() {
 	s.GameTimer.Reset()
 	go s.GameTimer.run()
 
-	// change map
-	s.ChangeMap(maprotation.NextMap(s.GameMode.ID(), s.Map))
+	// load next map
+	s.ChangeMap(s.GameMode.ID(), maprotation.NextMap(s.GameMode.ID(), s.Map))
 }
 
-func (s *Server) ChangeMap(mapName string) {
+func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.NotGotItems = true
-	s.Map = mapName
+	s.GameMode = GameModeByID(mode)
+	s.Map = mapp
 	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems)
 	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.TimeLeft, s.TimeLeft/1000)
 	s.Clients.MapChange()

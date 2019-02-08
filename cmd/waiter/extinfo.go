@@ -60,21 +60,23 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 	log.Println("listening for info requests on", laddr.String())
 
 	for {
-		p := make(protocol.Packet, 16)
-		n, raddr, err := conn.ReadFromUDP(p)
+		req := make(protocol.Packet, 16)
+		n, raddr, err := conn.ReadFromUDP(req)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		if n > 5 {
-			log.Println("malformed info request:", p[:n])
+			log.Println("malformed info request:", req[:n])
 			continue
 		}
-		p = p[:n]
+		req = req[:n]
 
 		// prepare response header (we need to replay the request)
-		respHeader := make([]byte, n)
-		copy(respHeader, p)
+		respHeader := req
+
+		// interpret request as packet
+		p := protocol.Packet(req)
 
 		reqType, ok := p.GetInt()
 		if !ok {
@@ -116,11 +118,14 @@ func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, r
 		eis.NumClients(),
 	}
 
-	if eis.IsPaused() {
+	paused := eis.Paused()
+
+	if paused {
 		q = append(q, 7)
 	} else {
 		q = append(q, 5)
 	}
+
 	q = append(q,
 		protocol.Version,
 		eis.GameMode.ID(),
@@ -128,12 +133,14 @@ func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, r
 		eis.MaxClients,
 		eis.MasterMode,
 	)
-	if eis.IsPaused() {
+
+	if paused {
 		q = append(q,
-			eis.IsPaused(), // paused?
-			100,            // gamespeed
+			paused, // paused?
+			100,    // gamespeed
 		)
 	}
+
 	q = append(q, eis.Map, eis.ServerDescription)
 
 	p := packet.Encode(q...)

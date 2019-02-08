@@ -135,9 +135,9 @@ func (cap *Capture) Init() {
 
 func GameModeByID(id gamemode.ID) GameMode {
 	switch id {
-	case 3:
+	case gamemode.Insta:
 		return &Insta{}
-	case 5:
+	case gamemode.Effic:
 		return &Effic{}
 	default:
 		log.Println("unknown gamemode", id)

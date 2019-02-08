@@ -12,6 +12,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/client/playerstate"
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
@@ -207,6 +208,7 @@ outer:
 			}
 
 		case nmc.MasterMode:
+			log.Println(p)
 			_mm, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read mastermode from mastermode packet:", p)
@@ -225,7 +227,39 @@ outer:
 			s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.MasterMode, mm)
 
 		case nmc.VoteMap:
-			// TODO
+			mapp, ok := p.GetString()
+			if !ok {
+				log.Println("could not read map from map vote packet:", p)
+				return
+			}
+			if mapp == "" {
+				mapp = s.Map
+			}
+
+			_mode, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read mode from map vote packet:", p)
+				return
+			}
+			mode := gamemode.ID(_mode)
+
+			if !gamemode.Valid(mode) {
+				log.Println("invalid gamemode", mode, "requested")
+				return
+			}
+
+			if s.MasterMode < mastermode.Veto {
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("this server does not support map voting")))
+				return
+			}
+
+			if client.Privilege < privilege.Master {
+				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("you can't do that")))
+				return
+			}
+
+			s.ChangeMap(mode, mapp)
+			log.Println(client, "forced", mode, "on", mapp)
 
 		case nmc.Ping:
 			// client pinging server → send pong

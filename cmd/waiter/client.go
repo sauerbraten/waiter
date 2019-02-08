@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
@@ -76,4 +78,8 @@ func (c *Client) Reset() {
 	if c.Position != nil {
 		c.Position.Close()
 	}
+}
+
+func (c *Client) String() string {
+	return fmt.Sprintf("%s (%d)", c.Name, c.CN)
 }

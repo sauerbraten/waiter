@@ -7,36 +7,22 @@ import (
 )
 
 type GameTimer struct {
+	*pausableticker.Ticker
+
 	TimeLeft int32 // in milliseconds
 
-	ticker       *pausableticker.Ticker
 	duration     time.Duration
 	intermission func()
 }
 
 func NewGameTimer(duration time.Duration, intermission func()) *GameTimer {
 	return &GameTimer{
+		Ticker: pausableticker.NewTicker(100 * time.Millisecond),
+
 		TimeLeft:     int32(duration / time.Millisecond),
-		ticker:       pausableticker.NewTicker(100 * time.Millisecond),
 		duration:     duration,
 		intermission: intermission,
 	}
-}
-
-func (t *GameTimer) Pause() {
-	t.ticker.Pause()
-}
-
-func (t *GameTimer) Resume() {
-	t.ticker.Resume()
-}
-
-func (t *GameTimer) IsPaused() bool {
-	return t.ticker.Paused
-}
-
-func (t *GameTimer) Stop() {
-	t.ticker.Stop()
 }
 
 func (t *GameTimer) Reset() {
@@ -47,7 +33,7 @@ func (t *GameTimer) Reset() {
 func (t *GameTimer) run() {
 	defer t.intermission()
 	for {
-		<-t.ticker.C
+		<-t.C
 		s.TimeLeft -= 100
 
 		if s.TimeLeft <= 0 {

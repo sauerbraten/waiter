@@ -9,3 +9,20 @@ const (
 	Locked
 	Private
 )
+
+func (mm ID) String() string {
+	switch mm {
+	case Auth:
+		return "auth"
+	case Open:
+		return "open"
+	case Veto:
+		return "veto"
+	case Locked:
+		return "locked"
+	case Private:
+		return "private"
+	default:
+		return ""
+	}
+}

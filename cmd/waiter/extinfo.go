@@ -93,26 +93,39 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 			}
 			switch extReqType {
 			case ExtInfoTypeUptime:
-				eis.sendUptime(conn, raddr, respHeader)
+				eis.send(conn, raddr, eis.uptime(respHeader))
 			case ExtInfoTypeClientInfo:
 				cn, ok := p.GetInt()
 				if !ok {
 					log.Println("malformed info request: could not read CN from client info request:", p)
 					continue
 				}
-				eis.sendPlayerStats(cn, conn, raddr, respHeader)
+				eis.send(conn, raddr, eis.clientInfo(cn, respHeader)...)
 			case ExtInfoTypeTeamScores:
 				// TODO
 			default:
 				log.Println("erroneous extinfo type queried:", reqType)
 			}
 		default:
-			eis.sendBasicInfo(conn, raddr, respHeader)
+			eis.send(conn, raddr, eis.basicInfo(respHeader))
 		}
 	}
 }
 
-func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, respHeader []byte) {
+func (eis *ExtInfoServer) send(conn *net.UDPConn, raddr *net.UDPAddr, packets ...protocol.Packet) {
+	for _, p := range packets {
+		n, err := conn.WriteToUDP(p, raddr)
+		if err != nil {
+			log.Println(err)
+		}
+
+		if n != len(p) {
+			log.Println("packet length and sent length didn't match!", p)
+		}
+	}
+}
+
+func (eis *ExtInfoServer) basicInfo(respHeader []byte) protocol.Packet {
 	q := []interface{}{
 		respHeader,
 		eis.NumClients(),
@@ -143,18 +156,10 @@ func (eis *ExtInfoServer) sendBasicInfo(conn *net.UDPConn, raddr *net.UDPAddr, r
 
 	q = append(q, eis.Map, eis.ServerDescription)
 
-	p := packet.Encode(q...)
-	n, err := conn.WriteToUDP(p, raddr)
-	if err != nil {
-		log.Println(err)
-	}
-
-	if n != len(p) {
-		log.Println("packet length and sent length didn't match!", p)
-	}
+	return packet.Encode(q...)
 }
 
-func (eis *ExtInfoServer) sendUptime(conn *net.UDPConn, raddr *net.UDPAddr, respHeader []byte) {
+func (eis *ExtInfoServer) uptime(respHeader []byte) protocol.Packet {
 	q := []interface{}{
 		respHeader,
 		ExtInfoACK,
@@ -166,19 +171,10 @@ func (eis *ExtInfoServer) sendUptime(conn *net.UDPConn, raddr *net.UDPAddr, resp
 		q = append(q, ServerMod)
 	}
 
-	p := packet.Encode(q...)
-
-	n, err := conn.WriteToUDP(p, raddr)
-	if err != nil {
-		log.Println(err)
-	}
-
-	if n != len(p) {
-		log.Println("packet length and sent length didn't match!", p)
-	}
+	return packet.Encode(q...)
 }
 
-func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *net.UDPAddr, respHeader []byte) {
+func (eis *ExtInfoServer) clientInfo(cn int32, respHeader []byte) (packets []protocol.Packet) {
 	q := []interface{}{
 		respHeader,
 		ExtInfoACK,
@@ -187,23 +183,13 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 
 	if cn < -1 || int(cn) > eis.NumClients() {
 		q = append(q, ExtInfoError)
-		p := packet.Encode(q...)
-
-		n, err := conn.WriteToUDP(p, raddr)
-		if err != nil {
-			log.Println(err)
-		}
-
-		if n != len(p) {
-			log.Println("packet length and sent length didn't match!", p)
-		}
-
+		packets = append(packets, packet.Encode(q...))
 		return
 	}
 
 	q = append(q, ExtInfoNoError)
 
-	headerLen := len(q)
+	header := q
 
 	q = append(q, ClientInfoResponseTypeCNs)
 
@@ -213,92 +199,46 @@ func (eis *ExtInfoServer) sendPlayerStats(cn int32, conn *net.UDPConn, raddr *ne
 		q = append(q, cn)
 	}
 
-	p := packet.Encode(q...)
-	n, err := conn.WriteToUDP(p, raddr)
-	if err != nil {
-		log.Println(err)
-	}
-
-	if n != len(p) {
-		log.Println("packet length and sent length didn't match!", p)
-	}
-
-	q = q[:headerLen]
-	p = nil
+	packets = append(packets, packet.Encode(q...))
 
 	if cn == -1 {
 		eis.Clients.ForEach(func(c *Client) {
-			q = append(q,
-				ClientInfoResponseTypeInfo,
-				c.CN,
-				c.Ping,
-				c.Name,
-				c.Team,
-				c.GameState.Frags,
-				c.GameState.Flags,
-				c.GameState.Deaths,
-				c.GameState.Teamkills,
-				c.GameState.Damage*100/utils.Max(c.GameState.ShotDamage, 1),
-				c.GameState.Health,
-				c.GameState.Armour,
-				c.GameState.SelectedWeapon.ID,
-				c.Privilege,
-				c.GameState.State,
-			)
-			if eis.SendClientIPsViaExtinfo {
-				q = append(q, []byte(c.Peer.Address.IP.To4()[:3]))
-			} else {
-				q = append(q, 0, 0, 0)
-			}
-
-			p = packet.Encode(q...)
-			n, err = conn.WriteToUDP(p, raddr)
-			if err != nil {
-				log.Println(err)
-			}
-
-			if n != len(p) {
-				log.Println("packet length and sent length didn't match!", p)
-			}
-
-			q = q[:headerLen]
-			p = nil
+			packets = append(packets, eis.clientPacket(c, header))
 		})
 	} else {
 		c := eis.Clients.GetClientByCN(uint32(cn))
-		q = append(q,
-			ClientInfoResponseTypeInfo,
-			c.CN,
-			c.Ping,
-			c.Name,
-			c.Team,
-			c.GameState.Frags,
-			c.GameState.Flags,
-			c.GameState.Deaths,
-			c.GameState.Teamkills,
-			c.GameState.Damage*100/utils.Max(c.GameState.ShotDamage, 1),
-			c.GameState.Health,
-			c.GameState.Armour,
-			c.GameState.SelectedWeapon,
-			c.Privilege,
-			c.GameState.State,
-		)
-
-		if eis.SendClientIPsViaExtinfo {
-			q = append(q, c.Peer.Address.IP[:2]) // only 3 first bytes
-		} else {
-			q = append(q, 0, 0, 0) // 3 times 0x0
-		}
-
-		p = packet.Encode(q...)
-
-		n, err = conn.WriteToUDP(p, raddr)
-		if err != nil {
-			log.Println(err)
-		}
-
-		if n != len(p) {
-			log.Println("packet length and sent length didn't match!", p)
-		}
+		packets = append(packets, eis.clientPacket(c, header))
 	}
+
+	return
+}
+
+func (eis *ExtInfoServer) clientPacket(c *Client, header []interface{}) protocol.Packet {
+	q := header
+
+	q = append(q,
+		ClientInfoResponseTypeInfo,
+		c.CN,
+		c.Ping,
+		c.Name,
+		c.Team,
+		c.GameState.Frags,
+		c.GameState.Flags,
+		c.GameState.Deaths,
+		c.GameState.Teamkills,
+		c.GameState.Damage*100/utils.Max(c.GameState.ShotDamage, 1),
+		c.GameState.Health,
+		c.GameState.Armour,
+		c.GameState.SelectedWeapon.ID,
+		c.Privilege,
+		c.GameState.State,
+	)
+
+	if eis.SendClientIPsViaExtinfo {
+		q = append(q, []byte(c.Peer.Address.IP.To4()[:3]))
+	} else {
+		q = append(q, 0, 0, 0)
+	}
+
+	return packet.Encode(q...)
 }

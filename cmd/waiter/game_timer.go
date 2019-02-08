@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/pausableticker"
+	"github.com/sauerbraten/waiter/pkg/pausableticker"
 )
 
 type GameTimer struct {

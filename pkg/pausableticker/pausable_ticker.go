@@ -3,10 +3,10 @@ package pausableticker
 import "time"
 
 type Ticker struct {
-	C      <-chan time.Time // The channel on which the ticks are delivered.
-	Paused bool
+	C <-chan time.Time // The channel on which the ticks are delivered.
 
 	pause  chan bool
+	paused bool
 	stop   chan struct{}
 	ticker *time.Ticker
 }
@@ -35,11 +35,11 @@ func (t *Ticker) run(c chan<- time.Time) {
 		case c <- <-t.ticker.C:
 		case shouldPause := <-t.pause:
 			if shouldPause {
-				t.Paused = true
+				t.paused = true
 				for shouldPause {
 					shouldPause = <-t.pause
 				}
-				t.Paused = false
+				t.paused = false
 			}
 		case <-t.stop:
 			close(t.pause)
@@ -51,6 +51,10 @@ func (t *Ticker) run(c chan<- time.Time) {
 
 func (t *Ticker) Pause() {
 	t.pause <- true
+}
+
+func (t *Ticker) Paused() bool {
+	return t.paused
 }
 
 func (t *Ticker) Resume() {

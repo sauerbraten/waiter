@@ -293,13 +293,29 @@ outer:
 			client.Packets.Publish(nmc.ChatMessage, msg)
 
 		case nmc.TeamChatMessage:
-			// client sending team chat message → pass on to team immediatly
+			// client sending team chat message → pass on to team immediately
 			msg, ok := p.GetString()
 			if !ok {
 				log.Println("could not read message from team chat message packet:", p)
 				return
 			}
 			s.Clients.SendToTeam(client, 1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.TeamChatMessage, client.CN, msg))
+
+		case nmc.ChangeName:
+			newName, ok := p.GetString()
+			if !ok {
+				log.Println("could not read name from name change packet:", p)
+				return
+			}
+
+			newName = cubecode.Filter(newName, false)
+
+			if len(newName) == 0 || len(newName) > 20 {
+				return
+			}
+
+			client.Name = newName
+			client.Packets.Publish(nmc.ChangeName, newName)
 
 		case nmc.MapCRC:
 			// client sends crc hash of his map file

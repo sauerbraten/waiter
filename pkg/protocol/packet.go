@@ -33,8 +33,12 @@ func (p *Packet) PutUint(v uint32) {
 
 // PutInt writes a string to the packet buffer, encoding it with Sauer's conversion table at the same time.
 func (p *Packet) PutString(s string) {
-	for _, c := range s {
-		p.PutInt(cubecode.FromUnicode(c))
+	for _, r := range s {
+		cpoint := cubecode.FromUnicode(r)
+		if cpoint == 0 {
+			continue
+		}
+		p.PutInt(cpoint)
 	}
 	(*p) = append(*p, 0x00)
 }
@@ -130,5 +134,4 @@ func (p *Packet) GetString() (s string, ok bool) {
 		}
 		s += string(cubecode.ToUnicode(cpoint))
 	}
-	return s, true
 }

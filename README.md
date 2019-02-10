@@ -5,6 +5,25 @@ A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
     /connect p1x.pw
 
 
+## Features
+
+What works:
+
+- insta & effic (but rocket and grenade don't show up for other players)
+- global auth
+- local auth
+- setting mastermode
+- forcing gamemode and/or map
+- changing your name
+- extinfo
+
+What doesn't work yet:
+
+- all other modes
+- mode/map voting
+- demo recording
+
+
 ## Installing
 
 Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Run `go install github.com/sauerbraten/waiter/cmd/waiter` to install the `waiter` command in your `$GOPATH/bin` (which should by in your `$PATH`).

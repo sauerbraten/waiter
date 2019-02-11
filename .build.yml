@@ -16,7 +16,7 @@ tasks:
       mv waiter src/github.com/sauerbraten/
   - version: |
       cd src/github.com/sauerbraten/waiter/cmd/waiter
-      sed -i "s/<filled in by CI service>/$(git rev-parse --short HEAD)/" config.go
+      sed -i "s/<filled in by CI service>/$(git rev-parse --short HEAD)/" config.json
   - build: |
       cd src/github.com/sauerbraten/waiter/cmd/waiter
       go get

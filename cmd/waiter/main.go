@@ -18,8 +18,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/net/enet"
 )
 
-const gitRevision = "<filled in by CI service>"
-
 var (
 	// global server state
 	s *Server

@@ -159,7 +159,7 @@ func (cm *ClientManager) Join(c *Client, name string, playerModel int32) {
 		c.GameState.State = playerstate.Alive
 	}
 
-	log.Printf("join: %s (%d)\n", name, c.CN)
+	log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", cm.UniqueName(c), c.Peer.Address.IP)))
 }
 
 // Tells other clients that the client disconnected, giving a disconnect reason in case it's not a normal leave.
@@ -168,16 +168,16 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 		return
 	}
 
+	cm.Relay(c, nmc.Leave, c.CN)
+
 	msg := ""
 	if reason != disconnectreason.None {
-		msg = fmt.Sprintf("disconnected: %s (%s) because: %s", cm.UniqueName(c), c.Peer.Address, reason)
+		msg = fmt.Sprintf("%s (%s) disconnected because: %s", cm.UniqueName(c), c.Peer.Address.IP, reason)
+		cm.Relay(c, nmc.ServerMessage, msg)
 	} else {
-		msg = fmt.Sprintf("disconnected: %s (%s)", cm.UniqueName(c), c.Peer.Address)
+		msg = fmt.Sprintf("%s (%s) disconnected", cm.UniqueName(c), c.Peer.Address.IP)
 	}
 	log.Println(cubecode.SanitizeString(msg))
-
-	cm.Relay(c, nmc.Leave, c.CN)
-	cm.Relay(c, nmc.ServerMessage, msg)
 
 	c.Peer.Disconnect(uint32(reason))
 

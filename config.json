@@ -16,7 +16,7 @@
 	"fallback_game_mode": 5,
 
 	// server description
-	"server_description": "p1x.pw (@ <filled in by CI service>)",
+	"server_description": "p1x.pw @ <filled in by CI service>",
 
 	// maximum number of clients
 	"max_clients": 12,

@@ -9,19 +9,33 @@ A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 
 What works:
 
-- insta & effic (but rocket and grenade don't show up for other players)
+- connecting & disconnecting
+- relaying positional data between clients (at 91 Hz!)
+- chat, team chat
+- changing weapon, shooting, killing, suiciding, spawning (but rocket and grenade don't show up for other players)
 - global auth
 - local auth
-- setting mastermode
+- changing mastermode
 - forcing gamemode and/or map
+- pausing & resuming
 - changing your name
-- extinfo
+- extinfo (server mod ID: -9)
 
-What doesn't work yet:
+Pretty much everything else is not yet implemented:
 
-- all other modes
-- mode/map voting
+- spawning pick ups (ammo, armour, quad, flags, ...)
+- picking up those pick ups
+- any modes besides DM (only insta is fully playable right now)
 - demo recording
+- `/checkmaps` (will compare against server-side hash, not majority)
+- overtime (& maybe golden goal)
+
+Some things are specifically not planned and will likely never be implemented:
+
+- bots
+- map voting
+- coop edit mode (including `/sendmap` and `/getmap`)
+- claiming privileges using `/setmaster` (relinquishing them with `/setmaster 0` already works)
 
 
 ## Installing

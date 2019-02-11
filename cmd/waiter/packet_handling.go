@@ -38,7 +38,7 @@ outer:
 
 		if !isValidMessage(client, packetType) {
 			log.Println("invalid network message code", packetType, "from CN", client.CN)
-			s.Clients.Disconnect(client, disconnectreason.MessageError)
+			s.Disconnect(client, disconnectreason.MessageError)
 			return
 		}
 
@@ -206,7 +206,7 @@ outer:
 			} else {
 				s.Clients.Broadcast(nil, nmc.ServerMessage, fmt.Sprintf("%s kicked %s", s.Clients.UniqueName(client), s.Clients.UniqueName(victim)))
 			}
-			s.Clients.Disconnect(victim, disconnectreason.Kick)
+			s.Disconnect(victim, disconnectreason.Kick)
 
 		case nmc.MasterMode:
 			log.Println(p)

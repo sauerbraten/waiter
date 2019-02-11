@@ -87,19 +87,6 @@ func (cm *ClientManager) Relay(from *Client, args ...interface{}) {
 	cm.Broadcast(exclude(from), args...)
 }
 
-// Sends basic server info to the client.
-func (cm *ClientManager) SendServerConfig(c *Client, config *Config) {
-	c.Send(
-		nmc.ServerInfo,
-		c.CN,
-		protocol.Version,
-		c.SessionID,
-		false,
-		config.ServerDescription,
-		config.PrimaryAuthDomain,
-	)
-}
-
 // Sends 'welcome' information to a newly joined client like map, mode, time left, other players, etc.
 func (cm *ClientManager) SendWelcome(c *Client) {
 	p := []interface{}{

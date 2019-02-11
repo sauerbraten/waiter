@@ -3,6 +3,10 @@ package main
 import (
 	"time"
 
+	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/pkg/protocol"
+
 	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
@@ -19,6 +23,25 @@ type Server struct {
 	relay   *Relay
 	Clients *ClientManager
 	Auth    *auth.Manager
+}
+
+func (s *Server) Connect(peer *enet.Peer) {
+	client := s.Clients.Add(peer)
+	client.Position, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
+	client.Send(
+		nmc.ServerInfo,
+		client.CN,
+		protocol.Version,
+		client.SessionID,
+		false,
+		s.ServerDescription,
+		s.PrimaryAuthDomain,
+	)
+}
+
+func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
+	s.relay.RemoveClient(client.CN)
+	s.Clients.Disconnect(client, reason)
 }
 
 func (s *Server) Intermission() {

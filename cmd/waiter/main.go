@@ -90,28 +90,19 @@ func main() {
 
 		switch event.Type {
 		case enet.EVENT_TYPE_CONNECT:
-			log.Println("enet: connected:", event.Peer.Address.String())
-
 			if ban, ok := bm.GetBan(event.Peer.Address.IP); ok {
 				log.Println("peer's IP is banned:", ban)
 				event.Peer.Disconnect(uint32(disconnectreason.IPBanned))
 				continue
 			}
-
-			client := s.Clients.Add(event.Peer)
-
-			client.Position, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
-
-			s.Clients.SendServerConfig(client, s.Config)
+			s.Connect(event.Peer)
 
 		case enet.EVENT_TYPE_DISCONNECT:
-			log.Println("enet: disconnected:", event.Peer.Address.String())
 			client := s.Clients.GetClientByPeer(event.Peer)
 			if client == nil {
 				continue
 			}
-			s.relay.RemoveClient(client.CN)
-			s.Clients.Disconnect(client, disconnectreason.None)
+			s.Disconnect(client, disconnectreason.None)
 
 		case enet.EVENT_TYPE_RECEIVE:
 			// TODO: fix this maybe?

@@ -7,9 +7,9 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
-	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 )
 
 func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
@@ -56,7 +56,7 @@ func (s *Server) handleAuthAnswer(client *Client, domain string, p *protocol.Pac
 	sucess, name, prvlg := s.Auth.CheckAnswer(uint32(requestID), client.CN, domain, answer)
 	if !sucess {
 		if client.AuthRequiredBecause > disconnectreason.None {
-			s.Clients.Disconnect(client, client.AuthRequiredBecause)
+			s.Disconnect(client, client.AuthRequiredBecause)
 		}
 		return
 	}

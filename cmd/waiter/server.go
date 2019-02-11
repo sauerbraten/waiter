@@ -3,17 +3,17 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/net/enet"
-	"github.com/sauerbraten/waiter/pkg/protocol"
-
 	"github.com/sauerbraten/waiter/internal/auth"
+	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
+	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/maprotation"
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
 type Server struct {
@@ -42,6 +42,15 @@ func (s *Server) Connect(peer *enet.Peer) {
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
+	if s.Clients.NumberOfClientsConnected() == 0 {
+		s.Empty()
+	}
+}
+
+func (s *Server) Empty() {
+	s.MasterMode = mastermode.Open
+	s.timer.Resume()
+	s.ChangeMap(s.FallbackGameMode, maprotation.NextMap(s.FallbackGameMode, s.Map))
 }
 
 func (s *Server) Intermission() {
@@ -190,7 +199,11 @@ func (s *Server) handleDeath(fragger, victim *Client) {
 	victim.Die()
 	fragger.GameState.Frags += s.GameMode.CountFrag(fragger, victim)
 	// TODO: effectiveness
-	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, s.GameMode.TeamFrags(fragger.Team))
+	teamFrags := 0
+	if teamMode, ok := s.GameMode.(TeamMode); ok {
+		teamFrags = teamMode.Frags(fragger.Team)
+	}
+	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, teamFrags)
 	// TODO teamkills
 }
 

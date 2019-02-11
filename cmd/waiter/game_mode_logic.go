@@ -12,41 +12,44 @@ type GameMode interface {
 	Init()
 	Join(*Client)
 	CountFrag(fragger, victim *Client) int
-	TeamFrags(string) int
 }
 
-type NonTeamMode struct{}
+type teamlessMode struct{}
 
-func (_ *NonTeamMode) Init() {}
+func (*teamlessMode) Init() {}
 
-func (_ *NonTeamMode) Join(c *Client) {}
+func (*teamlessMode) Join(c *Client) {}
 
-func (_ *NonTeamMode) CountFrag(fragger, victim *Client) int {
+func (*teamlessMode) CountFrag(fragger, victim *Client) int {
 	if fragger == victim {
 		return -1
 	}
 	return 1
 }
 
-func (_ *NonTeamMode) TeamFrags(_ string) int { return 0 }
-
 type Effic struct {
-	NonTeamMode
+	teamlessMode
 }
 
-func (_ *Effic) ID() gamemode.ID { return gamemode.Effic }
+func (*Effic) ID() gamemode.ID { return gamemode.Effic }
 
 type Insta struct {
-	NonTeamMode
+	teamlessMode
 }
 
-func (_ *Insta) ID() gamemode.ID { return gamemode.Insta }
+func (*Insta) ID() gamemode.ID { return gamemode.Insta }
 
-type TeamMode struct {
+type TeamMode interface {
+	GameMode
+	Frags(string) int
+	ForEach(func(*Team))
+}
+
+type teamMode struct {
 	Teams map[string]*Team
 }
 
-func (t *TeamMode) selectWeakestTeam() string {
+func (t *teamMode) selectWeakestTeam() string {
 	teams := []*Team{}
 	for _, team := range t.Teams {
 		teams = append(teams, team)
@@ -65,24 +68,30 @@ func (t *TeamMode) selectWeakestTeam() string {
 	return teams[utils.RNG.Int31n(2)].Name
 }
 
-func (t *TeamMode) Init() {
+func (t *teamMode) Init() {
 	t.Teams = map[string]*Team{}
 }
 
-func (t *TeamMode) Join(c *Client) {
+func (t *teamMode) Join(c *Client) {
 	team := t.selectWeakestTeam()
 	c.Team = team
 	t.Teams[team].AddPlayer(c)
 }
 
-func (_ *TeamMode) CountFrag(fragger, victim *Client) int {
+func (*teamMode) CountFrag(fragger, victim *Client) int {
 	if fragger.Team == victim.Team {
 		return -1
 	}
 	return 1
 }
 
-func (t *TeamMode) TeamFrags(name string) int {
+func (t *teamMode) ForEach(do func(t *Team)) {
+	for _, team := range t.Teams {
+		do(team)
+	}
+}
+
+func (t *teamMode) Frags(name string) int {
 	if team, ok := t.Teams[name]; ok {
 		return team.Frags
 	}
@@ -90,17 +99,17 @@ func (t *TeamMode) TeamFrags(name string) int {
 }
 
 type CTF struct {
-	TeamMode
+	teamMode
 }
 
-func (_ *CTF) ID() gamemode.ID { return gamemode.CTF }
+func (*CTF) ID() gamemode.ID { return gamemode.CTF }
 
 func (ctf *CTF) Join(c *Client) {
-	ctf.TeamMode.Join(c)
+	ctf.teamMode.Join(c)
 }
 
 func (ctf *CTF) Init() {
-	ctf.TeamMode.Init()
+	ctf.teamMode.Init()
 	ctf.Teams["good"] = &Team{}
 	ctf.Teams["evil"] = &Team{}
 
@@ -111,20 +120,20 @@ type EfficCTF struct {
 	CTF
 }
 
-func (_ *EfficCTF) ID() gamemode.ID { return gamemode.EfficCTF }
+func (*EfficCTF) ID() gamemode.ID { return gamemode.EfficCTF }
 
 type Capture struct {
-	TeamMode
+	teamMode
 }
 
-func (_ *Capture) ID() gamemode.ID { return gamemode.Capture }
+func (*Capture) ID() gamemode.ID { return gamemode.Capture }
 
 func (cap *Capture) Join(c *Client) {
-	cap.TeamMode.Join(c)
+	cap.teamMode.Join(c)
 }
 
 func (cap *Capture) Init() {
-	cap.TeamMode.Init()
+	cap.teamMode.Init()
 	cap.Teams["guht"] = &Team{}
 	cap.Teams["pöse"] = &Team{}
 

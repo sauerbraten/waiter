@@ -101,6 +101,20 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 		p = append(p, pup)
 	}
 
+	if s.timer.Paused() {
+		p = append(p, nmc.PauseGame, 1, -1)
+	}
+
+	if teamMode, ok := s.GameMode.(TeamMode); ok {
+		p = append(p, nmc.TeamInfo)
+		teamMode.ForEach(func(t *Team) {
+			if t.Frags > 0 {
+				p = append(p, t.Name, t.Frags)
+			}
+		})
+		p = append(p, "")
+	}
+
 	// tell the client what team he was put in by the server
 	p = append(p, nmc.SetTeam, c.CN, c.Team, -1)
 

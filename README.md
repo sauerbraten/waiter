@@ -10,7 +10,7 @@ A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 What works:
 
 - connecting & disconnecting
-- relaying positional data between clients (at 91 Hz!)
+- relaying positional data between clients
 - chat, team chat
 - changing weapon, shooting, killing, suiciding, spawning (but rocket and grenade don't show up for other players)
 - global auth

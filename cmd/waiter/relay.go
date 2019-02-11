@@ -42,7 +42,7 @@ func NewRelay() *Relay {
 }
 
 func (r *Relay) loop() {
-	t := time.Tick(11 * time.Millisecond)
+	t := time.Tick(33 * time.Millisecond)
 	for {
 		select {
 		case <-t:

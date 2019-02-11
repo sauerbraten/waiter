@@ -7,19 +7,19 @@ import (
 	"os"
 
 	"github.com/sauerbraten/waiter/internal/auth"
-	"github.com/sauerbraten/waiter/internal/client/privilege"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 )
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Println("Usage: genauth <domain> <privilege> <name>")
+		fmt.Println("Usage: genauth <domain> <role> <name>")
 		os.Exit(1)
 		return
 	}
 
-	domain, prvlg, name := os.Args[1], privilege.Parse(os.Args[2]), os.Args[3]
+	domain, rol, name := os.Args[1], role.Parse(os.Args[2]), os.Args[3]
 
-	if prvlg != privilege.Master && prvlg != privilege.Admin {
+	if rol != role.Master && rol != role.Admin {
 		fmt.Println("privilege must be 'master' or 'admin'")
 		os.Exit(2)
 		return
@@ -38,7 +38,7 @@ func main() {
 			Domain: domain,
 		},
 		PublicKey: pub,
-		Privilege: prvlg,
+		Role:      rol,
 	}
 
 	fmt.Printf("add to user's auth.cfg:\nauthkey \"%s\" \"%s\" \"%s\"\n", name, hex.EncodeToString(priv), domain)

@@ -52,5 +52,14 @@
                         "y": "74974e29398515bf738bd961484a455aa122d0273c6da8a4"
                 },
                 "role": "master"
+        },
+        {
+                "name": "Frosty",
+                "domain": "waiter",
+                "public_key": {
+                        "x": "99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2",
+                        "y": "2c3b89d5359440d6d19adcf765d9d8a9861fc47c7a73d41"
+                },
+                "role": "master"
         }
 ]

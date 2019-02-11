@@ -22,7 +22,7 @@ import (
 	"math/big"
 	mrand "math/rand"
 
-	"github.com/sauerbraten/waiter/internal/client/privilege"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 )
 
 // request holds the data we need to remember between
@@ -32,7 +32,7 @@ type request struct {
 	domain   string
 	name     string
 	cn       uint32
-	prvlg    privilege.ID
+	role     role.ID
 	solution string
 }
 
@@ -52,14 +52,14 @@ func NewManager(users []*User) *Manager {
 	return m
 }
 
-func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, prvlg privilege.ID) (requestID uint32) {
+func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, role role.ID) (requestID uint32) {
 	requestID = mrand.Uint32()
 	req := &request{
 		id:     requestID,
 		domain: domain,
 		name:   name,
 		cn:     cn,
-		prvlg:  prvlg,
+		role:   role,
 	}
 	m.pending[requestID] = req
 	return
@@ -78,7 +78,7 @@ func (m *Manager) GenerateChallenge(cn uint32, domain, name string) (challenge s
 		return "", 0, errors.New("auth: user not found")
 	}
 
-	requestID = m.RegisterAuthRequest(cn, domain, name, u.Privilege)
+	requestID = m.RegisterAuthRequest(cn, domain, name, u.Role)
 
 	challenge, solution, err := generateChallenge(u.PublicKey)
 	if err != nil {
@@ -91,13 +91,13 @@ func (m *Manager) GenerateChallenge(cn uint32, domain, name string) (challenge s
 	return challenge, requestID, nil
 }
 
-func (m *Manager) CheckAnswer(requestID, cn uint32, domain string, answer string) (bool, string, privilege.ID) {
+func (m *Manager) CheckAnswer(requestID, cn uint32, domain string, answer string) (bool, string, role.ID) {
 	defer m.ClearAuthRequest(requestID)
 	req, ok := m.pending[requestID]
 	if !ok {
-		return false, "", privilege.None
+		return false, "", role.None
 	}
-	return requestID == req.id && domain == req.domain && cn == req.cn && answer == req.solution, req.name, req.prvlg
+	return requestID == req.id && domain == req.domain && cn == req.cn && answer == req.solution, req.name, req.role
 }
 
 func generateChallenge(pub publicKey) (challenge, solution string, err error) {

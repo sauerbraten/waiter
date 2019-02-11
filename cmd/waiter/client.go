@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
@@ -18,7 +18,7 @@ type Client struct {
 	Name                string
 	Team                string
 	PlayerModel         int32
-	Privilege           privilege.ID
+	Role                role.ID
 	GameState           *GameState
 	Joined              bool                // true if the player is actually in the game
 	AuthRequiredBecause disconnectreason.ID // e.g. server is in private mode
@@ -61,7 +61,7 @@ func (c *Client) Die() {
 func (c *Client) Reset() {
 	c.Name = ""
 	c.PlayerModel = -1
-	c.Privilege = privilege.None
+	c.Role = role.None
 	if c.GameState != nil {
 		c.GameState.Reset()
 	}
@@ -73,11 +73,11 @@ func (c *Client) Reset() {
 	c.Peer = nil
 	c.SessionID = utils.RNG.Int31()
 	c.Ping = 0
-	if c.Packets != nil {
-		c.Packets.Close()
-	}
 	if c.Position != nil {
 		c.Position.Close()
+	}
+	if c.Packets != nil {
+		c.Packets.Close()
 	}
 }
 

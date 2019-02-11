@@ -223,7 +223,7 @@ func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 		c.GameState.Health,
 		c.GameState.Armour,
 		c.GameState.SelectedWeapon.ID,
-		c.Privilege,
+		c.Role,
 		c.GameState.State,
 	)
 

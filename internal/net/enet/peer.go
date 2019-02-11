@@ -18,7 +18,7 @@ import (
 type PeerState uint
 
 type Peer struct {
-	Address net.UDPAddr
+	Address *net.UDPAddr
 	Network net.IPNet // for bans
 	State   PeerState
 	cPeer   *C.ENetPeer
@@ -38,7 +38,7 @@ func peerFromCPeer(cPeer *C.ENetPeer) *Peer {
 	ip := net.IPv4(byte((ipBytes<<24)>>24), byte((ipBytes<<16)>>24), byte((ipBytes<<8)>>24), byte(ipBytes>>24))
 
 	p := &Peer{
-		Address: net.UDPAddr{
+		Address: &net.UDPAddr{
 			IP:   ip,
 			Port: int(cPeer.address.port),
 		},
@@ -69,6 +69,8 @@ func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
 
 	switch nmc.ID(payload[0]) {
 	case nmc.Position,
+		nmc.Welcome,
+		nmc.InitializeClient,
 		nmc.Leave,
 		nmc.Died,
 		nmc.SpawnState,
@@ -77,6 +79,8 @@ func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
 		nmc.ClientPing,
 		nmc.TimeLeft,
 		nmc.ServerMessage,
+		nmc.CurrentMaster,
+		nmc.AuthChallenge,
 		nmc.Client:
 	// do nothing
 	default:

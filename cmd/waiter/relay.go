@@ -121,8 +121,6 @@ func (r *Relay) AddClient(cn uint32, sf sendFunc) (positions *Publisher, packets
 	return
 }
 
-// Unsubscribe removes the specified channel from the topic, meaning there will be no more messages sent to updates.
-// Unsubscribe will close updates.
 func (r *Relay) RemoveClient(cn uint32) error {
 	r.μ.Lock()
 	defer r.μ.Unlock()

@@ -9,8 +9,8 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
-	"github.com/sauerbraten/waiter/internal/client/playerstate"
-	"github.com/sauerbraten/waiter/internal/client/privilege"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
@@ -178,34 +178,36 @@ outer:
 				log.Println("could not read password from setmaster packet:", p)
 				return
 			}
-			if cn == client.CN && toggle != 0 {
-				client.Send(nmc.ServerMessage, cubecode.Fail("server only supports claiming master using /auth"))
+			switch toggle {
+			case 0:
+				s.setRole(client, cn, role.None)
+			default:
+				s.setRole(client, cn, role.Master)
+			}
+
+		case nmc.Kick:
+			_cn, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read cn from kick packet:", p)
 				return
 			}
-			target := s.Clients.GetClientByCN(cn)
-			if target == nil {
-				client.Send(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("no client with CN %d", cn)))
+			cn := uint32(_cn)
+			reason, ok := p.GetString()
+			if !ok {
+				log.Println("could not read reason from kick packet:", p)
 				return
 			}
-			if client != target && client.Privilege <= target.Privilege {
+			victim := s.Clients.GetClientByCN(cn)
+			if client.Role <= victim.Role {
 				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 				return
 			}
-			switch toggle {
-			case 0:
-				oldPrivilege := target.Privilege
-				s.setPrivilege(target, privilege.None)
-				var msg string
-				if client != target {
-					msg = fmt.Sprintf("%s took away %s privileges from %s", s.Clients.UniqueName(client), oldPrivilege, s.Clients.UniqueName(target))
-				} else {
-					msg = fmt.Sprintf("%s relinquished %s privileges", s.Clients.UniqueName(client), oldPrivilege)
-				}
-				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
-			default:
-				s.setPrivilege(target, privilege.Master)
-				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, fmt.Sprintf("%s gave %s privileges to %s", s.Clients.UniqueName(client), privilege.Master, s.Clients.UniqueName(target)))
+			if reason != "" {
+				s.Clients.Broadcast(nil, nmc.ServerMessage, fmt.Sprintf("%s kicked %s for: %s", s.Clients.UniqueName(client), s.Clients.UniqueName(victim), reason))
+			} else {
+				s.Clients.Broadcast(nil, nmc.ServerMessage, fmt.Sprintf("%s kicked %s", s.Clients.UniqueName(client), s.Clients.UniqueName(victim)))
 			}
+			s.Clients.Disconnect(victim, disconnectreason.Kick)
 
 		case nmc.MasterMode:
 			log.Println(p)
@@ -219,7 +221,7 @@ outer:
 				log.Println("invalid mastermode", mm, "requested")
 				return
 			}
-			if client.Privilege == privilege.None {
+			if client.Role == role.None {
 				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 				return
 			}
@@ -253,7 +255,7 @@ outer:
 				return
 			}
 
-			if client.Privilege < privilege.Master {
+			if client.Role < role.Master {
 				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 				return
 			}
@@ -399,7 +401,7 @@ outer:
 
 		case nmc.PauseGame:
 			if s.MasterMode < mastermode.Locked {
-				if client.Privilege == privilege.None {
+				if client.Role == role.None {
 					return
 				}
 			}

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/auth"
-	"github.com/sauerbraten/waiter/internal/client/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sauerbraten/waiter/internal/client/privilege"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 )
 
 type UserIdentifier struct {
@@ -14,17 +14,17 @@ type UserIdentifier struct {
 
 type User struct {
 	UserIdentifier
-	PublicKey publicKey    `json:"public_key"`
-	Privilege privilege.ID `json:"-"`
+	PublicKey publicKey `json:"public_key"`
+	Role      role.ID   `json:"-"`
 }
 
 func (u *User) MarshalJSON() ([]byte, error) {
 	proxy := struct {
 		User
-		Privilege string `json:"privilege"`
+		Role string `json:"role"`
 	}{
-		User:      *u,
-		Privilege: u.Privilege.String(),
+		User: *u,
+		Role: u.Role.String(),
 	}
 	return json.Marshal(proxy)
 }
@@ -33,7 +33,7 @@ func (u *User) UnmarshalJSON(data []byte) error {
 	proxy := &struct {
 		UserIdentifier
 		PublicKey publicKey `json:"public_key"`
-		Privilege string    `json:"privilege"`
+		Role      string    `json:"role"`
 	}{}
 	err := json.Unmarshal(data, proxy)
 	if err != nil {
@@ -41,9 +41,9 @@ func (u *User) UnmarshalJSON(data []byte) error {
 	}
 	u.UserIdentifier = proxy.UserIdentifier
 	u.PublicKey = proxy.PublicKey
-	u.Privilege = privilege.Parse(proxy.Privilege)
-	if u.Privilege == -1 {
-		return fmt.Errorf("invalid value for 'privilege'")
+	u.Role = role.Parse(proxy.Role)
+	if u.Role == -1 {
+		return fmt.Errorf("invalid value for 'role'")
 	}
 	return nil
 }

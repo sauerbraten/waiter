@@ -113,7 +113,7 @@ func main() {
 				continue
 			}
 			s.relay.RemoveClient(client.CN)
-			s.Clients.Leave(client)
+			s.Clients.Disconnect(client, disconnectreason.None)
 
 		case enet.EVENT_TYPE_RECEIVE:
 			// TODO: fix this maybe?

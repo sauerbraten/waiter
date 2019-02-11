@@ -7,7 +7,7 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
-	"github.com/sauerbraten/waiter/internal/client/privilege"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 )
@@ -23,7 +23,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
 }
 
 func (s *Server) handleGlobalAuthRequest(client *Client, name string) {
-	requestID := s.Auth.RegisterAuthRequest(client.CN, "", name, privilege.Auth)
+	requestID := s.Auth.RegisterAuthRequest(client.CN, "", name, role.Auth)
 
 	callback := func(sessionID int32) func(string) {
 		return func(challenge string) {
@@ -60,8 +60,7 @@ func (s *Server) handleAuthAnswer(client *Client, domain string, p *protocol.Pac
 		}
 		return
 	}
-	log.Printf("successful auth by %s (%d) as %s [%s]\n", client.Name, client.CN, name, domain)
-	s.setAuthPrivilege(client, prvlg, domain, name)
+	s.setAuthRole(client, prvlg, domain, name)
 }
 
 func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
@@ -87,8 +86,7 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 			if client == nil || client.SessionID != sessionID || !sucess {
 				return
 			}
-			log.Printf("successful gauth by %s (%d) as %s\n", client.Name, client.CN, name)
-			s.setAuthPrivilege(client, privilege.Auth, "", name)
+			s.setAuthRole(client, role.Auth, "", name)
 		}
 	}(client.SessionID)
 
@@ -100,18 +98,50 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 	}
 }
 
-func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.ID, domain, name string) {
-	s.setPrivilege(client, prvlg)
-	msg := fmt.Sprintf("%s claimed %s privileges as %s", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name))
+func (s *Server) setAuthRole(client *Client, prvlg role.ID, domain, name string) {
+	msg := fmt.Sprintf("%s claimed %s privileges as %s", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name))
 	if domain != "" {
-		msg = fmt.Sprintf("%s claimed %s privileges as %s [%s]", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name), cubecode.Green(domain))
+		msg = fmt.Sprintf("%s claimed %s privileges as %s [%s]", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name), cubecode.Green(domain))
 	}
 	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	log.Println(cubecode.SanitizeString(msg))
+
+	s._setRole(client, prvlg)
 }
 
-func (s *Server) setPrivilege(client *Client, prvlg privilege.ID) {
-	client.Privilege = prvlg
-	if prvlg > privilege.None {
+func (s *Server) setRole(client *Client, targetCN uint32, rol role.ID) {
+	target := s.Clients.GetClientByCN(targetCN)
+	if target == nil {
+		client.Send(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("no client with CN %d", targetCN)))
+		return
+	}
+	if target.Role == rol {
+		return
+	}
+	if client != target && client.Role <= target.Role || client == target && rol != role.None {
+		client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
+		return
+	}
+
+	var msg string
+	if rol == role.None {
+		if client == target {
+			msg = fmt.Sprintf("%s relinquished %s privileges", s.Clients.UniqueName(client), target.Role)
+		} else {
+			msg = fmt.Sprintf("%s took away %s privileges from %s", s.Clients.UniqueName(client), target.Role, s.Clients.UniqueName(target))
+		}
+	} else {
+		msg = fmt.Sprintf("%s gave %s privileges to %s", s.Clients.UniqueName(client), rol, s.Clients.UniqueName(target))
+	}
+	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	log.Println(cubecode.SanitizeString(msg))
+
+	s._setRole(target, rol)
+}
+
+func (s *Server) _setRole(client *Client, rol role.ID) {
+	client.Role = rol
+	if rol > role.None {
 		client.AuthRequiredBecause = disconnectreason.None
 	}
 	pup, _ := s.Clients.PrivilegedUsersPacket()

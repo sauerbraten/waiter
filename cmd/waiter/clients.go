@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
-	"github.com/sauerbraten/waiter/internal/client/playerstate"
-	"github.com/sauerbraten/waiter/internal/client/privilege"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
@@ -160,24 +161,22 @@ func (cm *ClientManager) Join(c *Client, name string, playerModel int32) {
 	log.Printf("join: %s (%d)\n", name, c.CN)
 }
 
-// For when a client disconnects deliberately.
-func (cm *ClientManager) Leave(c *Client) {
-	log.Printf("left: %s (%d)\n", c.Name, c.CN)
-	cm.Disconnect(c, disconnectreason.None)
-}
-
 // Tells other clients that the client disconnected, giving a disconnect reason in case it's not a normal leave.
 func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 	if !c.InUse {
 		return
 	}
 
-	// inform others
-	cm.InformOthersOfDisconnect(c, reason)
-
+	msg := ""
 	if reason != disconnectreason.None {
-		log.Printf("disconnected: %s (%d) - %s", c.Name, c.CN, reason)
+		msg = fmt.Sprintf("disconnected: %s (%s) because: %s", cm.UniqueName(c), c.Peer.Address, reason)
+	} else {
+		msg = fmt.Sprintf("disconnected: %s (%s)", cm.UniqueName(c), c.Peer.Address)
 	}
+	log.Println(cubecode.SanitizeString(msg))
+
+	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.Leave, c.CN)
+	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
 
 	c.Peer.Disconnect(uint32(reason))
 
@@ -190,12 +189,6 @@ func (cm *ClientManager) InformOthersOfJoin(c *Client) {
 	if c.GameState.State == playerstate.Spectator {
 		cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.Spectator, c.CN, 1)
 	}
-}
-
-// Informs all other clients that a client left the game.
-func (cm *ClientManager) InformOthersOfDisconnect(c *Client, reason disconnectreason.ID) {
-	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.Leave, c.CN)
-	// TOOD: send a server message with the disconnect reason in case it's not a normal leave
 }
 
 func (cm *ClientManager) MapChange() {
@@ -211,7 +204,7 @@ func (cm *ClientManager) MapChange() {
 
 func (cm *ClientManager) PrivilegedUsers() (privileged []*Client) {
 	cm.ForEach(func(c *Client) {
-		if c.Privilege > privilege.None {
+		if c.Role > role.None {
 			privileged = append(privileged, c)
 		}
 	})
@@ -222,8 +215,8 @@ func (cm *ClientManager) PrivilegedUsersPacket() (p protocol.Packet, noPrivilege
 	q := []interface{}{nmc.CurrentMaster, s.MasterMode}
 
 	cm.ForEach(func(c *Client) {
-		if c.Privilege > privilege.None {
-			q = append(q, c.CN, c.Privilege)
+		if c.Role > role.None {
+			q = append(q, c.CN, c.Role)
 		}
 	})
 

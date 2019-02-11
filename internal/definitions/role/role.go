@@ -1,4 +1,4 @@
-package privilege
+package role
 
 import "strings"
 

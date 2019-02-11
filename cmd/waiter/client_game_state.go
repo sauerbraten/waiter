@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/client/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"

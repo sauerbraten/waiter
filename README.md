@@ -15,7 +15,8 @@ What works:
 - changing weapon, shooting, killing, suiciding, spawning (but rocket and grenade don't show up for other players)
 - global auth
 - local auth
-- changing mastermode
+- sharing master
+- setting mastermode
 - forcing gamemode and/or map
 - pausing & resuming
 - changing your name

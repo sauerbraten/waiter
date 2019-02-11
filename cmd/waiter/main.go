@@ -61,10 +61,10 @@ func init() {
 			UpSince:     time.Now(),
 			NumClients:  cs.NumberOfClientsConnected,
 		},
-		GameTimer: NewGameTimer(conf.GameDuration*time.Minute, func() { s.Intermission() }),
-		relay:     NewRelay(),
-		Clients:   cs,
-		Auth:      auth.NewManager(users),
+		timer:   StartTimer(conf.GameDuration*time.Minute, func() { s.Intermission() }),
+		relay:   NewRelay(),
+		Clients: cs,
+		Auth:    auth.NewManager(users),
 	}
 
 	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
@@ -82,8 +82,6 @@ func main() {
 	log.Println("server running on port", s.Config.ListenPort)
 
 	go s.handleExtinfoRequests()
-
-	go s.GameTimer.run()
 
 	go s.relay.loop()
 

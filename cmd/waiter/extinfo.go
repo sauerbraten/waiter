@@ -124,7 +124,7 @@ func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
 		s.NumClients(),
 	}
 
-	paused := s.Paused()
+	paused := s.timer.Paused()
 
 	if paused {
 		q = append(q, 7)
@@ -135,7 +135,7 @@ func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
 	q = append(q,
 		protocol.Version,
 		s.GameMode.ID(),
-		s.TimeLeft/1000,
+		s.timer.TimeLeft/1000,
 		s.MaxClients,
 		s.MasterMode,
 	)

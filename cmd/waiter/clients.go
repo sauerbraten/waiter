@@ -105,7 +105,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	p := []interface{}{
 		nmc.Welcome,
 		nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems, // currently played mode & map
-		nmc.TimeLeft, s.TimeLeft / 1000, // time left in this round
+		nmc.TimeLeft, s.timer.TimeLeft / 1000, // time left in this round
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level

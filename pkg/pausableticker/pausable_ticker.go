@@ -1,6 +1,8 @@
 package pausableticker
 
-import "time"
+import (
+	"time"
+)
 
 type Ticker struct {
 	C <-chan time.Time // The channel on which the ticks are delivered.
@@ -11,7 +13,7 @@ type Ticker struct {
 	ticker *time.Ticker
 }
 
-func NewTicker(d time.Duration) *Ticker {
+func New(d time.Duration) *Ticker {
 	c := make(chan time.Time)
 	pause := make(chan bool)
 	stop := make(chan struct{})
@@ -62,7 +64,7 @@ func (t *Ticker) Resume() {
 }
 
 func (t *Ticker) Stop() {
-	t.ticker.Stop()
 	t.stop <- struct{}{}
 	<-t.stop
+	t.ticker.Stop()
 }

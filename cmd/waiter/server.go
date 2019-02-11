@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/auth"
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/maprotation"
@@ -15,7 +15,7 @@ import (
 type Server struct {
 	*Config
 	*State
-	*GameTimer
+	timer   *GameTimer
 	relay   *Relay
 	Clients *ClientManager
 	Auth    *auth.Manager
@@ -33,10 +33,6 @@ func (s *Server) Intermission() {
 	// wait for timer to finish
 	<-end
 
-	// start new 10 minutes timer
-	s.GameTimer.Reset()
-	go s.GameTimer.run()
-
 	// load next map
 	s.ChangeMap(s.GameMode.ID(), maprotation.NextMap(s.GameMode.ID(), s.Map))
 }
@@ -45,8 +41,9 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.NotGotItems = true
 	s.GameMode = GameModeByID(mode)
 	s.Map = mapp
+	s.timer.Restart()
 	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems)
-	s.Clients.Broadcast(nil, nmc.TimeLeft, s.TimeLeft/1000)
+	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
 }

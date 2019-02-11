@@ -410,13 +410,13 @@ outer:
 				return
 			}
 			if pause == 1 {
-				log.Println("pausing game at", s.TimeLeft/1000, "seconds left")
+				log.Println("pausing game at", s.timer.TimeLeft/1000, "seconds left")
 				s.Clients.Broadcast(nil, nmc.PauseGame, 1, client.CN)
-				s.Pause()
+				s.timer.Pause()
 			} else {
-				log.Println("resuming game at", s.TimeLeft/1000, "seconds left")
+				log.Println("resuming game at", s.timer.TimeLeft/1000, "seconds left")
 				s.Clients.Broadcast(nil, nmc.PauseGame, 0, client.CN)
-				s.Resume()
+				s.timer.Resume()
 			}
 
 		case nmc.ItemList:

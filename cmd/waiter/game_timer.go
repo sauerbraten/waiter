@@ -15,28 +15,31 @@ type GameTimer struct {
 	intermission func()
 }
 
-func NewGameTimer(duration time.Duration, intermission func()) *GameTimer {
-	return &GameTimer{
-		Ticker: pausableticker.NewTicker(100 * time.Millisecond),
+func StartTimer(duration time.Duration, intermission func()) *GameTimer {
+	gt := &GameTimer{
+		Ticker: pausableticker.New(100 * time.Millisecond),
 
 		TimeLeft:     int32(duration / time.Millisecond),
 		duration:     duration,
 		intermission: intermission,
 	}
+	go gt.run()
+	return gt
 }
 
-func (t *GameTimer) Reset() {
-	t.Stop()
-	*t = *NewGameTimer(t.duration, t.intermission) // swap out the GameTimer t points to
+func (gt *GameTimer) Restart() {
+	gt.Stop()
+	gt.Ticker = pausableticker.New(100 * time.Millisecond)
+	gt.TimeLeft = int32(gt.duration / time.Millisecond)
+	go gt.run()
 }
 
-func (t *GameTimer) run() {
-	defer t.intermission()
-	for {
-		<-t.C
-		s.TimeLeft -= 100
+func (gt *GameTimer) run() {
+	for range gt.C {
+		s.timer.TimeLeft -= 100
 
-		if s.TimeLeft <= 0 {
+		if s.timer.TimeLeft <= 0 {
+			gt.intermission()
 			return
 		}
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"sort"
 
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
@@ -140,7 +139,6 @@ func GameModeByID(id gamemode.ID) GameMode {
 	case gamemode.Effic:
 		return &Effic{}
 	default:
-		log.Println("unknown gamemode", id)
-		panic("unknown gamemode")
+		return nil
 	}
 }

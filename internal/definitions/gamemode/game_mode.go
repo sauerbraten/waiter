@@ -1,5 +1,7 @@
 package gamemode
 
+import "strconv"
+
 type ID int32
 
 const (
@@ -77,10 +79,11 @@ func (gm ID) String() string {
 	case EfficCollect:
 		return "effic collect"
 	default:
-		return ""
+		return strconv.Itoa(int(gm))
 	}
 }
 
 func Valid(gm ID) bool {
-	return FFA <= gm && gm <= EfficCollect
+	// TODO
+	return gm == Insta || gm == Effic
 }

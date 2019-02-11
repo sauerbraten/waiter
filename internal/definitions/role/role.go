@@ -1,6 +1,9 @@
 package role
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 type ID int32
 
@@ -26,8 +29,8 @@ func Parse(s string) ID {
 	}
 }
 
-func (p ID) String() string {
-	switch p {
+func (r ID) String() string {
+	switch r {
 	case None:
 		return "none"
 	case Master:
@@ -37,6 +40,6 @@ func (p ID) String() string {
 	case Admin:
 		return "admin"
 	default:
-		return ""
+		return strconv.Itoa(int(r))
 	}
 }

@@ -1,5 +1,7 @@
 package mastermode
 
+import "strconv"
+
 type ID int32
 
 const (
@@ -23,6 +25,6 @@ func (mm ID) String() string {
 	case Private:
 		return "private"
 	default:
-		return ""
+		return strconv.Itoa(int(mm))
 	}
 }

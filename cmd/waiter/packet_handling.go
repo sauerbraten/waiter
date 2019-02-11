@@ -245,6 +245,7 @@ outer:
 			mode := gamemode.ID(_mode)
 
 			if !gamemode.Valid(mode) {
+				client.Send(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("%s is not implemented on this server", mode)))
 				log.Println("invalid gamemode", mode, "requested")
 				return
 			}

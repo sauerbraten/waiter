@@ -1,5 +1,7 @@
 package disconnectreason
 
+import "strconv"
+
 type ID uint32
 
 const (
@@ -41,6 +43,6 @@ func (dr ID) String() string {
 	case WrongPassword:
 		return "invalid password"
 	default:
-		return ""
+		return strconv.Itoa(int(dr))
 	}
 }

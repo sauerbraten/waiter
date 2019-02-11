@@ -8,11 +8,11 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
-	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 )
@@ -175,8 +175,8 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 	}
 	log.Println(cubecode.SanitizeString(msg))
 
-	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.Leave, c.CN)
-	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
+	cm.Relay(c, nmc.Leave, c.CN)
+	cm.Relay(c, nmc.ServerMessage, msg)
 
 	c.Peer.Disconnect(uint32(reason))
 
@@ -185,9 +185,9 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 
 // Informs all other clients that a client joined the game.
 func (cm *ClientManager) InformOthersOfJoin(c *Client) {
-	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.InitializeClient, c.CN, c.Name, c.Team, c.PlayerModel)
+	cm.Relay(c, nmc.InitializeClient, c.CN, c.Name, c.Team, c.PlayerModel)
 	if c.GameState.State == playerstate.Spectator {
-		cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.Spectator, c.CN, 1)
+		cm.Relay(c, nmc.Spectator, c.CN, 1)
 	}
 }
 
@@ -198,7 +198,7 @@ func (cm *ClientManager) MapChange() {
 			return
 		}
 		c.GameState.Spawn(s.GameMode.ID())
-		c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, c.CN, c.GameState.ToWire()))
+		c.Send(nmc.SpawnState, c.CN, c.GameState.ToWire())
 	})
 }
 

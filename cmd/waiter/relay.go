@@ -147,7 +147,7 @@ func (r *Relay) FlushPositionAndSend(cn uint32, p []byte) {
 			if _cn == cn {
 				continue
 			}
-			send(0, enet.PACKET_FLAG_NO_ALLOCATE, pos)
+			send(0, enet.PACKET_FLAG_NONE, pos)
 		}
 		delete(r.positions, cn)
 	}
@@ -156,7 +156,7 @@ func (r *Relay) FlushPositionAndSend(cn uint32, p []byte) {
 		if _cn == cn {
 			continue
 		}
-		send(0, enet.PACKET_FLAG_NO_ALLOCATE, p)
+		send(0, enet.PACKET_FLAG_NONE, p)
 	}
 }
 

@@ -9,15 +9,14 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
-	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
@@ -226,7 +225,7 @@ outer:
 				return
 			}
 			s.MasterMode = mm
-			s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.MasterMode, mm)
+			s.Clients.Broadcast(nil, nmc.MasterMode, mm)
 
 		case nmc.VoteMap:
 			mapp, ok := p.GetString()
@@ -302,7 +301,7 @@ outer:
 				log.Println("could not read message from team chat message packet:", p)
 				return
 			}
-			s.Clients.SendToTeam(client, 1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.TeamChatMessage, client.CN, msg))
+			s.Clients.SendToTeam(client, nmc.TeamChatMessage, client.CN, msg)
 
 		case nmc.ChangeName:
 			newName, ok := p.GetString()
@@ -412,11 +411,11 @@ outer:
 			}
 			if pause == 1 {
 				log.Println("pausing game at", s.TimeLeft/1000, "seconds left")
-				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PauseGame, 1, client.CN)
+				s.Clients.Broadcast(nil, nmc.PauseGame, 1, client.CN)
 				s.Pause()
 			} else {
 				log.Println("resuming game at", s.TimeLeft/1000, "seconds left")
-				s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.PauseGame, 0, client.CN)
+				s.Clients.Broadcast(nil, nmc.PauseGame, 0, client.CN)
 				s.Resume()
 			}
 

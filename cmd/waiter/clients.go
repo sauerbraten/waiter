@@ -58,26 +58,21 @@ func (cm *ClientManager) GetClientByPeer(peer *enet.Peer) *Client {
 	return nil
 }
 
-// Sends a packet to a client over the specified channel.
-func (cm *ClientManager) Send(to *Client, channel uint8, flags enet.PacketFlag, p []byte) {
-	to.Peer.Send(channel, flags, p)
-}
-
 // Send a packet to a client's team, but not the client himself, over the specified channel.
-func (cm *ClientManager) SendToTeam(c *Client, channel uint8, flags enet.PacketFlag, args ...interface{}) {
+func (cm *ClientManager) SendToTeam(c *Client, args ...interface{}) {
 	excludeSelfAndOtherTeams := func(_c *Client) bool {
 		return _c == c || _c.Team != c.Team
 	}
-	cm.Broadcast(excludeSelfAndOtherTeams, channel, flags, args...)
+	cm.Broadcast(excludeSelfAndOtherTeams, args...)
 }
 
 // Sends a packet to all clients currently in use.
-func (cm *ClientManager) Broadcast(exclude func(*Client) bool, channel uint8, flags enet.PacketFlag, args ...interface{}) {
+func (cm *ClientManager) Broadcast(exclude func(*Client) bool, args ...interface{}) {
 	for _, c := range cm.cs {
 		if !c.InUse || (exclude != nil && exclude(c)) {
 			continue
 		}
-		cm.Send(c, channel, flags, packet.Encode(args...))
+		c.Send(args...)
 	}
 }
 
@@ -87,13 +82,13 @@ func exclude(c *Client) func(*Client) bool {
 	}
 }
 
-func (cm *ClientManager) Relay(from *Client, channel uint8, flags enet.PacketFlag, args ...interface{}) {
-	cm.Broadcast(exclude(from), channel, flags, args...)
+func (cm *ClientManager) Relay(from *Client, args ...interface{}) {
+	cm.Broadcast(exclude(from), args...)
 }
 
 // Sends basic server info to the client.
 func (cm *ClientManager) SendServerConfig(c *Client, config *Config) {
-	p := packet.Encode(
+	c.Send(
 		nmc.ServerInfo,
 		c.CN,
 		protocol.Version,
@@ -102,8 +97,6 @@ func (cm *ClientManager) SendServerConfig(c *Client, config *Config) {
 		config.ServerDescription,
 		config.PrimaryAuthDomain,
 	)
-
-	cm.Send(c, 1, enet.PACKET_FLAG_RELIABLE, p)
 }
 
 // Sends 'welcome' information to a newly joined client like map, mode, time left, other players, etc.
@@ -147,7 +140,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 		}
 	}
 
-	cm.Send(c, 1, enet.PACKET_FLAG_RELIABLE, packet.Encode(p...))
+	c.Send(p...)
 }
 
 // Puts a client into the current game, using the data the client provided with his N_JOIN packet.
@@ -193,15 +186,15 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 
 // Informs all other clients that a client joined the game.
 func (cm *ClientManager) InformOthersOfJoin(c *Client) {
-	cm.Broadcast(exclude(c), 1, enet.PACKET_FLAG_RELIABLE, nmc.InitializeClient, c.CN, c.Name, c.Team, c.PlayerModel)
+	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.InitializeClient, c.CN, c.Name, c.Team, c.PlayerModel)
 	if c.GameState.State == playerstate.Spectator {
-		cm.Broadcast(exclude(c), 1, enet.PACKET_FLAG_RELIABLE, nmc.Spectator, c.CN, 1)
+		cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.Spectator, c.CN, 1)
 	}
 }
 
 // Informs all other clients that a client left the game.
 func (cm *ClientManager) InformOthersOfDisconnect(c *Client, reason disconnectreason.ID) {
-	cm.Broadcast(exclude(c), 1, enet.PACKET_FLAG_RELIABLE, nmc.Leave, c.CN)
+	cm.Relay(c, 1, enet.PACKET_FLAG_RELIABLE, nmc.Leave, c.CN)
 	// TOOD: send a server message with the disconnect reason in case it's not a normal leave
 }
 

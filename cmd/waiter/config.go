@@ -6,10 +6,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 )
 
-const (
-	GLOBAL_AUTH_DOMAIN = ""
-)
-
 type Config struct {
 	ListenAddress string `json:"listen_address"`
 	ListenPort    int    `json:"listen_port"`

@@ -10,8 +10,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/maprotation"
-	"github.com/sauerbraten/waiter/internal/net/enet"
-	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
 type Server struct {
@@ -25,7 +23,7 @@ type Server struct {
 
 func (s *Server) Intermission() {
 	// notify all clients
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.TimeLeft, 0)
+	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
 
 	// start 5 second timer
 	end := time.After(5 * time.Second)
@@ -47,10 +45,10 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.NotGotItems = true
 	s.GameMode = GameModeByID(mode)
 	s.Map = mapp
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems)
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.TimeLeft, s.TimeLeft/1000)
+	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems)
+	s.Clients.Broadcast(nil, nmc.TimeLeft, s.TimeLeft/1000)
 	s.Clients.MapChange()
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, s.MessageOfTheDay)
+	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
 }
 
 type hit struct {
@@ -65,7 +63,8 @@ func (s *Server) HandleShoot(client *Client, wpn weapon.Weapon, id int32, from, 
 	from.Mul(geom.DMF)
 	to.Mul(geom.DMF)
 
-	s.Clients.Broadcast(exclude(client), 1, enet.PACKET_FLAG_RELIABLE,
+	s.Clients.Relay(
+		client,
 		nmc.ShotEffects,
 		client.CN,
 		wpn.ID,
@@ -111,7 +110,8 @@ func (s *Server) HandleShoot(client *Client, wpn weapon.Weapon, id int32, from, 
 func (s *Server) HandleExplode(client *Client, millis int32, wpn weapon.Weapon, id int32, hits []hit) {
 	// TODO: delete stored projectile
 
-	s.Clients.Broadcast(exclude(client), 1, enet.PACKET_FLAG_RELIABLE,
+	s.Clients.Relay(
+		client,
 		nmc.ExplodeEffects,
 		client.CN,
 		wpn.ID,
@@ -150,15 +150,15 @@ hits:
 
 func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapon.ID, dir *geom.Vector) {
 	victim.applyDamage(attacker, damage, wpnID, dir)
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.Damage, victim.CN, attacker.CN, damage, victim.GameState.Armour, victim.GameState.Health)
+	s.Clients.Broadcast(nil, nmc.Damage, victim.CN, attacker.CN, damage, victim.GameState.Armour, victim.GameState.Health)
 	// TODO: setpushed ???
 	if !dir.IsZero() {
 		dir.Scale(geom.DNF)
 		p := []interface{}{nmc.HitPush, victim.CN, wpnID, damage, dir.X(), dir.Y(), dir.Z()}
 		if victim.GameState.Health <= 0 {
-			s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, p...)
+			s.Clients.Broadcast(nil, p...)
 		} else {
-			attacker.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(p...))
+			attacker.Send(p...)
 		}
 	}
 	if victim.GameState.Health <= 0 {
@@ -170,7 +170,7 @@ func (s *Server) handleDeath(fragger, victim *Client) {
 	victim.Die()
 	fragger.GameState.Frags += s.GameMode.CountFrag(fragger, victim)
 	// TODO: effectiveness
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, s.GameMode.TeamFrags(fragger.Team))
+	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, s.GameMode.TeamFrags(fragger.Team))
 	// TODO teamkills
 }
 

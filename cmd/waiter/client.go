@@ -8,6 +8,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/utils"
 )
 
@@ -82,4 +83,8 @@ func (c *Client) Reset() {
 
 func (c *Client) String() string {
 	return fmt.Sprintf("%s (%d)", c.Name, c.CN)
+}
+
+func (c *Client) Send(args ...interface{}) {
+	c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(args...))
 }

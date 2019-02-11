@@ -12,7 +12,7 @@ import (
 
 type sendFunc func(channel uint8, flags enet.PacketFlag, payload []byte)
 
-// Relay handles subscribing and unsubcribing to topics.
+// Relay relays positional data between clients
 type Relay struct {
 	μ sync.Mutex
 

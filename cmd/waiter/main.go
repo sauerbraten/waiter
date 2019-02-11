@@ -21,17 +21,8 @@ import (
 const gitRevision = "<filled in by CI service>"
 
 var (
-	// global enet host var (to call Flush() on)
-	host *enet.Host
-
-	// global variable to indicate to the main loop that there are packets to be sent
-	mustFlush = false
-
 	// global server state
 	s *Server
-
-	// client manager
-	cs *ClientManager
 
 	// ban manager
 	bm *bans.BanManager
@@ -58,7 +49,7 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	cs = &ClientManager{}
+	cs := &ClientManager{}
 
 	s = &Server{
 		Config: conf,
@@ -83,21 +74,14 @@ func init() {
 }
 
 func main() {
-	var err error
-	host, err = enet.NewHost(s.Config.ListenAddress, s.Config.ListenPort)
+	host, err := enet.NewHost(s.Config.ListenAddress, s.Config.ListenPort)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	log.Println("server running on port", s.Config.ListenPort)
 
-	extInfoServer := &ExtInfoServer{
-		Config:    s.Config,
-		State:     s.State,
-		GameTimer: s.GameTimer,
-		Clients:   s.Clients,
-	}
-	go extInfoServer.ServeStateInfoForever()
+	go s.handleExtinfoRequests()
 
 	go s.GameTimer.run()
 
@@ -116,11 +100,11 @@ func main() {
 				continue
 			}
 
-			client := cs.Add(event.Peer)
+			client := s.Clients.Add(event.Peer)
 
 			client.Position, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
 
-			cs.SendServerConfig(client, s.Config)
+			s.Clients.SendServerConfig(client, s.Config)
 
 		case enet.EVENT_TYPE_DISCONNECT:
 			log.Println("enet: disconnected:", event.Peer.Address.String())
@@ -129,7 +113,7 @@ func main() {
 				continue
 			}
 			s.relay.RemoveClient(client.CN)
-			cs.Leave(client)
+			s.Clients.Leave(client)
 
 		case enet.EVENT_TYPE_RECEIVE:
 			// TODO: fix this maybe?

@@ -36,15 +36,8 @@ const (
 	ServerMod int32 = -9
 )
 
-type ExtInfoServer struct {
-	*Config
-	*State
-	*GameTimer
-	Clients *ClientManager
-}
-
-func (eis *ExtInfoServer) ServeStateInfoForever() {
-	laddr, err := net.ResolveUDPAddr("udp", eis.ListenAddress+":"+strconv.Itoa(eis.ListenPort+1))
+func (s *Server) handleExtinfoRequests() {
+	laddr, err := net.ResolveUDPAddr("udp", s.ListenAddress+":"+strconv.Itoa(s.ListenPort+1))
 	if err != nil {
 		log.Println(err)
 		return
@@ -93,26 +86,26 @@ func (eis *ExtInfoServer) ServeStateInfoForever() {
 			}
 			switch extReqType {
 			case ExtInfoTypeUptime:
-				eis.send(conn, raddr, eis.uptime(respHeader))
+				s.send(conn, raddr, s.uptime(respHeader))
 			case ExtInfoTypeClientInfo:
 				cn, ok := p.GetInt()
 				if !ok {
 					log.Println("malformed info request: could not read CN from client info request:", p)
 					continue
 				}
-				eis.send(conn, raddr, eis.clientInfo(cn, respHeader)...)
+				s.send(conn, raddr, s.clientInfo(cn, respHeader)...)
 			case ExtInfoTypeTeamScores:
 				// TODO
 			default:
 				log.Println("erroneous extinfo type queried:", reqType)
 			}
 		default:
-			eis.send(conn, raddr, eis.basicInfo(respHeader))
+			s.send(conn, raddr, s.basicInfo(respHeader))
 		}
 	}
 }
 
-func (eis *ExtInfoServer) send(conn *net.UDPConn, raddr *net.UDPAddr, packets ...protocol.Packet) {
+func (s *Server) send(conn *net.UDPConn, raddr *net.UDPAddr, packets ...protocol.Packet) {
 	for _, p := range packets {
 		n, err := conn.WriteToUDP(p, raddr)
 		if err != nil {
@@ -125,13 +118,13 @@ func (eis *ExtInfoServer) send(conn *net.UDPConn, raddr *net.UDPAddr, packets ..
 	}
 }
 
-func (eis *ExtInfoServer) basicInfo(respHeader []byte) protocol.Packet {
+func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
 	q := []interface{}{
 		respHeader,
-		eis.NumClients(),
+		s.NumClients(),
 	}
 
-	paused := eis.Paused()
+	paused := s.Paused()
 
 	if paused {
 		q = append(q, 7)
@@ -141,10 +134,10 @@ func (eis *ExtInfoServer) basicInfo(respHeader []byte) protocol.Packet {
 
 	q = append(q,
 		protocol.Version,
-		eis.GameMode.ID(),
-		eis.TimeLeft/1000,
-		eis.MaxClients,
-		eis.MasterMode,
+		s.GameMode.ID(),
+		s.TimeLeft/1000,
+		s.MaxClients,
+		s.MasterMode,
 	)
 
 	if paused {
@@ -154,17 +147,17 @@ func (eis *ExtInfoServer) basicInfo(respHeader []byte) protocol.Packet {
 		)
 	}
 
-	q = append(q, eis.Map, eis.ServerDescription)
+	q = append(q, s.Map, s.ServerDescription)
 
 	return packet.Encode(q...)
 }
 
-func (eis *ExtInfoServer) uptime(respHeader []byte) protocol.Packet {
+func (s *Server) uptime(respHeader []byte) protocol.Packet {
 	q := []interface{}{
 		respHeader,
 		ExtInfoACK,
 		ExtInfoVersion,
-		int32(time.Since(eis.UpSince) / time.Second),
+		int32(time.Since(s.UpSince) / time.Second),
 	}
 
 	if len(respHeader) > 2 {
@@ -174,14 +167,14 @@ func (eis *ExtInfoServer) uptime(respHeader []byte) protocol.Packet {
 	return packet.Encode(q...)
 }
 
-func (eis *ExtInfoServer) clientInfo(cn int32, respHeader []byte) (packets []protocol.Packet) {
+func (s *Server) clientInfo(cn int32, respHeader []byte) (packets []protocol.Packet) {
 	q := []interface{}{
 		respHeader,
 		ExtInfoACK,
 		ExtInfoVersion,
 	}
 
-	if cn < -1 || int(cn) > eis.NumClients() {
+	if cn < -1 || int(cn) > s.NumClients() {
 		q = append(q, ExtInfoError)
 		packets = append(packets, packet.Encode(q...))
 		return
@@ -194,7 +187,7 @@ func (eis *ExtInfoServer) clientInfo(cn int32, respHeader []byte) (packets []pro
 	q = append(q, ClientInfoResponseTypeCNs)
 
 	if cn == -1 {
-		eis.Clients.ForEach(func(c *Client) { q = append(q, c.CN) })
+		s.Clients.ForEach(func(c *Client) { q = append(q, c.CN) })
 	} else {
 		q = append(q, cn)
 	}
@@ -202,18 +195,18 @@ func (eis *ExtInfoServer) clientInfo(cn int32, respHeader []byte) (packets []pro
 	packets = append(packets, packet.Encode(q...))
 
 	if cn == -1 {
-		eis.Clients.ForEach(func(c *Client) {
-			packets = append(packets, eis.clientPacket(c, header))
+		s.Clients.ForEach(func(c *Client) {
+			packets = append(packets, s.clientPacket(c, header))
 		})
 	} else {
-		c := eis.Clients.GetClientByCN(uint32(cn))
-		packets = append(packets, eis.clientPacket(c, header))
+		c := s.Clients.GetClientByCN(uint32(cn))
+		packets = append(packets, s.clientPacket(c, header))
 	}
 
 	return
 }
 
-func (eis *ExtInfoServer) clientPacket(c *Client, header []interface{}) protocol.Packet {
+func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 	q := header
 
 	q = append(q,
@@ -234,7 +227,7 @@ func (eis *ExtInfoServer) clientPacket(c *Client, header []interface{}) protocol
 		c.GameState.State,
 	)
 
-	if eis.SendClientIPsViaExtinfo {
+	if s.SendClientIPsViaExtinfo {
 		q = append(q, []byte(c.Peer.Address.IP.To4()[:3]))
 	} else {
 		q = append(q, 0, 0, 0)

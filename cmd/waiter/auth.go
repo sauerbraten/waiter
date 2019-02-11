@@ -10,8 +10,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/client/privilege"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/net/enet"
-	"github.com/sauerbraten/waiter/internal/net/packet"
 )
 
 func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
@@ -21,7 +19,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
 		return
 	}
 
-	client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.AuthChallenge, domain, requestID, challenge))
+	client.Send(nmc.AuthChallenge, domain, requestID, challenge)
 }
 
 func (s *Server) handleGlobalAuthRequest(client *Client, name string) {
@@ -32,14 +30,14 @@ func (s *Server) handleGlobalAuthRequest(client *Client, name string) {
 			if client == nil || client.SessionID != sessionID {
 				return
 			}
-			client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.AuthChallenge, "", requestID, challenge))
+			client.Send(nmc.AuthChallenge, "", requestID, challenge)
 		}
 	}(client.SessionID)
 
 	err := ms.RequestAuthChallenge(requestID, name, callback)
 	if err != nil {
 		s.Auth.ClearAuthRequest(requestID)
-		client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, "not connected to authentication server"))
+		client.Send(nmc.ServerMessage, "not connected to authentication server")
 		return
 	}
 }
@@ -97,7 +95,7 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 	err := ms.ConfirmAuthAnswer(requestID, answer, callback)
 	if err != nil {
 		s.Auth.ClearAuthRequest(requestID)
-		client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Error("not connected to authentication server")))
+		client.Send(nmc.ServerMessage, cubecode.Error("not connected to authentication server"))
 		return
 	}
 }
@@ -108,7 +106,7 @@ func (s *Server) setAuthPrivilege(client *Client, prvlg privilege.ID, domain, na
 	if domain != "" {
 		msg = fmt.Sprintf("%s claimed %s privileges as %s [%s]", s.Clients.UniqueName(client), client.Privilege, cubecode.Magenta(name), cubecode.Green(domain))
 	}
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, nmc.ServerMessage, msg)
+	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
 }
 
 func (s *Server) setPrivilege(client *Client, prvlg privilege.ID) {
@@ -117,5 +115,5 @@ func (s *Server) setPrivilege(client *Client, prvlg privilege.ID) {
 		client.AuthRequiredBecause = disconnectreason.None
 	}
 	pup, _ := s.Clients.PrivilegedUsersPacket()
-	s.Clients.Broadcast(nil, 1, enet.PACKET_FLAG_RELIABLE, pup)
+	s.Clients.Broadcast(nil, pup)
 }

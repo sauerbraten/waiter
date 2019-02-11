@@ -125,7 +125,7 @@ outer:
 			s.Clients.Join(client, name, playerModel)
 			s.Clients.SendWelcome(client)
 			s.Clients.InformOthersOfJoin(client)
-			client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, s.MessageOfTheDay))
+			client.Send(nmc.ServerMessage, s.MessageOfTheDay)
 			if authDomain != "" && authName != "" {
 				s.handleAuthRequest(client, authDomain, authName)
 			}
@@ -179,16 +179,16 @@ outer:
 				return
 			}
 			if cn == client.CN && toggle != 0 {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("server only supports claiming master using /auth")))
+				client.Send(nmc.ServerMessage, cubecode.Fail("server only supports claiming master using /auth"))
 				return
 			}
 			target := s.Clients.GetClientByCN(cn)
 			if target == nil {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("no client with CN %d", cn))))
+				client.Send(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("no client with CN %d", cn)))
 				return
 			}
 			if client != target && client.Privilege <= target.Privilege {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("you can't do that")))
+				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 				return
 			}
 			switch toggle {
@@ -220,7 +220,7 @@ outer:
 				return
 			}
 			if client.Privilege == privilege.None {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("you can't do that")))
+				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 				return
 			}
 			s.MasterMode = mm
@@ -249,12 +249,12 @@ outer:
 			}
 
 			if s.MasterMode < mastermode.Veto {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("this server does not support map voting")))
+				client.Send(nmc.ServerMessage, cubecode.Fail("this server does not support map voting"))
 				return
 			}
 
 			if client.Privilege < privilege.Master {
-				client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.ServerMessage, cubecode.Fail("you can't do that")))
+				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 				return
 			}
 
@@ -268,7 +268,7 @@ outer:
 				log.Println("could not read ping from ping packet:", p)
 				return
 			}
-			client.Peer.Send(1, enet.PACKET_FLAG_NONE, packet.Encode(nmc.Pong, ping))
+			client.Send(nmc.Pong, ping)
 
 		case nmc.ClientPing:
 			// client sending the amount of lag he measured to the server → broadcast to other clients
@@ -288,7 +288,8 @@ outer:
 				return
 			}
 			if strings.HasPrefix(msg, "!rev") {
-				client.Peer.Send(1, enet.PACKET_FLAG_NONE, packet.Encode(nmc.ServerMessage, "running "+gitRevision))
+				client.Send(nmc.ServerMessage, "running "+gitRevision)
+				return
 			}
 			client.Packets.Publish(nmc.ChatMessage, msg)
 
@@ -332,7 +333,7 @@ outer:
 			}
 			client.GameState.Respawn()
 			client.GameState.Spawn(s.GameMode.ID())
-			client.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(nmc.SpawnState, client.CN, client.GameState.ToWire()))
+			client.Send(nmc.SpawnState, client.CN, client.GameState.ToWire())
 
 		case nmc.ConfirmSpawn:
 			lifeSequence, ok := p.GetInt()

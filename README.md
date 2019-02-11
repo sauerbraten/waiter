@@ -35,7 +35,7 @@ Some things are specifically not planned and will likely never be implemented:
 - bots
 - map voting
 - coop edit mode (including `/sendmap` and `/getmap`)
-- claiming privileges using `/setmaster` (relinquishing them with `/setmaster 0` already works)
+- claiming privileges using `/setmaster 1` (relinquishing them with `/setmaster 0` and sharing master using `/setmaster 1 <cn>` already works)
 
 
 ## Installing
@@ -77,7 +77,9 @@ In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for us
 
 ## Why?
 
-I started this mainly as a challenge to myself and because I have ideas to improve the integration of Sauerbraten servers with other services and interfaces. For example, making the server state available via WebSockets directly, instead of the UDP-based extinfo protocol, and integrating a third-party auth system (spanning multiple servers). Writing a server that makes it easy to modify gameplay is not one of the goals of this project, neither is plugin support, although it might happen at some point. If you want that, now, use pisto's great [spaghettimod](https://github.com/pisto/spaghettimod).
+I started this mainly as a challenge to myself and because I have ideas to improve the integration of Sauerbraten servers with other services and interfaces. For example, making the server state and game events available via WebSockets in real-time, instead of the UDP-based extinfo protocol, and integrating a third-party auth system (spanning multiple servers).
+
+Writing a server that makes it easy to modify gameplay is not one of the goals of this project, neither is plugin support, although it might happen at some point. If you want that, now, use pisto's great [spaghettimod](https://github.com/pisto/spaghettimod).
 
 
 ## License

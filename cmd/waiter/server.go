@@ -187,7 +187,7 @@ func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapo
 		if victim.GameState.Health <= 0 {
 			s.Clients.Broadcast(nil, p...)
 		} else {
-			attacker.Send(p...)
+			victim.Send(p...)
 		}
 	}
 	if victim.GameState.Health <= 0 {

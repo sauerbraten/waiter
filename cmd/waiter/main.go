@@ -59,7 +59,7 @@ func init() {
 			UpSince:     time.Now(),
 			NumClients:  cs.NumberOfClientsConnected,
 		},
-		timer:   StartTimer(conf.GameDuration*time.Minute, func() { s.Intermission() }),
+		timer:   StartTimer(conf.GameDuration*time.Minute, s.Intermission),
 		relay:   NewRelay(),
 		Clients: cs,
 		Auth:    auth.NewManager(users),

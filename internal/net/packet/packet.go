@@ -4,16 +4,15 @@ import (
 	"log"
 	"net"
 
-	"github.com/sauerbraten/waiter/pkg/protocol"
-
-	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/sound"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
+	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
 func Encode(args ...interface{}) protocol.Packet {

@@ -21,9 +21,14 @@ import (
 	"log"
 	"math/big"
 	mrand "math/rand"
+	"time"
 
 	"github.com/sauerbraten/waiter/internal/definitions/role"
 )
+
+func init() {
+	mrand.Seed(time.Now().UnixNano())
+}
 
 // request holds the data we need to remember between
 // generating a challenge and checking the response.

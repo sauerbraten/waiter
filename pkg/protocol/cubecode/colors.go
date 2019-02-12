@@ -5,7 +5,7 @@ const (
 	green   = "\f0" // player talk
 	blue    = "\f1" // "echo" command
 	yellow  = "\f2" // gameplay messages
-	red     = "\f3" //important errors
+	red     = "\f3" // important errors
 	gray    = "\f4"
 	magenta = "\f5"
 	orange  = "\f6"

@@ -29,13 +29,13 @@ var (
 		"nevil_c",
 		"serenity",
 	}
+	mr = map[gamemode.ID][]string{
+		gamemode.Insta:    instaMaps,
+		gamemode.Effic:    efficMaps,
+		gamemode.EfficCTF: efficCTFMaps,
+		gamemode.Capture:  captureMaps,
+	}
 )
-var mr = map[gamemode.ID][]string{
-	gamemode.Insta:    instaMaps,
-	gamemode.Effic:    efficMaps,
-	gamemode.EfficCTF: efficCTFMaps,
-	gamemode.Capture:  captureMaps,
-}
 
 func NextMap(mode gamemode.ID, currentMap string) string {
 	for i, m := range mr[mode] {

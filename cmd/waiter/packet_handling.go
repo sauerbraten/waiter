@@ -5,9 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/sauerbraten/waiter/pkg/protocol"
-	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
-
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
@@ -17,6 +14,8 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/packet"
+	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
 // parses a packet and decides what to do based on the network message code at the front of the packet

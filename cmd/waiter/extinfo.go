@@ -6,10 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sauerbraten/waiter/pkg/protocol"
-
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/utils"
+	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
 // Protocol constants

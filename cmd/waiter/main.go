@@ -7,8 +7,6 @@ import (
 
 	"github.com/sauerbraten/jsonfile"
 
-	"github.com/sauerbraten/waiter/pkg/protocol"
-
 	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/bans"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
@@ -16,6 +14,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/masterserver"
 	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
 var (

@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sauerbraten/waiter/pkg/protocol"
-	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
-
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
 func (s *Server) handleAuthRequest(client *Client, domain string, name string) {

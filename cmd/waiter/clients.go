@@ -5,9 +5,6 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/sauerbraten/waiter/pkg/protocol"
-	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
-
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
@@ -15,6 +12,8 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
+	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
 type ClientManager struct {

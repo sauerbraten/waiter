@@ -23,5 +23,7 @@ _testmain.go
 
 cmd/waiter/waiter
 cmd/genauth/genauth
+cmd/cenc/cenc
+cmd/cdec/cdec
 
 *.go_

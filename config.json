@@ -13,7 +13,7 @@
 
 
 	// default game mode (3 = insta, 5 = effic)
-	"fallback_game_mode": 5,
+	"fallback_game_mode": 7,
 
 	// server description
 	"server_description": "p1x.pw @ <filled in by CI service>",

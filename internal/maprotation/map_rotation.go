@@ -15,6 +15,7 @@ var (
 		"kffa",
 	}
 	efficMaps    = instaMaps
+	tacticsMaps  = instaMaps
 	efficCTFMaps = []string{
 		"reissen",
 		"forge",
@@ -32,6 +33,7 @@ var (
 	mr = map[gamemode.ID][]string{
 		gamemode.Insta:    instaMaps,
 		gamemode.Effic:    efficMaps,
+		gamemode.Tactics:  tacticsMaps,
 		gamemode.EfficCTF: efficCTFMaps,
 		gamemode.Capture:  captureMaps,
 	}

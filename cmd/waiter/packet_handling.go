@@ -349,7 +349,7 @@ outer:
 			}
 
 			client.GameState.State = playerstate.Alive
-			client.GameState.SelectedWeapon = weapon.ByID[weapon.ID(_weapon)]
+			client.GameState.SelectedWeapon = weapon.ByID(weapon.ID(_weapon))
 			client.GameState.LastSpawn = time.Time{}
 
 			client.Packets.Publish(nmc.ConfirmSpawn, client.GameState.ToWire())
@@ -457,11 +457,7 @@ func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32
 		log.Println("could not read weapon ID from shoot packet:", p)
 		return
 	}
-	wpn, ok = weapon.ByID[weapon.ID(weaponID)]
-	if !ok {
-		log.Println("invalid weapon ID in shoot packet:", weaponID)
-		return
-	}
+	wpn = weapon.ByID(weapon.ID(weaponID))
 	if time.Now().Before(client.GameState.GunReloadEnd) || client.GameState.Ammo[wpn.ID] <= 0 {
 		return
 	}
@@ -500,12 +496,7 @@ func parseExplode(client *Client, p *protocol.Packet) (millis int32, wpn weapon.
 		log.Println("could not read weapon ID from explode packet:", p)
 		return
 	}
-	wpn, ok = weapon.ByID[weapon.ID(weaponID)]
-	id, ok = p.GetInt()
-	if !ok {
-		log.Println("could not read explosion ID from explode packet:", p)
-		return
-	}
+	wpn = weapon.ByID(weapon.ID(weaponID))
 	numHits, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read number of hits from explode packet:", p)

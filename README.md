@@ -12,7 +12,7 @@ What works:
 - connecting & disconnecting
 - relaying positional data between clients
 - chat, team chat
-- changing weapon, shooting, killing, suiciding, spawning (but rocket and grenade don't show up for other players)
+- changing weapon, shooting, killing, suiciding, spawning
 - global auth
 - local auth
 - sharing master
@@ -26,7 +26,7 @@ Pretty much everything else is not yet implemented:
 
 - spawning pick ups (ammo, armour, quad, flags, ...)
 - picking up those pick ups
-- any modes besides DM (only insta is fully playable right now)
+- any modes besides insta, effic & tactics (no items & no teams)
 - demo recording
 - `/checkmaps` (will compare against server-side hash, not majority)
 - overtime (& maybe golden goal)
@@ -55,11 +55,7 @@ You can then start the server with `./waiter`.
 
 ## To Do
 
-Figure out why projectiles (grenades and rockets) are not rendered for players other than the one shooting.
-
-Then, implement mode/map change (forced, voting maybe later). With that, the goal is to support insta and effic games completely so waiter can be used for duels at least.
-
-Future goals will be efficctf and instactf (flag spawns & events), then ffa (all the other items), then capture and regen capture (capture base events).
+Implement efficctf and instactf (flag spawns & events), then ffa (all the other items), then capture and regen capture (capture base events).
 
 
 ## Project Structure

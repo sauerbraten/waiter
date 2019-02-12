@@ -3,9 +3,9 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 )
@@ -46,7 +46,12 @@ func NewGameState() *GameState {
 
 func (gs *GameState) ToWire() []byte {
 	return packet.Encode(
-		gs.LifeSequence, gs.Health, gs.MaxHealth, gs.Armour, gs.ArmourType, gs.SelectedWeapon.ID,
+		gs.LifeSequence,
+		gs.Health,
+		gs.MaxHealth,
+		gs.Armour,
+		gs.ArmourType,
+		gs.SelectedWeapon.ID,
 		weapon.FlattenAmmo(gs.Ammo),
 	)
 }
@@ -57,44 +62,30 @@ func (gs *GameState) Spawn(mode gamemode.ID) {
 	gs.GunReloadEnd = time.Time{}
 	gs.Tokens = 0
 	gs.ArmourType, gs.Armour = armour.SpawnArmour(mode)
-	gs.Ammo = weapon.SpawnAmmo(mode)
+	gs.Ammo, gs.SelectedWeapon = weapon.SpawnAmmo(mode)
 	gs.LastSpawn = time.Now()
 	gs.LifeSequence = (gs.LifeSequence + 1) % 128
 
 	gs.Health = gs.MaxHealth
 
 	switch mode {
-	case gamemode.Insta, gamemode.InstaTeam, gamemode.InstaCTF, gamemode.InstaProtect, gamemode.InstaHold, gamemode.InstaCollect:
+	case gamemode.Insta,
+		gamemode.InstaTeam,
+		gamemode.InstaCTF,
+		gamemode.InstaProtect,
+		gamemode.InstaHold,
+		gamemode.InstaCollect:
 		gs.Health, gs.MaxHealth = 1, 1
-		gs.SelectedWeapon = weapon.ByID[weapon.Rifle]
-
-	case gamemode.RegenCapture:
-		gs.SelectedWeapon = weapon.ByID[weapon.Random()]
-
-	case gamemode.Effic, gamemode.EfficTeam, gamemode.EfficCTF, gamemode.EfficProtect, gamemode.EfficHold, gamemode.EfficCollect:
-		gs.SelectedWeapon = weapon.ByID[weapon.Minigun]
-
-	case gamemode.FFA, gamemode.Teamplay, gamemode.Capture, gamemode.CTF, gamemode.Protect, gamemode.Hold, gamemode.Collect:
-		gs.SelectedWeapon = weapon.ByID[weapon.Pistol]
-
 	default:
-		println("unhandled gamemode:", mode)
-		panic("fix this!")
+		// maxhealth/100 is fine
 	}
 }
 
 func (gs *GameState) SelectWeapon(id weapon.ID) (weapon.Weapon, bool) {
 	if gs.State != playerstate.Alive {
-		return weapon.ByID[weapon.Pistol], false
+		return weapon.ByID(weapon.Pistol), false
 	}
-
-	wpn, ok := weapon.ByID[id]
-	if ok {
-		gs.SelectedWeapon = wpn
-	} else {
-		gs.SelectedWeapon = weapon.ByID[weapon.Pistol]
-	}
-
+	gs.SelectedWeapon = weapon.ByID(id)
 	return gs.SelectedWeapon, true
 }
 

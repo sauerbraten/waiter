@@ -85,5 +85,5 @@ func (gm ID) String() string {
 
 func Valid(gm ID) bool {
 	// TODO
-	return gm == Insta || gm == Effic
+	return gm == Insta || gm == Effic || gm == Tactics
 }

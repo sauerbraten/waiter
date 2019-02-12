@@ -39,6 +39,12 @@ type Insta struct {
 
 func (*Insta) ID() gamemode.ID { return gamemode.Insta }
 
+type Tactics struct {
+	teamlessMode
+}
+
+func (*Tactics) ID() gamemode.ID { return gamemode.Tactics }
+
 type TeamMode interface {
 	GameMode
 	Frags(string) int
@@ -147,6 +153,8 @@ func GameModeByID(id gamemode.ID) GameMode {
 		return &Insta{}
 	case gamemode.Effic:
 		return &Effic{}
+	case gamemode.Tactics:
+		return &Tactics{}
 	default:
 		return nil
 	}

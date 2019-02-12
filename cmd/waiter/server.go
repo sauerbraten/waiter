@@ -89,8 +89,8 @@ type hit struct {
 }
 
 func (s *Server) HandleShoot(client *Client, wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit) {
-	from.Mul(geom.DMF)
-	to.Mul(geom.DMF)
+	from = from.Mul(geom.DMF)
+	to = to.Mul(geom.DMF)
 
 	s.Clients.Relay(
 		client,
@@ -182,7 +182,7 @@ func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapo
 	s.Clients.Broadcast(nil, nmc.Damage, victim.CN, attacker.CN, damage, victim.GameState.Armour, victim.GameState.Health)
 	// TODO: setpushed ???
 	if !dir.IsZero() {
-		dir.Scale(geom.DNF)
+		dir = dir.Scale(geom.DNF)
 		p := []interface{}{nmc.HitPush, victim.CN, wpnID, damage, dir.X(), dir.Y(), dir.Z()}
 		if victim.GameState.Health <= 0 {
 			s.Clients.Broadcast(nil, p...)

@@ -465,18 +465,18 @@ func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32
 	if time.Now().Before(client.GameState.GunReloadEnd) || client.GameState.Ammo[wpn.ID] <= 0 {
 		return
 	}
-	_from, ok := parseVector(p)
+	from, ok = parseVector(p)
 	if !ok {
 		log.Println("could not read shot origin vector ('from') from shoot packet:", p)
 		return
 	}
-	from = _from.Mul(1 / geom.DMF)
-	_to, ok := parseVector(p)
+	from = from.Mul(1 / geom.DMF)
+	to, ok = parseVector(p)
 	if !ok {
 		log.Println("could not read shot destination vector ('to') from shoot packet:", p)
 		return
 	}
-	to = _to.Mul(1 / geom.DMF)
+	to = to.Mul(1 / geom.DMF)
 	if dist := geom.Distance(from, to); dist > wpn.Range+1.0 {
 		log.Println("shot distance out of weapon's range: distane =", dist, "range =", wpn.Range+1)
 	}

@@ -26,24 +26,18 @@ func (v *Vector) Magnitude() float64 {
 }
 
 func (v *Vector) Sub(o *Vector) *Vector {
-	v.x -= o.x
-	v.y -= o.y
-	v.z -= o.z
-	return v
+	return NewVector(v.x-o.x, v.y-o.y, v.z-o.z)
 }
 
 func (v *Vector) Mul(k float64) *Vector {
-	v.x *= k
-	v.y *= k
-	v.z *= k
-	return v
+	return NewVector(v.x*k, v.y*k, v.z*k)
 }
 
 func (v *Vector) Scale(k float64) *Vector {
 	if mag := v.Magnitude(); mag > 1e-6 {
-		v.Mul(k / mag)
+		return v.Mul(k / mag)
 	}
-	return v
+	return NewVector(v.x, v.y, v.z)
 }
 
 func Distance(from, to *Vector) float64 {

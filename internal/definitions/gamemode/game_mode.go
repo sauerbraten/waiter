@@ -10,22 +10,22 @@ const (
 	Teamplay
 	Insta
 	InstaTeam
-	Effic
+	Effic // 5
 	EfficTeam
 	Tactics
 	TacticsTeam
 	Capture
-	RegenCapture
+	RegenCapture // 10
 	CTF
 	InstaCTF
 	Protect
 	InstaProtect
-	Hold
+	Hold // 15
 	InstaHold
 	EfficCTF
 	EfficProtect
 	EfficHold
-	Collect
+	Collect // 20
 	InstaCollect
 	EfficCollect
 )

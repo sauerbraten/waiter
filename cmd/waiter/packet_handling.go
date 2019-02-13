@@ -47,7 +47,9 @@ outer:
 		case nmc.Position:
 			// client sending his position and movement in the world
 			if client.GameState.State == playerstate.Alive {
-				client.Position.Publish(packet.Encode(nmc.Position, p))
+				q := p
+				client.Position.Publish(packet.Encode(nmc.Position, q))
+				parsePosition(client, &p)
 			}
 			break outer
 
@@ -120,6 +122,7 @@ outer:
 				return
 			}
 			s.Clients.Join(client, name, playerModel)
+			s.GameMode.Join(client)
 			s.Clients.SendWelcome(client)
 			s.Clients.InformOthersOfJoin(client)
 			client.Send(nmc.ServerMessage, s.MessageOfTheDay)
@@ -367,7 +370,7 @@ outer:
 			log.Println("todo: MAPCRC")
 
 		case nmc.TrySpawn:
-			if client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() {
+			if client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() || !s.GameMode.CanSpawn(client) {
 				return
 			}
 			client.GameState.Spawn(s.GameMode.ID())
@@ -398,12 +401,12 @@ outer:
 
 		case nmc.ChangeWeapon:
 			// player changing weapon
-			_weapon, ok := p.GetInt()
+			_requested, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read weapon ID from weapon change packet:", p)
 				return
 			}
-			requested := weapon.ID(_weapon)
+			requested := weapon.ID(_requested)
 			selected, ok := client.GameState.SelectWeapon(requested)
 			if !ok {
 				break
@@ -411,14 +414,14 @@ outer:
 			client.Packets.Publish(nmc.ChangeWeapon, selected.ID)
 
 		case nmc.Shoot:
-			wpn, id, from, to, hits, ok := parseShoot(client, p)
+			wpn, id, from, to, hits, ok := parseShoot(client, &p)
 			if !ok {
 				return
 			}
 			s.HandleShoot(client, wpn, id, from, to, hits)
 
 		case nmc.Explode:
-			millis, wpn, id, hits, ok := parseExplode(client, p)
+			millis, wpn, id, hits, ok := parseExplode(client, &p)
 			if !ok {
 				return
 			}
@@ -461,7 +464,12 @@ outer:
 
 		default:
 			log.Println("received", packetType, p, "on channel", channelID)
-			break outer
+			ok := s.GameMode.HandlePacket(client, packetType, &p)
+			if !ok {
+				log.Println("could not handle packet", packetType, p, "on channel", channelID)
+				break outer
+			}
+			log.Println("remaining:", p)
 		}
 	}
 
@@ -488,7 +496,47 @@ func isValidMessage(c *Client, networkMessageCode nmc.ID) bool {
 	return true
 }
 
-func parseShoot(client *Client, p protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {
+func parsePosition(client *Client, p *protocol.Packet) {
+	// parse position out of packet
+	_, ok := p.GetUint() // we don't support bots so we know it's from the client themselves
+	if !ok {
+		log.Println("could not read CN from position packet (packet too short):", p)
+		return
+	}
+	p.GetByte() // state, not used
+	flags, ok := p.GetByte()
+
+	xyz := [3]float64{}
+	for i := range xyz {
+		c1, ok := p.GetByte()
+		if !ok {
+			log.Printf("could not read first byte of %s coordinate from position packet (packet too short): %v", string("xyz"[i]), p)
+			return
+		}
+		c2, ok := p.GetByte()
+		if !ok {
+			log.Printf("could not read second byte of %s coordinate from position packet (packet too short): %v", string("xyz"[i]), p)
+			return
+		}
+		c := int32(c1) | int32(c2)<<8
+		if flags&(1<<uint(i)) != 0 {
+			c3, ok := p.GetByte()
+			if !ok {
+				log.Printf("could not read third byte of %s coordinate from position packet (packet too short): %v", string("xyz"[i]), p)
+				return
+			}
+			c |= int32(c3) << 16
+			if c&0x800000 != 0 {
+				c |= -16777216 // 0xFF000000
+			}
+			xyz[i] = float64(c2) / geom.DMF
+		}
+	}
+
+	// TODO: save position to client for dropflag event
+}
+
+func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {
 	id, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read shot ID from shoot packet:", p)
@@ -527,7 +575,7 @@ func parseShoot(client *Client, p protocol.Packet) (wpn weapon.Weapon, id int32,
 	return
 }
 
-func parseExplode(client *Client, p protocol.Packet) (millis int32, wpn weapon.Weapon, id int32, hits []hit, success bool) {
+func parseExplode(client *Client, p *protocol.Packet) (millis int32, wpn weapon.Weapon, id int32, hits []hit, success bool) {
 	millis, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read millis from explode packet:", p)
@@ -539,6 +587,11 @@ func parseExplode(client *Client, p protocol.Packet) (millis int32, wpn weapon.W
 		return
 	}
 	wpn = weapon.ByID(weapon.ID(weaponID))
+	_, ok = p.GetInt() // TODO: use projectile ID to link to shot
+	if !ok {
+		log.Println("could not read projectile ID from explode packet:", p)
+		return
+	}
 	numHits, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read number of hits from explode packet:", p)
@@ -548,7 +601,7 @@ func parseExplode(client *Client, p protocol.Packet) (millis int32, wpn weapon.W
 	return
 }
 
-func parseHits(num int32, p protocol.Packet) (hits []hit, ok bool) {
+func parseHits(num int32, p *protocol.Packet) (hits []hit, ok bool) {
 	hits = make([]hit, num)
 	for i := range hits {
 		_target, ok := p.GetInt()
@@ -590,12 +643,12 @@ func parseHits(num int32, p protocol.Packet) (hits []hit, ok bool) {
 	return hits, true
 }
 
-func parseVector(p protocol.Packet) (*geom.Vector, bool) {
+func parseVector(p *protocol.Packet) (*geom.Vector, bool) {
 	xyz := [3]float64{}
 	for i := range xyz {
 		coord, ok := p.GetInt()
 		if !ok {
-			log.Println("could not read", "xzy"[i], "coordinate from packet:", p)
+			log.Printf("could not read %s coordinate from packet: %v", string("xzy"[i]), p)
 			return nil, false
 		}
 		xyz[i] = float64(coord)

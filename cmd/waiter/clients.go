@@ -90,7 +90,7 @@ func (cm *ClientManager) Relay(from *Client, args ...interface{}) {
 func (cm *ClientManager) SendWelcome(c *Client) {
 	p := []interface{}{
 		nmc.Welcome,
-		nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems, // currently played mode & map
+		nmc.MapChange, s.Map, s.GameMode.ID(), !s.GotItems, // currently played mode & map
 		nmc.TimeLeft, s.timer.TimeLeft / 1000, // time left in this round
 	}
 
@@ -115,7 +115,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	}
 
 	// tell the client what team he was put in by the server
-	p = append(p, nmc.SetTeam, c.CN, c.Team, -1)
+	p = append(p, nmc.SetTeam, c.CN, c.Team.Name, -1)
 
 	// tell the client how to spawn (what health, what armour, what weapons, what ammo, etc.)
 	if c.GameState.State == playerstate.Spectator {
@@ -137,7 +137,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	// send other client's state (name, team, playermodel)
 	for _, client := range cm.cs {
 		if client != c && client.InUse {
-			p = append(p, nmc.InitializeClient, client.CN, client.Name, client.Team, client.PlayerModel)
+			p = append(p, nmc.InitializeClient, client.CN, client.Name, client.Team.Name, client.PlayerModel)
 		}
 	}
 
@@ -185,7 +185,7 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 
 // Informs all other clients that a client joined the game.
 func (cm *ClientManager) InformOthersOfJoin(c *Client) {
-	cm.Relay(c, nmc.InitializeClient, c.CN, c.Name, c.Team, c.PlayerModel)
+	cm.Relay(c, nmc.InitializeClient, c.CN, c.Name, c.Team.Name, c.PlayerModel)
 	if c.GameState.State == playerstate.Spectator {
 		cm.Relay(c, nmc.Spectator, c.CN, 1)
 	}

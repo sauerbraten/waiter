@@ -16,7 +16,7 @@ import (
 type Client struct {
 	CN                  uint32
 	Name                string
-	Team                string
+	Team                *Team
 	PlayerModel         int32
 	Role                role.ID
 	GameState           *GameState
@@ -38,7 +38,7 @@ func NewClient(cn uint32, peer *enet.Peer) *Client {
 		InUse:     true,
 		Peer:      peer,
 		SessionID: utils.RNG.Int31(),
-		Team:      "good", // TODO: select weaker team
+		Team:      NoTeam,
 		GameState: NewGameState(),
 	}
 }

@@ -11,7 +11,7 @@ type State struct {
 	GameMode   GameMode
 	Map        string
 
-	NotGotItems bool
-	UpSince     time.Time
-	NumClients  func() int // number of clients connected
+	GotItems   bool
+	UpSince    time.Time
+	NumClients func() int // number of clients connected
 }

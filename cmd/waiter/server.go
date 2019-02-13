@@ -40,6 +40,7 @@ func (s *Server) Connect(peer *enet.Peer) {
 }
 
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
+	s.GameMode.Leave(client)
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
 	if s.Clients.NumberOfClientsConnected() == 0 {
@@ -70,11 +71,12 @@ func (s *Server) Intermission() {
 }
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
-	s.NotGotItems = true
-	s.GameMode = GameModeByID(mode)
+	s.GotItems = false
 	s.Map = mapp
+	s.GameMode = GameModeByID(mode)
+	s.GameMode.Init()
 	s.timer.Restart()
-	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.NotGotItems)
+	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), !s.GotItems)
 	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
@@ -197,7 +199,7 @@ func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapo
 
 func (s *Server) handleDeath(fragger, victim *Client) {
 	victim.Die()
-	fragger.GameState.Frags += s.GameMode.CountFrag(fragger, victim)
+	fragger.GameState.Frags += s.GameMode.FragValue(fragger, victim)
 	// TODO: effectiveness
 	teamFrags := 0
 	if teamMode, ok := s.GameMode.(TeamMode); ok {

@@ -463,10 +463,9 @@ outer:
 			// TODO: process and broadcast itemlist so clients are ok
 
 		default:
-			log.Println("received", packetType, p, "on channel", channelID)
 			ok := s.GameMode.HandlePacket(client, packetType, &p)
 			if !ok {
-				log.Println("could not handle packet", packetType, p, "on channel", channelID)
+				log.Println("received", packetType, p, "on channel", channelID)
 				break outer
 			}
 		}

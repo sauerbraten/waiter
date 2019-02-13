@@ -33,6 +33,12 @@ type ctfMode struct {
 	evil flag
 }
 
+func NewCTFMode() ctfMode {
+	return ctfMode{
+		teamMode: NewTeamMode("good", "evil"),
+	}
+}
+
 func (ctf *ctfMode) flagByID(id int32) (*flag, bool) {
 	switch id {
 	case 0:
@@ -216,27 +222,49 @@ func (ctf *ctfMode) returnFlag(f *flag) {
 	f.owner = nil
 }
 
-func (ctf *ctfMode) Init() {
-	ctf.teamMode.Init()
+func (ctf *ctfMode) NeedMapInfo() bool { return !ctf.flagsInitialized }
 
-	ctf.Teams["good"] = NewTeam("good")
-	ctf.Teams["evil"] = NewTeam("evil")
+func (ctf *ctfMode) Init(client *Client) {
+	q := []interface{}{
+		nmc.InitFlags,
+		ctf.Teams["good"].Score,
+		ctf.Teams["evil"].Score,
+	}
 
-	s.Clients.ForEach(func(c *Client) { ctf.Join(c) })
-}
+	if ctf.flagsInitialized {
+		q = append(q, 2)
+		for _, f := range []flag{ctf.good, ctf.evil} {
+			var ownerCN int32 = -1
+			if f.owner != nil {
+				ownerCN = int32(f.owner.CN)
+			}
+			q = append(q, f.version, 0, ownerCN, 0)
+			if f.owner == nil {
+				dropped := !f.dropTime.IsZero()
+				q = append(q, dropped)
+				if dropped {
+					q = append(q, f.dropLocation.Mul(geom.DMF))
+				}
+			}
+		}
+	} else {
+		q = append(q, 0)
+	}
 
-func (ctf *ctfMode) Join(client *Client) {
-	ctf.teamMode.Join(client)
-	// TODO: init flags for client
+	client.Send(q...)
 }
 
 func (ctf *ctfMode) Leave(client *Client) {
-	// TODO: drop flag
+	ctf.dropFlag(client)
 	ctf.teamMode.Leave(client)
 }
 
 func (ctf *ctfMode) CanSpawn(c *Client) bool {
-	return !c.Joined || c.GameState.LastDeath.IsZero() || time.Since(c.GameState.LastDeath) > 5*time.Second
+	return c.GameState.LastDeath.IsZero() || time.Since(c.GameState.LastDeath) > 5*time.Second
+}
+
+func (ctf *ctfMode) HandleDeath(_, victim *Client) {
+	ctf.dropFlag(victim)
 }
 
 type EfficCTF struct {
@@ -245,11 +273,7 @@ type EfficCTF struct {
 
 func NewEfficCTF() *EfficCTF {
 	return &EfficCTF{
-		ctfMode{
-			teamMode: teamMode{
-				Teams: map[string]*Team{},
-			},
-		},
+		ctfMode: NewCTFMode(),
 	}
 }
 

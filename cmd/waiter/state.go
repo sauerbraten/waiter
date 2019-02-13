@@ -7,11 +7,10 @@ import (
 )
 
 type State struct {
-	MasterMode mastermode.ID
-	GameMode   GameMode
-	Map        string
-
-	GotItems   bool
-	UpSince    time.Time
-	NumClients func() int // number of clients connected
+	MasterMode       mastermode.ID
+	GameMode         GameMode
+	Map              string
+	UpSince          time.Time
+	NumClients       func() int // number of clients connected
+	PendingMapChange *time.Timer
 }

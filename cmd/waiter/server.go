@@ -59,24 +59,25 @@ func (s *Server) Intermission() {
 	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
 
 	// start 5 second timer
-	end := time.After(5 * time.Second)
+	s.PendingMapChange = time.AfterFunc(5*time.Second, func() {
+		s.ChangeMap(s.GameMode.ID(), maprotation.NextMap(s.GameMode.ID(), s.Map))
+	})
 
 	// TODO: send server messages with some top stats
-
-	// wait for timer to finish
-	<-end
-
-	// load next map
-	s.ChangeMap(s.GameMode.ID(), maprotation.NextMap(s.GameMode.ID(), s.Map))
 }
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
-	s.GotItems = false
+	// stop any pending map change
+	if s.PendingMapChange != nil {
+		s.PendingMapChange.Stop()
+	}
+
 	s.Map = mapp
 	s.GameMode = GameModeByID(mode)
-	s.GameMode.Init()
+	s.Clients.ForEach(s.GameMode.Join)
+
 	s.timer.Restart()
-	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), !s.GotItems)
+	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
 	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
@@ -207,4 +208,5 @@ func (s *Server) handleDeath(fragger, victim *Client) {
 	}
 	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, teamFrags)
 	// TODO teamkills
+	s.GameMode.HandleDeath(fragger, victim)
 }

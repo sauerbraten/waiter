@@ -62,7 +62,6 @@ func init() {
 		Clients: cs,
 		Auth:    auth.NewManager(users),
 	}
-	s.GameMode.Init()
 
 	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
 	if err != nil {

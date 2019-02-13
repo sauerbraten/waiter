@@ -11,23 +11,27 @@ import (
 
 type GameMode interface {
 	ID() gamemode.ID
-	Init()
+	NeedMapInfo() bool
 	Join(*Client)
+	Init(*Client)
 	Leave(*Client)
 	CanSpawn(*Client) bool
+	HandleDeath(fragger, victim *Client)
 	FragValue(fragger, victim *Client) int
 	HandlePacket(*Client, nmc.ID, *protocol.Packet) bool
 }
 
 type teamlessMode struct{}
 
-func (*teamlessMode) Init() {}
+func (*teamlessMode) Join(*Client) {}
 
-func (*teamlessMode) Join(c *Client) {}
+func (*teamlessMode) Init(*Client) {}
 
-func (*teamlessMode) Leave(c *Client) {}
+func (*teamlessMode) Leave(*Client) {}
 
-func (*teamlessMode) CanSpawn(c *Client) bool { return true }
+func (*teamlessMode) CanSpawn(*Client) bool { return true }
+
+func (*teamlessMode) HandleDeath(*Client, *Client) {}
 
 func (*teamlessMode) FragValue(fragger, victim *Client) int {
 	if fragger == victim {
@@ -37,6 +41,8 @@ func (*teamlessMode) FragValue(fragger, victim *Client) int {
 }
 
 type noItemsMode struct{}
+
+func (*noItemsMode) NeedMapInfo() bool { return false }
 
 func (*noItemsMode) HandlePacket(*Client, nmc.ID, *protocol.Packet) bool { return false }
 
@@ -71,6 +77,16 @@ type teamMode struct {
 	Teams map[string]*Team
 }
 
+func NewTeamMode(names ...string) teamMode {
+	teams := map[string]*Team{}
+	for _, name := range names {
+		teams[name] = NewTeam(name)
+	}
+	return teamMode{
+		Teams: teams,
+	}
+}
+
 func (t *teamMode) selectWeakestTeam() *Team {
 	teams := []*Team{}
 	for _, team := range t.Teams {
@@ -79,10 +95,6 @@ func (t *teamMode) selectWeakestTeam() *Team {
 
 	sort.Sort(ByScoreAndSize(teams))
 	return teams[0]
-}
-
-func (t *teamMode) Init() {
-	t.Teams = map[string]*Team{}
 }
 
 func (t *teamMode) Join(c *Client) {

@@ -90,7 +90,7 @@ func (cm *ClientManager) Relay(from *Client, args ...interface{}) {
 func (cm *ClientManager) SendWelcome(c *Client) {
 	p := []interface{}{
 		nmc.Welcome,
-		nmc.MapChange, s.Map, s.GameMode.ID(), !s.GotItems, // currently played mode & map
+		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo(), // currently played mode & map
 		nmc.TimeLeft, s.timer.TimeLeft / 1000, // time left in this round
 	}
 
@@ -150,12 +150,11 @@ func (cm *ClientManager) Join(c *Client, name string, playerModel int32) {
 	c.Name = name
 	c.PlayerModel = playerModel
 
-	c.GameState.Spawn(s.GameMode.ID())
-
 	if s.MasterMode == mastermode.Locked {
 		c.GameState.State = playerstate.Spectator
 	} else {
-		c.GameState.State = playerstate.Alive
+		c.GameState.State = playerstate.Dead
+		c.GameState.Spawn(s.GameMode.ID())
 	}
 
 	log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", cm.UniqueName(c), c.Peer.Address.IP)))

@@ -124,6 +124,7 @@ outer:
 			s.Clients.Join(client, name, playerModel)
 			s.GameMode.Join(client)
 			s.Clients.SendWelcome(client)
+			s.GameMode.Init(client)
 			s.Clients.InformOthersOfJoin(client)
 			client.Send(nmc.ServerMessage, s.MessageOfTheDay)
 			if authDomain != "" && authName != "" {
@@ -267,7 +268,8 @@ outer:
 				spectator.GameState.State = playerstate.Spectator
 			} else {
 				spectator.GameState.State = playerstate.Dead
-				// TODO: checkmap
+				s.GameMode.Join(spectator)
+				// todo: checkmap
 			}
 			s.Clients.Broadcast(nil, nmc.Spectator, spectator.CN, toggle)
 
@@ -370,7 +372,7 @@ outer:
 			log.Println("todo: MAPCRC")
 
 		case nmc.TrySpawn:
-			if client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() || !s.GameMode.CanSpawn(client) {
+			if !client.Joined || client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() || !s.GameMode.CanSpawn(client) {
 				return
 			}
 			client.GameState.Spawn(s.GameMode.ID())
@@ -388,7 +390,7 @@ outer:
 				return
 			}
 
-			if (client.GameState.State != playerstate.Alive && client.GameState.State != playerstate.Dead) || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawnAttempt.IsZero() {
+			if client.GameState.State != playerstate.Dead || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawnAttempt.IsZero() {
 				// client may not spawn
 				return
 			}

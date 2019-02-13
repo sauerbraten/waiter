@@ -24,10 +24,10 @@ type GameState struct {
 	Ammo           map[weapon.ID]int32 // weapon → ammo
 	Tokens         int32               // skulls
 
-	LastSpawn    time.Time
-	LifeSequence int32
-	LastShot     time.Time
-	LastDeath    time.Time
+	LastSpawnAttempt time.Time
+	LifeSequence     int32
+	LastShot         time.Time
+	LastDeath        time.Time
 
 	// fields that change at intermission
 	Frags      int
@@ -63,7 +63,7 @@ func (gs *GameState) Spawn(mode gamemode.ID) {
 	gs.Tokens = 0
 	gs.ArmourType, gs.Armour = armour.SpawnArmour(mode)
 	gs.Ammo, gs.SelectedWeapon = weapon.SpawnAmmo(mode)
-	gs.LastSpawn = time.Now()
+	gs.LastSpawnAttempt = time.Now()
 	gs.LifeSequence = (gs.LifeSequence + 1) % 128
 
 	gs.Health = gs.MaxHealth
@@ -107,6 +107,7 @@ func (gs *GameState) Die() {
 	gs.State = playerstate.Dead
 	gs.Deaths++
 	gs.LastDeath = time.Now()
+	gs.LastShot = time.Time{}
 }
 
 // Resets a client's game state.
@@ -125,12 +126,4 @@ func (gs *GameState) Reset() {
 	gs.ShotDamage = 0
 	gs.Damage = 0
 	gs.Flags = 0
-
-	gs.Respawn()
-}
-
-func (gs *GameState) Respawn() {
-	gs.LastSpawn = time.Time{}
-	gs.LastShot = time.Time{}
-	gs.Tokens = 0
 }

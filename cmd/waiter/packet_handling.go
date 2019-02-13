@@ -225,6 +225,49 @@ outer:
 			s.MasterMode = mm
 			s.Clients.Broadcast(nil, nmc.MasterMode, mm)
 
+		case nmc.Spectator:
+			_spectator, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read CN from spectator packet:", p)
+				return
+			}
+			spectator := s.Clients.GetClientByCN(uint32(_spectator))
+			if spectator == nil {
+				return
+			}
+			toggle, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read toggle from spectator packet:", p)
+				return
+			}
+			if client.Role == role.None {
+				// unprivileged clients can never change spec state of others
+				if spectator != client {
+					client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
+					return
+				}
+				// unprivileged clients can not unspec themselves in mm>=2
+				if client.GameState.State == playerstate.Spectator && s.MasterMode >= mastermode.Locked {
+					client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
+					return
+				}
+			}
+			if (spectator.GameState.State == playerstate.Spectator) == (toggle != 0) {
+				// nothing to do
+				return
+			}
+			if toggle != 0 {
+				if client.GameState.State == playerstate.Alive {
+					s.handleDeath(spectator, spectator)
+				}
+				s.GameMode.Leave(spectator)
+				spectator.GameState.State = playerstate.Spectator
+			} else {
+				spectator.GameState.State = playerstate.Dead
+				// TODO: checkmap
+			}
+			s.Clients.Broadcast(nil, nmc.Spectator, spectator.CN, toggle)
+
 		case nmc.VoteMap:
 			mapp, ok := p.GetString()
 			if !ok {
@@ -324,10 +367,9 @@ outer:
 			log.Println("todo: MAPCRC")
 
 		case nmc.TrySpawn:
-			if client.GameState.State != playerstate.Dead || !client.GameState.LastSpawn.IsZero() {
+			if client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() {
 				return
 			}
-			client.GameState.Respawn()
 			client.GameState.Spawn(s.GameMode.ID())
 			client.Send(nmc.SpawnState, client.CN, client.GameState.ToWire())
 
@@ -343,14 +385,14 @@ outer:
 				return
 			}
 
-			if (client.GameState.State != playerstate.Alive && client.GameState.State != playerstate.Dead) || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawn.IsZero() {
+			if (client.GameState.State != playerstate.Alive && client.GameState.State != playerstate.Dead) || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawnAttempt.IsZero() {
 				// client may not spawn
 				return
 			}
 
 			client.GameState.State = playerstate.Alive
 			client.GameState.SelectedWeapon = weapon.ByID(weapon.ID(_weapon))
-			client.GameState.LastSpawn = time.Time{}
+			client.GameState.LastSpawnAttempt = time.Time{}
 
 			client.Packets.Publish(nmc.ConfirmSpawn, client.GameState.ToWire())
 
@@ -369,21 +411,21 @@ outer:
 			client.Packets.Publish(nmc.ChangeWeapon, selected.ID)
 
 		case nmc.Shoot:
-			wpn, id, from, to, hits, ok := parseShoot(client, &p)
+			wpn, id, from, to, hits, ok := parseShoot(client, p)
 			if !ok {
 				return
 			}
 			s.HandleShoot(client, wpn, id, from, to, hits)
 
 		case nmc.Explode:
-			millis, wpn, id, hits, ok := parseExplode(client, &p)
+			millis, wpn, id, hits, ok := parseExplode(client, p)
 			if !ok {
 				return
 			}
 			s.HandleExplode(client, millis, wpn, id, hits)
 
 		case nmc.Suicide:
-			s.handleSuicide(client)
+			s.handleDeath(client, client)
 
 		case nmc.Sound:
 			sound, ok := p.GetInt()
@@ -446,7 +488,7 @@ func isValidMessage(c *Client, networkMessageCode nmc.ID) bool {
 	return true
 }
 
-func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {
+func parseShoot(client *Client, p protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {
 	id, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read shot ID from shoot packet:", p)
@@ -485,7 +527,7 @@ func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32
 	return
 }
 
-func parseExplode(client *Client, p *protocol.Packet) (millis int32, wpn weapon.Weapon, id int32, hits []hit, success bool) {
+func parseExplode(client *Client, p protocol.Packet) (millis int32, wpn weapon.Weapon, id int32, hits []hit, success bool) {
 	millis, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read millis from explode packet:", p)
@@ -506,7 +548,7 @@ func parseExplode(client *Client, p *protocol.Packet) (millis int32, wpn weapon.
 	return
 }
 
-func parseHits(num int32, p *protocol.Packet) (hits []hit, ok bool) {
+func parseHits(num int32, p protocol.Packet) (hits []hit, ok bool) {
 	hits = make([]hit, num)
 	for i := range hits {
 		_target, ok := p.GetInt()
@@ -548,7 +590,7 @@ func parseHits(num int32, p *protocol.Packet) (hits []hit, ok bool) {
 	return hits, true
 }
 
-func parseVector(p *protocol.Packet) (*geom.Vector, bool) {
+func parseVector(p protocol.Packet) (*geom.Vector, bool) {
 	xyz := [3]float64{}
 	for i := range xyz {
 		coord, ok := p.GetInt()

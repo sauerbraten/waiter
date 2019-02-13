@@ -1,16 +1,21 @@
 package main
 
 import (
+	"log"
 	"sort"
 
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
+	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/utils"
+	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
 type GameMode interface {
 	ID() gamemode.ID
 	Init()
 	Join(*Client)
+	Leave(*Client)
 	CountFrag(fragger, victim *Client) int
 }
 
@@ -19,6 +24,8 @@ type teamlessMode struct{}
 func (*teamlessMode) Init() {}
 
 func (*teamlessMode) Join(c *Client) {}
+
+func (*teamlessMode) Leave(c *Client) {}
 
 func (*teamlessMode) CountFrag(fragger, victim *Client) int {
 	if fragger == victim {
@@ -84,6 +91,8 @@ func (t *teamMode) Join(c *Client) {
 	t.Teams[team].AddPlayer(c)
 }
 
+func (*teamMode) Leave(c *Client) {}
+
 func (*teamMode) CountFrag(fragger, victim *Client) int {
 	if fragger.Team == victim.Team {
 		return -1
@@ -104,15 +113,56 @@ func (t *teamMode) Frags(name string) int {
 	return 0
 }
 
+type Flag struct {
+	ID            int32
+	Team          int32
+	SpawnLocation *geom.Vector
+}
+
+type FlagMode struct {
+	Flags []Flag
+}
+
+func (fm *FlagMode) handlePacket(client *Client, packetType nmc.ID, p protocol.Packet) {
+	switch packetType {
+	case nmc.InitFlags:
+		fm.parseFlags(p)
+	}
+}
+func (fm *FlagMode) parseFlags(p protocol.Packet) {
+	numFlags, ok := p.GetInt()
+	if !ok {
+		log.Println("could not read number of flags from initflags packet (packet too short):", p)
+		return
+	}
+	fm.Flags = []Flag{}
+	var i int32
+	for i < numFlags {
+		team, ok := p.GetInt()
+		if !ok {
+			log.Println("could not read team from initflags packet (packet too short):", p)
+			return
+		}
+		pos, ok := parseVector(p)
+		if !ok {
+			log.Println("could not read flag position from initflags packet (packet too short):", p)
+			return
+		}
+		pos = pos.Mul(1 / geom.DMF)
+		fm.Flags = append(fm.Flags, Flag{
+			ID:            i,
+			Team:          team,
+			SpawnLocation: pos,
+		})
+	}
+	return
+}
+
 type CTF struct {
 	teamMode
 }
 
 func (*CTF) ID() gamemode.ID { return gamemode.CTF }
-
-func (ctf *CTF) Join(c *Client) {
-	ctf.teamMode.Join(c)
-}
 
 func (ctf *CTF) Init() {
 	ctf.teamMode.Init()
@@ -134,17 +184,12 @@ type Capture struct {
 
 func (*Capture) ID() gamemode.ID { return gamemode.Capture }
 
-func (cap *Capture) Join(c *Client) {
-	cap.teamMode.Join(c)
-}
-
 func (cap *Capture) Init() {
 	cap.teamMode.Init()
 	cap.Teams["guht"] = &Team{}
 	cap.Teams["pöse"] = &Team{}
 
 	s.Clients.ForEach(func(c *Client) { cap.Join(c) })
-
 }
 
 func GameModeByID(id gamemode.ID) GameMode {
@@ -155,6 +200,8 @@ func GameModeByID(id gamemode.ID) GameMode {
 		return &Effic{}
 	case gamemode.Tactics:
 		return &Tactics{}
+	case gamemode.EfficCTF:
+		return &EfficCTF{}
 	default:
 		return nil
 	}

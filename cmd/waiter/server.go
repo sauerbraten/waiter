@@ -206,8 +206,3 @@ func (s *Server) handleDeath(fragger, victim *Client) {
 	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, teamFrags)
 	// TODO teamkills
 }
-
-func (s *Server) handleSuicide(client *Client) {
-	s.handleDeath(client, client)
-	client.GameState.Respawn()
-}

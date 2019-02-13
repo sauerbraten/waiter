@@ -77,8 +77,8 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.Clients.ForEach(s.GameMode.Join)
 
 	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
-	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.timer.Restart()
+	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
 }

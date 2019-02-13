@@ -20,6 +20,7 @@ type flag struct {
 	dropLocation *geom.Vector
 	//spawnIndex    int32
 	spawnLocation *geom.Vector
+	pendingReset  *time.Timer
 }
 
 type flagMode struct {
@@ -77,7 +78,7 @@ func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.
 			log.Println("could not read flag version from takeflag packet (packet too short):", p)
 			break
 		}
-		ctf.takeFlag(client, id, version)
+		ctf.touchFlag(client, id, version)
 
 	case nmc.TryDropFlag:
 		ctf.dropFlag(client)
@@ -139,7 +140,7 @@ func (ctf *ctfMode) initFlags(f1, f2 *flag) {
 	ctf.flagsInitialized = true
 }
 
-func (ctf *ctfMode) takeFlag(client *Client, id int32, version int32) {
+func (ctf *ctfMode) touchFlag(client *Client, id int32, version int32) {
 	if !ctf.flagsInitialized {
 		return
 	}
@@ -155,13 +156,10 @@ func (ctf *ctfMode) takeFlag(client *Client, id int32, version int32) {
 	}
 
 	team := ctf.teamByFlag(flag)
-	log.Println(client.Team, team)
 
 	if client.Team.Name != team {
 		// player stealing enemy flag
-		flag.version++
-		s.Clients.Broadcast(nil, nmc.TakeFlag, client.CN, id, flag.version)
-		flag.owner = client
+		ctf.takeFlag(client, flag)
 	} else if !flag.dropTime.IsZero() {
 		// player touches her own, dropped flag
 		ctf.returnFlag(flag)
@@ -190,6 +188,18 @@ func (ctf *ctfMode) takeFlag(client *Client, id int32, version int32) {
 	}
 }
 
+func (ctf *ctfMode) takeFlag(client *Client, f *flag) {
+	// cancel reset
+	if f.pendingReset != nil {
+		f.pendingReset.Stop()
+		f.pendingReset = nil
+	}
+
+	f.version++
+	s.Clients.Broadcast(nil, nmc.TakeFlag, client.CN, f.id, f.version)
+	f.owner = client
+}
+
 func (ctf *ctfMode) dropFlag(client *Client) {
 	if !ctf.flagsInitialized {
 		return
@@ -215,6 +225,11 @@ func (ctf *ctfMode) dropFlag(client *Client) {
 	f.version++
 
 	s.Clients.Broadcast(nil, nmc.DropFlag, client.CN, f.id, f.version, f.dropLocation.Mul(geom.DMF))
+	f.pendingReset = time.AfterFunc(10*time.Second, func() {
+		ctf.returnFlag(f)
+		f.version++
+		s.Clients.Broadcast(nil, nmc.ResetFlag, f.id, f.version, 0, f.team, ctf.Teams[ctf.teamByFlag(f)].Score)
+	})
 }
 
 func (ctf *ctfMode) returnFlag(f *flag) {

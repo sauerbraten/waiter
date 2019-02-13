@@ -100,7 +100,8 @@ func (t *teamMode) selectWeakestTeam() *Team {
 func (t *teamMode) Join(c *Client) {
 	team := t.selectWeakestTeam()
 	team.Add(c)
-	log.Println("weakest team:", team.Name)
+	log.Println("added", c, "to team", team.Name)
+	c.Send(nmc.SetTeam, c.CN, c.Team.Name, -1)
 }
 
 func (*teamMode) Leave(c *Client) {

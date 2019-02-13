@@ -469,7 +469,6 @@ outer:
 				log.Println("could not handle packet", packetType, p, "on channel", channelID)
 				break outer
 			}
-			log.Println("remaining:", p)
 		}
 	}
 

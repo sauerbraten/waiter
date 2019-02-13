@@ -28,6 +28,7 @@ type Client struct {
 	Peer                *enet.Peer
 	SessionID           int32
 	Ping                int32
+	CurrentPos          *geom.Vector
 	Position            *Publisher
 	Packets             *Publisher
 }

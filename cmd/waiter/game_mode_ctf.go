@@ -203,7 +203,12 @@ func (ctf *ctfMode) dropFlag(client *Client) {
 		return
 	}
 
-	// TODO: use client position
+	f.dropLocation = client.CurrentPos
+	f.dropTime = time.Now()
+	f.owner = nil
+	f.version++
+
+	s.Clients.Broadcast(nil, nmc.DropFlag, client.CN, f.id, f.version, f.dropLocation.Mul(geom.DMF))
 }
 
 func (ctf *ctfMode) returnFlag(f *flag) {

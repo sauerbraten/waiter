@@ -529,11 +529,12 @@ func parsePosition(client *Client, p *protocol.Packet) {
 			if c&0x800000 != 0 {
 				c |= -16777216 // 0xFF000000
 			}
-			xyz[i] = float64(c2) / geom.DMF
 		}
+		xyz[i] = float64(c)
 	}
+	client.CurrentPos = geom.NewVector(xyz[0], xyz[1], xyz[2]).Mul(1 / geom.DMF)
 
-	// TODO: save position to client for dropflag event
+	// rest of packet is not neede yet
 }
 
 func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {

@@ -12,6 +12,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/sound"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
+	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
@@ -88,6 +89,11 @@ func Encode(args ...interface{}) protocol.Packet {
 
 		case string:
 			p.PutString(v)
+
+		case *geom.Vector:
+			p.PutInt(int32(v.X()))
+			p.PutInt(int32(v.Y()))
+			p.PutInt(int32(v.Z()))
 
 		default:
 			log.Printf("unhandled type %T of arg %v\n", v, v)

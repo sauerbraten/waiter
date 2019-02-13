@@ -213,7 +213,7 @@ func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 		c.CN,
 		c.Ping,
 		c.Name,
-		c.Team,
+		c.Team.Name,
 		c.GameState.Frags,
 		c.GameState.Flags,
 		c.GameState.Deaths,

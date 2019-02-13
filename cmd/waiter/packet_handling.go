@@ -456,9 +456,7 @@ outer:
 				s.Clients.Broadcast(nil, nmc.PauseGame, 1, client.CN)
 				s.timer.Pause()
 			} else {
-				log.Println("resuming game at", s.timer.TimeLeft/1000, "seconds left")
-				s.Clients.Broadcast(nil, nmc.PauseGame, 0, client.CN)
-				s.timer.Resume()
+				s.timer.ResumeWithCountdown(client)
 			}
 
 		case nmc.ItemList:

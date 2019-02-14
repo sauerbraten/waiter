@@ -7,16 +7,14 @@ import (
 
 // temporary set of maps used in development phase
 var (
-	instaMaps = []string{
+	dmMaps = []string{
 		"hashi",
 		"turbine",
 		"ot",
 		"memento",
 		"kffa",
 	}
-	efficMaps    = instaMaps
-	tacticsMaps  = instaMaps
-	efficCTFMaps = []string{
+	ctfMaps = []string{
 		"reissen",
 		"forge",
 		"haste",
@@ -31,11 +29,15 @@ var (
 		"serenity",
 	}
 	mr = map[gamemode.ID][]string{
-		gamemode.Insta:    instaMaps,
-		gamemode.Effic:    efficMaps,
-		gamemode.Tactics:  tacticsMaps,
-		gamemode.EfficCTF: efficCTFMaps,
-		gamemode.Capture:  captureMaps,
+		gamemode.Insta:       dmMaps,
+		gamemode.InstaTeam:   dmMaps,
+		gamemode.Effic:       dmMaps,
+		gamemode.EfficTeam:   dmMaps,
+		gamemode.Tactics:     dmMaps,
+		gamemode.TacticsTeam: dmMaps,
+		gamemode.InstaCTF:    ctfMaps,
+		gamemode.EfficCTF:    ctfMaps,
+		gamemode.Capture:     captureMaps,
 	}
 )
 

@@ -84,6 +84,13 @@ func (gm ID) String() string {
 }
 
 func Valid(gm ID) bool {
-	// TODO
-	return gm == Insta || gm == Effic || gm == Tactics || gm == EfficCTF
+	switch gm {
+	case Insta, InstaTeam,
+		Effic, EfficTeam,
+		Tactics, TacticsTeam,
+		InstaCTF, EfficCTF:
+		return true
+	default:
+		return false
+	}
 }

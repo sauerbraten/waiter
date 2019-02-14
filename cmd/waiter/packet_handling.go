@@ -121,15 +121,7 @@ outer:
 				log.Println("could not read auth name from join packet:", p)
 				return
 			}
-			s.Clients.Join(client, name, playerModel)
-			s.GameMode.Join(client)
-			s.Clients.SendWelcome(client)
-			s.GameMode.Init(client)
-			s.Clients.InformOthersOfJoin(client)
-			client.Send(nmc.ServerMessage, s.MessageOfTheDay)
-			if authDomain != "" && authName != "" {
-				s.handleAuthRequest(client, authDomain, authName)
-			}
+			s.Join(client, name, playerModel, authDomain, authName)
 
 		case nmc.AuthTry:
 			// client wants us to send him a challenge
@@ -283,16 +275,16 @@ outer:
 				mapp = s.Map
 			}
 
-			_mode, ok := p.GetInt()
+			_modeID, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read mode from map vote packet:", p)
 				return
 			}
-			mode := gamemode.ID(_mode)
+			modeID := gamemode.ID(_modeID)
 
-			if !gamemode.Valid(mode) {
-				client.Send(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("%s is not implemented on this server", mode)))
-				log.Println("invalid gamemode", mode, "requested")
+			if !gamemode.Valid(modeID) {
+				client.Send(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("%s is not implemented on this server", modeID)))
+				log.Println("invalid gamemode", modeID, "requested")
 				return
 			}
 
@@ -306,8 +298,8 @@ outer:
 				return
 			}
 
-			s.ChangeMap(mode, mapp)
-			log.Println(client, "forced", mode, "on", mapp)
+			s.ChangeMap(modeID, mapp)
+			log.Println(client, "forced", modeID, "on", mapp)
 
 		case nmc.Ping:
 			// client pinging server → send pong
@@ -375,7 +367,7 @@ outer:
 			if !client.Joined || client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() || !s.GameMode.CanSpawn(client) {
 				return
 			}
-			client.GameState.Spawn(s.GameMode.ID())
+			s.Spawn(client)
 			client.Send(nmc.SpawnState, client.CN, client.GameState.ToWire())
 
 		case nmc.ConfirmSpawn:
@@ -420,6 +412,7 @@ outer:
 			if !ok {
 				return
 			}
+			log.Println("got shoot packet:", wpn, id, from, to, hits)
 			s.HandleShoot(client, wpn, id, from, to, hits)
 
 		case nmc.Explode:
@@ -461,6 +454,18 @@ outer:
 
 		case nmc.ItemList:
 			// TODO: process and broadcast itemlist so clients are ok
+
+		case nmc.ServerCommand:
+			cmd, ok := p.GetString()
+			if !ok || client.Role != role.Admin {
+				return
+			}
+			switch cmd {
+			case "persist", "keepteams":
+				s.ToggleKeepTeams()
+			default:
+				client.Send(nmc.ServerMessage, cubecode.Fail("unknown command"))
+			}
 
 		default:
 			ok := s.GameMode.HandlePacket(client, packetType, &p)

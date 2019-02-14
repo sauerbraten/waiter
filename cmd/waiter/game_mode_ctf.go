@@ -34,9 +34,9 @@ type ctfMode struct {
 	evil flag
 }
 
-func NewCTFMode() ctfMode {
+func NewCTFMode(keepTeams bool) ctfMode {
 	return ctfMode{
-		teamMode: NewTeamMode("good", "evil"),
+		teamMode: NewTeamMode(false, keepTeams, "good", "evil"),
 	}
 }
 
@@ -283,13 +283,27 @@ func (ctf *ctfMode) HandleDeath(_, victim *Client) {
 }
 
 type EfficCTF struct {
+	efficMode
 	ctfMode
 }
 
-func NewEfficCTF() *EfficCTF {
+func NewEfficCTF(keepTeams bool) GameMode {
 	return &EfficCTF{
-		ctfMode: NewCTFMode(),
+		ctfMode: NewCTFMode(keepTeams),
 	}
 }
 
 func (*EfficCTF) ID() gamemode.ID { return gamemode.EfficCTF }
+
+type InstaCTF struct {
+	instaMode
+	ctfMode
+}
+
+func NewInstaCTF(keepTeams bool) GameMode {
+	return &InstaCTF{
+		ctfMode: NewCTFMode(keepTeams),
+	}
+}
+
+func (*InstaCTF) ID() gamemode.ID { return gamemode.InstaCTF }

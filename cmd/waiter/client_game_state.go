@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
-	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/net/packet"
@@ -56,29 +55,13 @@ func (gs *GameState) ToWire() []byte {
 	)
 }
 
-// Sets GameState properties to the initial values depending on the mode.
-func (gs *GameState) Spawn(mode gamemode.ID) {
+func (gs *GameState) Spawn() {
 	gs.QuadTimeLeft = 0
 	gs.GunReloadEnd = time.Time{}
 	gs.Tokens = 0
-	gs.ArmourType, gs.Armour = armour.SpawnArmour(mode)
-	gs.Ammo, gs.SelectedWeapon = weapon.SpawnAmmo(mode)
 	gs.LastSpawnAttempt = time.Now()
 	gs.LifeSequence = (gs.LifeSequence + 1) % 128
-
 	gs.Health = gs.MaxHealth
-
-	switch mode {
-	case gamemode.Insta,
-		gamemode.InstaTeam,
-		gamemode.InstaCTF,
-		gamemode.InstaProtect,
-		gamemode.InstaHold,
-		gamemode.InstaCollect:
-		gs.Health, gs.MaxHealth = 1, 1
-	default:
-		// maxhealth/100 is fine
-	}
 }
 
 func (gs *GameState) SelectWeapon(id weapon.ID) (weapon.Weapon, bool) {

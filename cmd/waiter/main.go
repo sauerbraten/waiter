@@ -10,8 +10,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/bans"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
-	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/masterserver"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/pkg/protocol"
@@ -51,9 +49,6 @@ func init() {
 	s = &Server{
 		Config: conf,
 		State: &State{
-			MasterMode: mastermode.Open,
-			GameMode:   GameModeByID(conf.FallbackGameMode),
-			Map:        maprotation.NextMap(conf.FallbackGameMode, ""),
 			UpSince:    time.Now(),
 			NumClients: cs.NumberOfClientsConnected,
 		},
@@ -62,6 +57,7 @@ func init() {
 		Clients: cs,
 		Auth:    auth.NewManager(users),
 	}
+	s.Empty()
 
 	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
 	if err != nil {

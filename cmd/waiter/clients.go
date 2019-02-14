@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/role"
@@ -144,22 +143,6 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	c.Send(p...)
 }
 
-// Puts a client into the current game, using the data the client provided with his N_JOIN packet.
-func (cm *ClientManager) Join(c *Client, name string, playerModel int32) {
-	c.Joined = true
-	c.Name = name
-	c.PlayerModel = playerModel
-
-	if s.MasterMode == mastermode.Locked {
-		c.GameState.State = playerstate.Spectator
-	} else {
-		c.GameState.State = playerstate.Dead
-		c.GameState.Spawn(s.GameMode.ID())
-	}
-
-	log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", cm.UniqueName(c), c.Peer.Address.IP)))
-}
-
 // Tells other clients that the client disconnected, giving a disconnect reason in case it's not a normal leave.
 func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 	if !c.InUse {
@@ -196,7 +179,7 @@ func (cm *ClientManager) MapChange() {
 		if c.GameState.State == playerstate.Spectator {
 			return
 		}
-		c.GameState.Spawn(s.GameMode.ID())
+		s.Spawn(c)
 		c.Send(nmc.SpawnState, c.CN, c.GameState.ToWire())
 	})
 }

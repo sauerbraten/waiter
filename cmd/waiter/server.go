@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/auth"
@@ -14,6 +16,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
 type Server struct {
@@ -23,6 +26,9 @@ type Server struct {
 	relay   *Relay
 	Clients *ClientManager
 	Auth    *auth.Manager
+
+	PendingMapChange *time.Timer
+	KeepTeams        bool
 }
 
 func (s *Server) Connect(peer *enet.Peer) {
@@ -39,6 +45,38 @@ func (s *Server) Connect(peer *enet.Peer) {
 	)
 }
 
+// Puts a client into the current game, using the data the client provided with his N_JOIN packet.
+func (s *Server) Join(c *Client, name string, playerModel int32, authDomain, authName string) {
+	c.Joined = true
+	c.Name = name
+	c.PlayerModel = playerModel
+
+	if s.MasterMode == mastermode.Locked {
+		c.GameState.State = playerstate.Spectator
+	} else {
+		c.GameState.State = playerstate.Dead
+		s.Spawn(c)
+	}
+
+	s.GameMode.Join(c)       // may set client's team
+	s.Clients.SendWelcome(c) // tells client about her team
+	s.GameMode.Init(c)       // may send additional welcome info like flags
+	s.Clients.InformOthersOfJoin(c)
+
+	c.Send(nmc.ServerMessage, s.MessageOfTheDay)
+
+	if authDomain != "" && authName != "" {
+		s.handleAuthRequest(c, authDomain, authName)
+	}
+
+	log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", s.Clients.UniqueName(c), c.Peer.Address.IP)))
+}
+
+func (s *Server) Spawn(client *Client) {
+	client.GameState.Spawn()
+	s.GameMode.Spawn(client.GameState)
+}
+
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(client)
 	s.relay.RemoveClient(client.CN)
@@ -49,8 +87,8 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 }
 
 func (s *Server) Empty() {
+	s.KeepTeams = false
 	s.MasterMode = mastermode.Open
-	s.timer.Resume()
 	s.ChangeMap(s.FallbackGameMode, maprotation.NextMap(s.FallbackGameMode, s.Map))
 }
 
@@ -73,7 +111,7 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	}
 
 	s.Map = mapp
-	s.GameMode = GameModeByID(mode)
+	s.GameMode = StartGame(mode)
 	s.Clients.ForEach(s.GameMode.Join)
 
 	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
@@ -81,6 +119,16 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
+}
+
+func (s *Server) ToggleKeepTeams() {
+	activated := !s.KeepTeams
+	s.KeepTeams = !s.KeepTeams
+	if activated {
+		s.Clients.Broadcast(nil, nmc.ServerMessage, "keeping teams")
+	} else {
+		s.Clients.Broadcast(nil, nmc.ServerMessage, "teams will be shuffled on map change")
+	}
 }
 
 type hit struct {

@@ -453,7 +453,6 @@ outer:
 			if !ok {
 				return
 			}
-			log.Println("got shoot packet:", wpn, id, from, to, hits)
 			s.HandleShoot(client, wpn, id, from, to, hits)
 
 		case nmc.Explode:

@@ -121,10 +121,9 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
 }
 
-func (s *Server) ToggleKeepTeams() {
-	activated := !s.KeepTeams
-	s.KeepTeams = !s.KeepTeams
-	if activated {
+func (s *Server) SetKeepTeams(keepTeams bool) {
+	s.KeepTeams = keepTeams
+	if keepTeams {
 		s.Clients.Broadcast(nil, nmc.ServerMessage, "keeping teams")
 	} else {
 		s.Clients.Broadcast(nil, nmc.ServerMessage, "teams will be shuffled on map change")

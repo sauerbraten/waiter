@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
@@ -49,7 +50,7 @@ outer:
 			if client.GameState.State == playerstate.Alive {
 				q := p
 				client.Position.Publish(packet.Encode(nmc.Position, q))
-				parsePosition(client, &p)
+				client.CurrentPos = parsePosition(&p)
 			}
 			break outer
 
@@ -191,6 +192,9 @@ outer:
 				return
 			}
 			victim := s.Clients.GetClientByCN(cn)
+			if victim == nil {
+				return
+			}
 			if client.Role <= victim.Role {
 				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 				return
@@ -327,7 +331,11 @@ outer:
 				log.Println("could not read message from chat message packet:", p)
 				return
 			}
-			client.Packets.Publish(nmc.ChatMessage, msg)
+			if strings.HasPrefix(msg, "#") {
+				s.HandleCommand(client, msg[1:])
+			} else {
+				client.Packets.Publish(nmc.ChatMessage, msg)
+			}
 
 		case nmc.TeamChatMessage:
 			// client sending team chat message → pass on to team immediately
@@ -497,15 +505,11 @@ outer:
 
 		case nmc.ServerCommand:
 			cmd, ok := p.GetString()
-			if !ok || client.Role != role.Admin {
+			if !ok {
+				log.Println("could not read command from server command packet:", p)
 				return
 			}
-			switch cmd {
-			case "persist", "keepteams":
-				s.ToggleKeepTeams()
-			default:
-				client.Send(nmc.ServerMessage, cubecode.Fail("unknown command"))
-			}
+			s.HandleCommand(client, cmd)
 
 		default:
 			ok := s.GameMode.HandlePacket(client, packetType, &p)
@@ -539,7 +543,7 @@ func isValidMessage(c *Client, networkMessageCode nmc.ID) bool {
 	return true
 }
 
-func parsePosition(client *Client, p *protocol.Packet) {
+func parsePosition(p *protocol.Packet) (pos *geom.Vector) {
 	// parse position out of packet
 	_, ok := p.GetUint() // we don't support bots so we know it's from the client themselves
 	if !ok {
@@ -575,9 +579,11 @@ func parsePosition(client *Client, p *protocol.Packet) {
 		}
 		xyz[i] = float64(c)
 	}
-	client.CurrentPos = geom.NewVector(xyz[0], xyz[1], xyz[2]).Mul(1 / geom.DMF)
 
-	// rest of packet is not neede yet
+	// rest of packet is not needed yet
+
+	pos = geom.NewVector(xyz[0], xyz[1], xyz[2]).Mul(1 / geom.DMF)
+	return
 }
 
 func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32, from, to *geom.Vector, hits []hit, success bool) {

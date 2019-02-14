@@ -182,7 +182,7 @@ func (ctf *ctfMode) touchFlag(client *Client, id int32, version int32) {
 			enemyFlag.version++
 			s.Clients.Broadcast(nil, nmc.ScoreFlag, client.CN, enemyFlag.id, enemyFlag.version, flag.id, flag.version, 0, flag.team, ctf.Teams[team].Score, client.GameState.Flags)
 			if ctf.Teams[team].Score >= 10 {
-				// todo: trigger intermission
+				s.Intermission()
 			}
 		}
 	}

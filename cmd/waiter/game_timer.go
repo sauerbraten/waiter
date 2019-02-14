@@ -68,6 +68,7 @@ func (gt *GameTimer) run() {
 	for range gt.C {
 		s.timer.TimeLeft -= 100
 		if s.timer.TimeLeft <= 0 {
+			s.timer.TimeLeft = 0
 			gt.intermission()
 			return
 		}

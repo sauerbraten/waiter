@@ -249,11 +249,7 @@ func (s *Server) handleDeath(fragger, victim *Client) {
 	victim.Die()
 	fragger.GameState.Frags += s.GameMode.FragValue(fragger, victim)
 	// TODO: effectiveness
-	teamFrags := 0
-	if teamMode, ok := s.GameMode.(TeamMode); ok {
-		teamFrags = teamMode.Frags(fragger.Team)
-	}
-	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, teamFrags)
-	// TODO teamkills
 	s.GameMode.HandleDeath(fragger, victim)
+	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, fragger.Team.Frags)
+	// TODO teamkills
 }

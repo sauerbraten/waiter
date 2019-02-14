@@ -25,6 +25,12 @@ type GameMode interface {
 	HandlePacket(*Client, nmc.ID, *protocol.Packet) bool
 }
 
+// assert interface implementations at compile time
+var (
+	_ TeamMode = &EfficCTF{}
+	_ TeamMode = &InstaTeam{}
+)
+
 func StartGame(id gamemode.ID) GameMode {
 	switch id {
 	case gamemode.Insta:
@@ -79,13 +85,13 @@ func (*noItemsMode) HandlePacket(*Client, nmc.ID, *protocol.Packet) bool { retur
 
 type TeamMode interface {
 	GameMode
-	Frags(*Team) int
+	Teams() map[string]*Team
 	ForEach(func(*Team))
 	ChangeTeam(*Client, string, bool)
 }
 
 type teamMode struct {
-	Teams             map[string]*Team
+	teams             map[string]*Team
 	otherTeamsAllowed bool
 	keepTeams         bool
 }
@@ -96,7 +102,7 @@ func NewTeamMode(otherTeamsAllowed, keepTeams bool, names ...string) teamMode {
 		teams[name] = NewTeam(name)
 	}
 	return teamMode{
-		Teams:             teams,
+		teams:             teams,
 		otherTeamsAllowed: otherTeamsAllowed,
 		keepTeams:         keepTeams,
 	}
@@ -105,7 +111,7 @@ func NewTeamMode(otherTeamsAllowed, keepTeams bool, names ...string) teamMode {
 func (tm *teamMode) selectTeam(c *Client) *Team {
 	if tm.keepTeams {
 		log.Println("trying to keep team")
-		for _, t := range tm.Teams {
+		for _, t := range tm.teams {
 			if c.Team.Name == t.Name {
 				log.Println("leaving", c, "in team", t.Name)
 				return t
@@ -117,7 +123,7 @@ func (tm *teamMode) selectTeam(c *Client) *Team {
 
 func (tm *teamMode) selectWeakestTeam() *Team {
 	teams := []*Team{}
-	for _, team := range tm.Teams {
+	for _, team := range tm.teams {
 		teams = append(teams, team)
 	}
 
@@ -143,12 +149,14 @@ func (*teamMode) FragValue(fragger, victim *Client) int {
 }
 
 func (tm *teamMode) ForEach(do func(t *Team)) {
-	for _, team := range tm.Teams {
+	for _, team := range tm.teams {
 		do(team)
 	}
 }
 
-func (tm *teamMode) Frags(t *Team) int { return t.Frags }
+func (tm *teamMode) Teams() map[string]*Team {
+	return tm.teams
+}
 
 func (tm *teamMode) ChangeTeam(c *Client, newTeamName string, forced bool) {
 	reason := -1 // = none = silent
@@ -170,7 +178,7 @@ func (tm *teamMode) ChangeTeam(c *Client, newTeamName string, forced bool) {
 	}
 
 	// try existing teams first
-	for name, team := range tm.Teams {
+	for name, team := range tm.teams {
 		if name == newTeamName {
 			// todo: check privileges and team balance
 			setTeam(c.Team, team)
@@ -180,7 +188,7 @@ func (tm *teamMode) ChangeTeam(c *Client, newTeamName string, forced bool) {
 
 	if tm.otherTeamsAllowed {
 		newTeam := NewTeam(newTeamName)
-		tm.Teams[newTeamName] = newTeam
+		tm.teams[newTeamName] = newTeam
 		setTeam(c.Team, newTeam)
 	}
 }

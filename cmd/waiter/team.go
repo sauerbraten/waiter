@@ -36,6 +36,9 @@ func (teams BySizeAndScore) Less(i, j int) bool {
 	if teams[i].Score != teams[j].Score {
 		return teams[i].Score < teams[j].Score
 	}
+	if teams[i].Frags != teams[j].Frags {
+		return teams[i].Frags < teams[j].Frags
+	}
 	return utils.RNG.Intn(2) == 0
 }
 

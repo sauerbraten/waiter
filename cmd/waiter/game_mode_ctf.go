@@ -177,11 +177,11 @@ func (ctf *ctfMode) touchFlag(client *Client, id int32, version int32) {
 		if enemyFlag.owner == client {
 			ctf.returnFlag(enemyFlag)
 			client.GameState.Flags++
-			ctf.Teams[team].Score++
+			ctf.teams[team].Score++
 			flag.version++
 			enemyFlag.version++
-			s.Clients.Broadcast(nil, nmc.ScoreFlag, client.CN, enemyFlag.id, enemyFlag.version, flag.id, flag.version, 0, flag.team, ctf.Teams[team].Score, client.GameState.Flags)
-			if ctf.Teams[team].Score >= 10 {
+			s.Clients.Broadcast(nil, nmc.ScoreFlag, client.CN, enemyFlag.id, enemyFlag.version, flag.id, flag.version, 0, flag.team, ctf.teams[team].Score, client.GameState.Flags)
+			if ctf.teams[team].Score >= 10 {
 				s.Intermission()
 			}
 		}
@@ -228,7 +228,7 @@ func (ctf *ctfMode) dropFlag(client *Client) {
 	f.pendingReset = time.AfterFunc(10*time.Second, func() {
 		ctf.returnFlag(f)
 		f.version++
-		s.Clients.Broadcast(nil, nmc.ResetFlag, f.id, f.version, 0, f.team, ctf.Teams[ctf.teamByFlag(f)].Score)
+		s.Clients.Broadcast(nil, nmc.ResetFlag, f.id, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
 	})
 }
 
@@ -242,8 +242,8 @@ func (ctf *ctfMode) NeedMapInfo() bool { return !ctf.flagsInitialized }
 func (ctf *ctfMode) Init(client *Client) {
 	q := []interface{}{
 		nmc.InitFlags,
-		ctf.Teams["good"].Score,
-		ctf.Teams["evil"].Score,
+		ctf.teams["good"].Score,
+		ctf.teams["evil"].Score,
 	}
 
 	if ctf.flagsInitialized {

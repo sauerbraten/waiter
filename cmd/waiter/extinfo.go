@@ -94,7 +94,7 @@ func (s *Server) handleExtinfoRequests() {
 				}
 				s.send(conn, raddr, s.clientInfo(cn, respHeader)...)
 			case ExtInfoTypeTeamScores:
-				// TODO
+				s.send(conn, raddr, s.teamScores(respHeader))
 			default:
 				log.Println("erroneous extinfo type queried:", reqType)
 			}
@@ -235,6 +235,44 @@ func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 		q = append(q, []byte(c.Peer.Address.IP.To4()[:3]))
 	} else {
 		q = append(q, 0, 0, 0)
+	}
+
+	return packet.Encode(q...)
+}
+
+func (s *Server) teamScores(respHeader []byte) protocol.Packet {
+	q := []interface{}{
+		respHeader,
+		ExtInfoACK,
+		ExtInfoVersion,
+	}
+
+	teamMode, isTeamMode := s.GameMode.(TeamMode)
+	if isTeamMode {
+		q = append(q, ExtInfoNoError)
+	} else {
+		q = append(q, ExtInfoError)
+	}
+
+	q = append(q, s.GameMode.ID(), s.timer.TimeLeft/1000)
+
+	if !isTeamMode {
+		return packet.Encode(q...)
+	}
+
+	captureMode, isCaptureMode := teamMode.(CaptureMode)
+
+	for name, team := range teamMode.Teams() {
+		if team.Score <= 0 && len(team.Players) == 0 {
+			continue
+		}
+		q = append(q, name, team.Score)
+		if isCaptureMode {
+			bases := captureMode.Bases(team)
+			q = append(q, len(bases), bases)
+		} else {
+			q = append(q, -1)
+		}
 	}
 
 	return packet.Encode(q...)

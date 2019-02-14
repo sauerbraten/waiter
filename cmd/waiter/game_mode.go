@@ -121,7 +121,7 @@ func (tm *teamMode) selectWeakestTeam() *Team {
 		teams = append(teams, team)
 	}
 
-	sort.Sort(ByScoreAndSize(teams))
+	sort.Sort(BySizeAndScore(teams))
 	return teams[0]
 }
 

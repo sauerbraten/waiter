@@ -19,22 +19,22 @@ func NewTeam(name string) *Team {
 }
 
 // sorts teams ascending by score, then size
-type ByScoreAndSize []*Team
+type BySizeAndScore []*Team
 
-func (teams ByScoreAndSize) Len() int {
+func (teams BySizeAndScore) Len() int {
 	return len(teams)
 }
 
-func (teams ByScoreAndSize) Swap(i, j int) {
+func (teams BySizeAndScore) Swap(i, j int) {
 	teams[i], teams[j] = teams[j], teams[i]
 }
 
-func (teams ByScoreAndSize) Less(i, j int) bool {
-	if teams[i].Score != teams[j].Score {
-		return teams[i].Score < teams[j].Score
-	}
+func (teams BySizeAndScore) Less(i, j int) bool {
 	if len(teams[i].Players) != len(teams[j].Players) {
 		return len(teams[i].Players) < len(teams[j].Players)
+	}
+	if teams[i].Score != teams[j].Score {
+		return teams[i].Score < teams[j].Score
 	}
 	return utils.RNG.Intn(2) == 0
 }

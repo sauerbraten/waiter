@@ -37,7 +37,7 @@ ENetEvent serviceHost(ENetHost *host) {
 
 	int e = 0;
 	do {
-		e = enet_host_service(host, &event, 2); // don't block
+		e = enet_host_service(host, &event, 1); // 0 (= don't block) will hog an entire CPU core at 100%
 	} while (e <= 0 || (event.type == ENET_EVENT_TYPE_RECEIVE && event.packet->dataLength == 0));
 
 	// TODO: investigate why we are receiving empty packets...

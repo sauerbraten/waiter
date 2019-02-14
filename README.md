@@ -9,8 +9,8 @@ A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 
 What works:
 
-- connecting & disconnecting
-- relaying positional data between clients
+- insta, insta team, effic, effic team, tactics, tactics team
+- insta ctf, effic ctf
 - chat, team chat
 - changing weapon, shooting, killing, suiciding, spawning
 - global auth
@@ -18,15 +18,16 @@ What works:
 - sharing master
 - setting mastermode
 - forcing gamemode and/or map
-- pausing & resuming
+- pausing & resuming (with countdown)
+- locking teams
 - changing your name
 - extinfo (server mod ID: -9)
 
 Pretty much everything else is not yet implemented:
 
-- spawning pick ups (ammo, armour, quad, flags, ...)
+- spawning pick ups (ammo, armour, quad, ...)
 - picking up those pick ups
-- any modes besides insta, effic & tactics (no items & no teams)
+- any modes requiring items (e.g. ffa) or bases (capture) or tokens (collect)
 - demo recording
 - `/checkmaps` (will compare against server-side hash, not majority)
 - overtime (& maybe golden goal)
@@ -55,7 +56,7 @@ You can then start the server with `./waiter`.
 
 ## To Do
 
-Implement efficctf and instactf (flag spawns & events), then ffa (all the other items), then capture and regen capture (capture base events).
+Implement ffa (item pick ups), then capture and regen capture (capture base events).
 
 
 ## Project Structure

@@ -344,15 +344,56 @@ outer:
 				log.Println("could not read name from name change packet:", p)
 				return
 			}
-
 			newName = cubecode.Filter(newName, false)
 
-			if len(newName) == 0 || len(newName) > 20 {
+			if len(newName) == 0 || len(newName) > 24 {
 				return
 			}
 
 			client.Name = newName
 			client.Packets.Publish(nmc.ChangeName, newName)
+
+		case nmc.ChangeTeam:
+			teamName, ok := readTeamName(&p)
+			if !ok {
+				log.Println("could not read team name from change team packet:", p)
+				return
+			}
+			if client.Team.Name == teamName {
+				return
+			}
+
+			teamMode, ok := s.GameMode.(TeamMode)
+			if !ok {
+				return
+			}
+
+			teamMode.ChangeTeam(client, teamName, false)
+
+		case nmc.SetTeam:
+			_victim, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read player CN from set team packet:", p)
+				return
+			}
+			victim := s.Clients.GetClientByCN(uint32(_victim))
+
+			teamName, ok := readTeamName(&p)
+			if !ok {
+				log.Println("could not read team name from change team packet:", p)
+				return
+			}
+
+			if victim == nil || victim.Team.Name == teamName || client.Role == role.None {
+				return
+			}
+
+			teamMode, ok := s.GameMode.(TeamMode)
+			if !ok {
+				return
+			}
+
+			teamMode.ChangeTeam(victim, teamName, true)
 
 		case nmc.MapCRC:
 			// client sends crc hash of his map file
@@ -658,4 +699,19 @@ func parseVector(p *protocol.Packet) (*geom.Vector, bool) {
 		xyz[i] = float64(coord)
 	}
 	return geom.NewVector(xyz[0], xyz[1], xyz[2]), true
+}
+
+func readTeamName(p *protocol.Packet) (string, bool) {
+	teamName, ok := p.GetString()
+	if !ok {
+		return "", false
+	}
+
+	teamName = cubecode.Filter(teamName, false)
+
+	if len(teamName) == 0 || len(teamName) > 6 {
+		return "", false
+	}
+
+	return teamName, true
 }

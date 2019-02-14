@@ -7,6 +7,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
@@ -80,6 +81,7 @@ type TeamMode interface {
 	GameMode
 	Frags(*Team) int
 	ForEach(func(*Team))
+	ChangeTeam(*Client, string, bool)
 }
 
 type teamMode struct {
@@ -126,11 +128,7 @@ func (tm *teamMode) selectWeakestTeam() *Team {
 func (tm *teamMode) Join(c *Client) {
 	team := tm.selectTeam(c)
 	team.Add(c)
-	log.Println("added", c, "to team", team.Name)
 	s.Clients.Broadcast(nil, nmc.SetTeam, c.CN, c.Team.Name, -1)
-	for _, t := range tm.Teams {
-		log.Println(t.Name, t.Players)
-	}
 }
 
 func (*teamMode) Leave(c *Client) {
@@ -151,6 +149,41 @@ func (tm *teamMode) ForEach(do func(t *Team)) {
 }
 
 func (tm *teamMode) Frags(t *Team) int { return t.Frags }
+
+func (tm *teamMode) ChangeTeam(c *Client, newTeamName string, forced bool) {
+	reason := -1 // = none = silent
+	if c.GameState.State != playerstate.Spectator {
+		if forced {
+			reason = 1
+		} else {
+			reason = 0 // = voluntary
+		}
+	}
+
+	setTeam := func(old, new *Team) {
+		if c.GameState.State == playerstate.Alive {
+			s.handleDeath(c, c)
+		}
+		old.Remove(c)
+		new.Add(c)
+		s.Clients.Broadcast(nil, nmc.SetTeam, c.CN, c.Team.Name, reason)
+	}
+
+	// try existing teams first
+	for name, team := range tm.Teams {
+		if name == newTeamName {
+			// todo: check privileges and team balance
+			setTeam(c.Team, team)
+			return
+		}
+	}
+
+	if tm.otherTeamsAllowed {
+		newTeam := NewTeam(newTeamName)
+		tm.Teams[newTeamName] = newTeam
+		setTeam(c.Team, newTeam)
+	}
+}
 
 type efficMode struct{}
 

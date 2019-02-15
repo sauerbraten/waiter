@@ -59,7 +59,7 @@ func (s *Server) handleExtinfoRequests() {
 			continue
 		}
 		if n > 5 {
-			log.Println("malformed info request:", req[:n])
+			log.Println("malformed info request:", req[:n], "from", raddr)
 			continue
 		}
 		req = req[:n]
@@ -227,11 +227,6 @@ func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 	)
 
 	if s.SendClientIPsViaExtinfo {
-		log.Println(c)
-		log.Println(c.Peer)
-		log.Println(c.Peer.Address)
-		log.Println(c.Peer.Address.IP)
-		log.Println(c.Peer.Address.IP.To4())
 		q = append(q, []byte(c.Peer.Address.IP.To4()[:3]))
 	} else {
 		q = append(q, 0, 0, 0)

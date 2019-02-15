@@ -39,7 +39,7 @@ func (s *Server) Connect(peer *enet.Peer) {
 		client.CN,
 		protocol.Version,
 		client.SessionID,
-		false,
+		false, // password protection is not used by this implementation
 		s.ServerDescription,
 		s.PrimaryAuthDomain,
 	)

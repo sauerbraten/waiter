@@ -1,12 +1,7 @@
 [
 	{
-		"network": "127.0.0.1/24",
+		"network": "77.20.252.0/24",
 		"reason": "test ban",
-		"expiry_date": 1538634796
-	},
-	{
-		"network": "127.0.20.1/16",
-		"reason": "test ban 2",
-		"expiry_date": 1403982695
+		"expiry_date": 1550225716
 	}
 ]

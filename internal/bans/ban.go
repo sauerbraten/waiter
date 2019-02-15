@@ -37,5 +37,8 @@ func (b *Ban) UnmarshalJSON(jsonBytes []byte) error {
 }
 
 func (b *Ban) String() string {
+	if b.ExpiryDate.IsZero() {
+		return fmt.Sprintf("%v is banned indefinitely (%v)", b.Network.String(), b.Reason)
+	}
 	return fmt.Sprintf("%v is banned until %v (%v)", b.Network.String(), b.ExpiryDate, b.Reason)
 }

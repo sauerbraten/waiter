@@ -149,6 +149,8 @@ func (ms *MasterServer) handleAddGlobalBan(args []string) {
 		return
 	}
 
+	log.Println(args)
+
 	ipString := args[0]
 	numDots := strings.Count(ipString, ".")
 	for i := 0; i < 3-numDots; i++ {
@@ -158,7 +160,7 @@ func (ms *MasterServer) handleAddGlobalBan(args []string) {
 	ip := net.ParseIP(ipString)
 	network := &net.IPNet{IP: ip, Mask: ip.DefaultMask()}
 
-	ms.Bans.AddBan(network, "banned by master server", time.Now(), true)
+	ms.Bans.AddBan(network, "banned by master server", time.Time{}, true)
 }
 
 func (ms *MasterServer) handleAuthChallenge(args []string) {

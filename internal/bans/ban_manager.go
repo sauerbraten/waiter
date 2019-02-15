@@ -90,7 +90,7 @@ func (bm *BanManager) GetBan(ip net.IP) (ban *Ban, ok bool) {
 	for cidr, b := range bm.bans {
 		if b.Network.Contains(ip) {
 			// check if the ban already expired
-			if b.ExpiryDate.Before(time.Now()) {
+			if !b.ExpiryDate.IsZero() && b.ExpiryDate.Before(time.Now()) {
 				bm.clearBan(cidr)
 			} else {
 				ban, ok = b, true

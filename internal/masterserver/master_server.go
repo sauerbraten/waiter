@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sauerbraten/chef/pkg/ips"
+
 	"github.com/sauerbraten/waiter/internal/bans"
 )
 
@@ -152,13 +154,7 @@ func (ms *MasterServer) handleAddGlobalBan(args []string) {
 	log.Println(args)
 
 	ipString := args[0]
-	numDots := strings.Count(ipString, ".")
-	for i := 0; i < 3-numDots; i++ {
-		ipString += ".0"
-	}
-
-	ip := net.ParseIP(ipString)
-	network := &net.IPNet{IP: ip, Mask: ip.DefaultMask()}
+	network := ips.GetSubnet(ipString)
 
 	ms.Bans.AddBan(network, "banned by master server", time.Time{}, true)
 }

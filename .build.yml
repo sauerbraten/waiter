@@ -23,7 +23,7 @@ tasks:
       go build
   - deploy: |
       cd src/github.com/sauerbraten/waiter
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq bans.json config.json users.json ci@$DEPLOY:~/waiter/
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq bans.json config.json users.json maps.json ci@$DEPLOY:~/waiter/
       cd cmd/waiter
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq waiter ci@$DEPLOY:~/waiter/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall waiter || true'

@@ -151,8 +151,6 @@ func (ms *MasterServer) handleAddGlobalBan(args []string) {
 		return
 	}
 
-	log.Println(args)
-
 	ipString := args[0]
 	network := ips.GetSubnet(ipString)
 

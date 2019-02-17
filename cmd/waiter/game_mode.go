@@ -23,6 +23,7 @@ type GameMode interface {
 	HandleDeath(fragger, victim *Client)
 	FragValue(fragger, victim *Client) int
 	HandlePacket(*Client, nmc.ID, *protocol.Packet) bool
+	End()
 }
 
 // assert interface implementations at compile time
@@ -68,9 +69,9 @@ func (*teamlessMode) FragValue(fragger, victim *Client) int {
 }
 
 // no spawn timeout
-type deathmatchMode struct{}
+type noSpawnWaitMode struct{}
 
-func (*deathmatchMode) CanSpawn(*Client) bool { return true }
+func (*noSpawnWaitMode) CanSpawn(*Client) bool { return true }
 
 // no pick-ups, no flags, no bases
 type noItemsMode struct{}
@@ -82,6 +83,8 @@ func (*noItemsMode) Init(*Client) {}
 func (*noItemsMode) HandleDeath(*Client, *Client) {}
 
 func (*noItemsMode) HandlePacket(*Client, nmc.ID, *protocol.Packet) bool { return false }
+
+func (*noItemsMode) End() {}
 
 type TeamMode interface {
 	GameMode
@@ -202,7 +205,7 @@ func (*efficMode) Spawn(gs *GameState) {
 
 type Effic struct {
 	efficMode
-	deathmatchMode
+	noSpawnWaitMode
 	noItemsMode
 	teamlessMode
 }
@@ -213,7 +216,7 @@ func (*Effic) ID() gamemode.ID { return gamemode.Effic }
 
 type EfficTeam struct {
 	efficMode
-	deathmatchMode
+	noSpawnWaitMode
 	noItemsMode
 	teamMode
 }
@@ -236,7 +239,7 @@ func (*instaMode) Spawn(gs *GameState) {
 
 type Insta struct {
 	instaMode
-	deathmatchMode
+	noSpawnWaitMode
 	noItemsMode
 	teamlessMode
 }
@@ -247,7 +250,7 @@ func (*Insta) ID() gamemode.ID { return gamemode.Insta }
 
 type InstaTeam struct {
 	instaMode
-	deathmatchMode
+	noSpawnWaitMode
 	noItemsMode
 	teamMode
 }
@@ -270,7 +273,7 @@ func (*tacticsMode) Spawn(gs *GameState) {
 
 type Tactics struct {
 	tacticsMode
-	deathmatchMode
+	noSpawnWaitMode
 	noItemsMode
 	teamlessMode
 }
@@ -281,7 +284,7 @@ func (*Tactics) ID() gamemode.ID { return gamemode.Tactics }
 
 type TacticsTeam struct {
 	tacticsMode
-	deathmatchMode
+	noSpawnWaitMode
 	noItemsMode
 	teamMode
 }

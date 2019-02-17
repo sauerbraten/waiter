@@ -105,6 +105,11 @@ func (s *Server) Intermission() {
 }
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
+	// cancel pending game mode goroutines
+	if s.GameMode != nil {
+		s.GameMode.End()
+	}
+
 	// stop any pending map change
 	if s.PendingMapChange != nil {
 		s.PendingMapChange.Stop()

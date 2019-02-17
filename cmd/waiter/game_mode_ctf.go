@@ -282,6 +282,15 @@ func (ctf *ctfMode) HandleDeath(_, victim *Client) {
 	ctf.dropFlag(victim)
 }
 
+func (ctf *ctfMode) End() {
+	if ctf.good.pendingReset != nil {
+		ctf.good.pendingReset.Stop()
+	}
+	if ctf.evil.pendingReset != nil {
+		ctf.evil.pendingReset.Stop()
+	}
+}
+
 type EfficCTF struct {
 	efficMode
 	ctfMode

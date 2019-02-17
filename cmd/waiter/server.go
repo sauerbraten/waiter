@@ -87,6 +87,7 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 }
 
 func (s *Server) Empty() {
+	s.MapRotation.queue = s.MapRotation.queue[:0]
 	s.KeepTeams = false
 	s.MasterMode = mastermode.Open
 	if s.GameMode.ID() != s.FallbackGameMode {

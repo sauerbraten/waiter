@@ -23,6 +23,11 @@ What works:
 - changing your name
 - extinfo (server mod ID: -9)
 
+Server commands:
+
+- `#keepteams 0|1` (a.k.a. `#persist`): set to 1 to disable randomizing teams on map load
+- `#queuemap [map...]`: check the map queue or enqueue one or multiple maps
+
 Pretty much everything else is not yet implemented:
 
 - spawning pick ups (ammo, armour, quad, ...)

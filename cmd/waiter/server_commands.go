@@ -17,9 +17,10 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	switch cmd {
 	case "help":
 		if c.Role > role.None {
-			c.Send(nmc.ServerMessage, "available commands: keepteams (=persist)")
+			c.Send(nmc.ServerMessage, "available commands: keepteams (=persist), queuemap")
 		}
-	case "persist", "keepteams":
+
+	case "persist", "persistteams", "keepteams":
 		if c.Role == role.None {
 			return
 		}
@@ -34,6 +35,25 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 			c.Send(nmc.ServerMessage, "teams will be kept")
 		} else {
 			c.Send(nmc.ServerMessage, "teams will be shuffled")
+		}
+
+	case "queuemap", "queuedmap", "queuemaps", "queuedmaps":
+		if c.Role == role.None {
+			return
+		}
+		for _, mapp := range parts[1:] {
+			err := s.MapRotation.queueMap(mapp)
+			if err != "" {
+				c.Send(nmc.ServerMessage, cubecode.Fail(err))
+			}
+		}
+		switch len(s.MapRotation.queue) {
+		case 0:
+			c.Send(nmc.ServerMessage, "no maps queued")
+		case 1:
+			c.Send(nmc.ServerMessage, "queued map: "+s.MapRotation.queue[0])
+		default:
+			c.Send(nmc.ServerMessage, "queued maps: "+strings.Join(s.MapRotation.queue, ", "))
 		}
 
 	default:

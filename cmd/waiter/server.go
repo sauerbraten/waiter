@@ -89,7 +89,9 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 func (s *Server) Empty() {
 	s.KeepTeams = false
 	s.MasterMode = mastermode.Open
-	s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(StartGame(s.FallbackGameMode), s.Map))
+	if s.GameMode.ID() != s.FallbackGameMode {
+		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(StartGame(s.FallbackGameMode), s.Map))
+	}
 }
 
 func (s *Server) Intermission() {
@@ -127,6 +129,7 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.timer.Restart()
 	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
+
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
 }
 

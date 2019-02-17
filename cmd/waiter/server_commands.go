@@ -24,17 +24,27 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 		if c.Role == role.None {
 			return
 		}
+		changed := false
 		if len(parts) > 1 {
 			val, err := strconv.Atoi(parts[1])
 			if err != nil || (val != 0 && val != 1) {
 				return
 			}
+			changed = s.KeepTeams != (val == 1)
 			s.KeepTeams = val == 1
 		}
-		if s.KeepTeams {
-			c.Send(nmc.ServerMessage, "teams will be kept")
+		if changed {
+			if s.KeepTeams {
+				s.Clients.Broadcast(nil, nmc.ServerMessage, "teams will be kept")
+			} else {
+				s.Clients.Broadcast(nil, nmc.ServerMessage, "teams will be shuffled")
+			}
 		} else {
-			c.Send(nmc.ServerMessage, "teams will be shuffled")
+			if s.KeepTeams {
+				c.Send(nmc.ServerMessage, "teams will be kept")
+			} else {
+				c.Send(nmc.ServerMessage, "teams will be shuffled")
+			}
 		}
 
 	case "queuemap", "queuedmap", "queuemaps", "queuedmaps":

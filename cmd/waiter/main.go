@@ -44,6 +44,12 @@ func init() {
 		log.Fatalln(err)
 	}
 
+	var mr MapRotation
+	err = jsonfile.ParseFile("maps.json", &mr)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	cs := &ClientManager{}
 
 	s = &Server{
@@ -52,10 +58,11 @@ func init() {
 			UpSince:    time.Now(),
 			NumClients: cs.NumberOfClientsConnected,
 		},
-		timer:   StartTimer(conf.GameDuration*time.Minute, func() { s.Intermission() }),
-		relay:   NewRelay(),
-		Clients: cs,
-		Auth:    auth.NewManager(users),
+		timer:       StartTimer(conf.GameDuration*time.Minute, func() { s.Intermission() }),
+		relay:       NewRelay(),
+		Clients:     cs,
+		Auth:        auth.NewManager(users),
+		MapRotation: &mr,
 	}
 	s.Empty()
 

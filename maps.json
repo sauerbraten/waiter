@@ -1,0 +1,52 @@
+{
+	"deathmatch": [
+		"academy",
+		"collusion",
+		"complex",
+		"duel7",
+		"duel8",
+		"elegy",
+		"fury",
+		"hashi",
+		"industry",
+		"kffa",
+		"legazzo",
+		"mbt2",
+		"memento",
+		"metl2",
+		"metl3",
+		"orion",
+		"ot",
+		"outpost",
+		"park",
+		"renegade",
+		"rm5",
+		"simplicity",
+		"skrdm1",
+		"tartech",
+		"teahupoo",
+		"tumwalk",
+		"turbine"
+	],
+	"ctf": [
+		"abbey",
+		"catch22",
+		"dust2",
+		"forge",
+		"forgotten",
+		"haste",
+		"mercury",
+		"redemption",
+		"reissen",
+		"tempest",
+		"turbulence",
+		"twinforts"
+	],
+	"capture": [
+		"nevil_c",
+		"nmp4",
+		"nmp8",
+		"nmp9",
+		"serenity"
+	]
+}

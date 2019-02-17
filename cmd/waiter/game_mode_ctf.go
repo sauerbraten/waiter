@@ -11,14 +11,18 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
+type CTFMode interface {
+	TeamMode
+	DropFlag(*Client) // used as marker for ctf modes
+}
+
 type flag struct {
-	id           int32
-	team         int32
-	owner        *Client
-	version      int32
-	dropTime     time.Time
-	dropLocation *geom.Vector
-	//spawnIndex    int32
+	id            int32
+	team          int32
+	owner         *Client
+	version       int32
+	dropTime      time.Time
+	dropLocation  *geom.Vector
 	spawnLocation *geom.Vector
 	pendingReset  *time.Timer
 }
@@ -81,7 +85,7 @@ func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.
 		ctf.touchFlag(client, id, version)
 
 	case nmc.TryDropFlag:
-		ctf.dropFlag(client)
+		ctf.DropFlag(client)
 
 	default:
 		return false
@@ -200,7 +204,7 @@ func (ctf *ctfMode) takeFlag(client *Client, f *flag) {
 	f.owner = client
 }
 
-func (ctf *ctfMode) dropFlag(client *Client) {
+func (ctf *ctfMode) DropFlag(client *Client) {
 	if !ctf.flagsInitialized {
 		return
 	}
@@ -270,7 +274,7 @@ func (ctf *ctfMode) Init(client *Client) {
 }
 
 func (ctf *ctfMode) Leave(client *Client) {
-	ctf.dropFlag(client)
+	ctf.DropFlag(client)
 	ctf.teamMode.Leave(client)
 }
 
@@ -279,7 +283,7 @@ func (ctf *ctfMode) CanSpawn(c *Client) bool {
 }
 
 func (ctf *ctfMode) HandleDeath(_, victim *Client) {
-	ctf.dropFlag(victim)
+	ctf.DropFlag(victim)
 }
 
 func (ctf *ctfMode) End() {

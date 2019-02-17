@@ -13,7 +13,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/internal/maprotation"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
@@ -22,10 +21,11 @@ import (
 type Server struct {
 	*Config
 	*State
-	timer   *GameTimer
-	relay   *Relay
-	Clients *ClientManager
-	Auth    *auth.Manager
+	timer       *GameTimer
+	relay       *Relay
+	Clients     *ClientManager
+	Auth        *auth.Manager
+	MapRotation *MapRotation
 
 	PendingMapChange *time.Timer
 	KeepTeams        bool
@@ -89,19 +89,23 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 func (s *Server) Empty() {
 	s.KeepTeams = false
 	s.MasterMode = mastermode.Open
-	s.ChangeMap(s.FallbackGameMode, maprotation.NextMap(s.FallbackGameMode, s.Map))
+	s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(StartGame(s.FallbackGameMode), s.Map))
 }
 
 func (s *Server) Intermission() {
 	// notify all clients
 	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
 
+	nextMap := s.MapRotation.NextMap(s.GameMode, s.Map)
+
 	// start 5 second timer
 	s.PendingMapChange = time.AfterFunc(5*time.Second, func() {
-		s.ChangeMap(s.GameMode.ID(), maprotation.NextMap(s.GameMode.ID(), s.Map))
+		s.ChangeMap(s.GameMode.ID(), nextMap)
 	})
 
 	// TODO: send server messages with some top stats
+
+	s.Clients.Broadcast(nil, nmc.ServerMessage, "next up: "+nextMap)
 }
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {

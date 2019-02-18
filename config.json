@@ -19,7 +19,7 @@
 	"server_description": "p1x.pw @ <filled in by CI service>",
 
 	// maximum number of clients
-	"max_clients": 12,
+	"max_clients": 18,
 
 	// wether ot not to send client's IPs via netinfo. when set to true, the first 3 bytes of the IPs will be sent (e.g. 53.253.53.0),
 	// otherwise, "0.0.0.0" will be sent for every client.

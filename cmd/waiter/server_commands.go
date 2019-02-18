@@ -17,7 +17,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	switch cmd {
 	case "help":
 		switch c.Role {
-		case role.None:
+		case role.Master, role.Admin:
 			c.Send(nmc.ServerMessage, "available commands: keepteams (=persist), queuemap")
 		}
 

@@ -13,8 +13,8 @@ What works:
 - insta ctf, effic ctf
 - chat, team chat
 - changing weapon, shooting, killing, suiciding, spawning
-- global auth
-- local auth
+- global auth (`/auth` and `/authkick`)
+- local auth (`/sauth`, `/dauth`, `/sauthkick`, `/dauthkick`, auth-on-connect)
 - sharing master
 - setting mastermode
 - forcing gamemode and/or map
@@ -26,7 +26,7 @@ What works:
 Server commands:
 
 - `#keepteams 0|1` (a.k.a. `#persist`): set to 1 to disable randomizing teams on map load
-- `#queuemap [map...]`: check the map queue or enqueue one or multiple maps
+- `#queuemap [map...]`: check the map queue or enqueue one or more maps
 
 Pretty much everything else is not yet implemented:
 

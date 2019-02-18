@@ -14,7 +14,6 @@ import (
 
 type GameMode interface {
 	ID() gamemode.ID
-	Start()
 	Pause()
 	Resume()
 	NeedMapInfo() bool
@@ -23,7 +22,6 @@ type GameMode interface {
 	Leave(*Client)
 	CanSpawn(*Client) bool
 	Spawn(*GameState) // sets armour, ammo, and health
-	ConfirmSpawn(*Client)
 	HandleDeath(fragger, victim *Client)
 	FragValue(fragger, victim *Client) int
 	HandlePacket(*Client, nmc.ID, *protocol.Packet) bool
@@ -36,44 +34,6 @@ var (
 	_ TeamMode = &EfficCTF{}
 	_ TeamMode = &InstaTeam{}
 )
-
-func NewGame(id gamemode.ID) GameMode {
-	game := func() GameMode {
-		switch id {
-		case gamemode.Insta:
-			return NewInsta()
-		case gamemode.InstaTeam:
-			return NewInstaTeam(s.KeepTeams)
-		case gamemode.Effic:
-			return NewEffic()
-		case gamemode.EfficTeam:
-			return NewEfficTeam(s.KeepTeams)
-		case gamemode.Tactics:
-			return NewTactics()
-		case gamemode.TacticsTeam:
-			return NewTacticsTeam(s.KeepTeams)
-		case gamemode.InstaCTF:
-			return NewInstaCTF(s.KeepTeams)
-		case gamemode.EfficCTF:
-			return NewEfficCTF(s.KeepTeams)
-		default:
-			return nil
-		}
-	}()
-
-	if s.CompetitiveMode {
-		return NewCompetitiveGame(game)
-	} else {
-		return game
-	}
-}
-
-// non-competitive
-type baseMode struct{}
-
-func (*baseMode) Start() {}
-
-func (*baseMode) ConfirmSpawn(*Client) {}
 
 type teamlessMode struct{}
 
@@ -234,7 +194,6 @@ func (*efficMode) Spawn(gs *GameState) {
 }
 
 type Effic struct {
-	baseMode
 	deathmatchMode
 	efficMode
 	noSpawnWaitMode
@@ -247,7 +206,6 @@ func NewEffic() GameMode { return &Effic{} }
 func (*Effic) ID() gamemode.ID { return gamemode.Effic }
 
 type EfficTeam struct {
-	baseMode
 	deathmatchMode
 	efficMode
 	noSpawnWaitMode
@@ -272,7 +230,6 @@ func (*instaMode) Spawn(gs *GameState) {
 }
 
 type Insta struct {
-	baseMode
 	deathmatchMode
 	instaMode
 	noSpawnWaitMode
@@ -285,7 +242,6 @@ func NewInsta() GameMode { return &Insta{} }
 func (*Insta) ID() gamemode.ID { return gamemode.Insta }
 
 type InstaTeam struct {
-	baseMode
 	deathmatchMode
 	instaMode
 	noSpawnWaitMode
@@ -310,7 +266,6 @@ func (*tacticsMode) Spawn(gs *GameState) {
 }
 
 type Tactics struct {
-	baseMode
 	deathmatchMode
 	tacticsMode
 	noSpawnWaitMode
@@ -323,7 +278,6 @@ func NewTactics() GameMode { return &Tactics{} }
 func (*Tactics) ID() gamemode.ID { return gamemode.Tactics }
 
 type TacticsTeam struct {
-	baseMode
 	deathmatchMode
 	tacticsMode
 	noSpawnWaitMode

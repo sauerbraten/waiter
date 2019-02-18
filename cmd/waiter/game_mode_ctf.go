@@ -34,7 +34,6 @@ type flagMode struct {
 }
 
 type ctfMode struct {
-	baseMode
 	teamMode
 	flagMode
 	good flag
@@ -46,8 +45,6 @@ func NewCTFMode(keepTeams bool) ctfMode {
 		teamMode: NewTeamMode(false, keepTeams, "good", "evil"),
 	}
 }
-
-func (ctf *ctfMode) Start() {}
 
 func (ctf *ctfMode) Pause() {
 	if ctf.good.pendingReset != nil {

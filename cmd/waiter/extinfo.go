@@ -133,7 +133,7 @@ func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
 
 	q = append(q,
 		protocol.Version,
-		s.GameMode.ID(),
+		s.Mode().ID(),
 		s.timer.TimeLeft/1000,
 		s.MaxClients,
 		s.MasterMode,
@@ -242,14 +242,14 @@ func (s *Server) teamScores(respHeader []byte) protocol.Packet {
 		ExtInfoVersion,
 	}
 
-	teamMode, isTeamMode := s.GameMode.(TeamMode)
+	teamMode, isTeamMode := s.Mode().(TeamMode)
 	if isTeamMode {
 		q = append(q, ExtInfoNoError)
 	} else {
 		q = append(q, ExtInfoError)
 	}
 
-	q = append(q, s.GameMode.ID(), s.timer.TimeLeft/1000)
+	q = append(q, s.Mode().ID(), s.timer.TimeLeft/1000)
 
 	if !isTeamMode {
 		return packet.Encode(q...)

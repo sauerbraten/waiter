@@ -8,7 +8,7 @@ import (
 
 type State struct {
 	MasterMode mastermode.ID
-	GameMode   GameMode
+	Game
 	Map        string
 	UpSince    time.Time
 	NumClients func() int // number of clients connected

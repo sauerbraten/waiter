@@ -112,9 +112,9 @@ func (s *Server) Join(c *Client) {
 		s.Spawn(c)
 	}
 
-	s.GameMode.Join(c)       // may set client's team
+	s.Mode().Join(c)         // may set client's team
 	s.Clients.SendWelcome(c) // tells client about her team
-	s.GameMode.Init(c)       // may send additional welcome info like flags
+	s.Mode().Init(c)         // may send additional welcome info like flags
 	s.Clients.InformOthersOfJoin(c)
 
 	c.Send(nmc.ServerMessage, s.MessageOfTheDay)
@@ -124,7 +124,7 @@ func (s *Server) Join(c *Client) {
 
 func (s *Server) Spawn(client *Client) {
 	client.GameState.Spawn()
-	s.GameMode.Spawn(client.GameState)
+	s.Mode().Spawn(client.GameState)
 }
 
 func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
@@ -139,11 +139,11 @@ func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
 
 	client.Packets.Publish(nmc.ConfirmSpawn, client.GameState.ToWire())
 
-	s.GameMode.ConfirmSpawn(client)
+	s.Game.ConfirmSpawn(client)
 }
 
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
-	s.GameMode.Leave(client)
+	s.Game.Leave(client)
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
 	if s.Clients.NumberOfClientsConnected() == 0 {
@@ -182,8 +182,8 @@ func (s *Server) Empty() {
 	s.KeepTeams = false
 	s.CompetitiveMode = false
 	s.MasterMode = mastermode.Open
-	if s.GameMode.ID() != s.FallbackGameMode {
-		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(NewGame(s.FallbackGameMode), s.Map))
+	if s.Mode().ID() != s.FallbackGameMode {
+		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(NewGame(s.FallbackGameMode).Mode(), s.Map))
 	}
 }
 
@@ -191,11 +191,11 @@ func (s *Server) Intermission() {
 	// notify all clients
 	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
 
-	nextMap := s.MapRotation.NextMap(s.GameMode, s.Map)
+	nextMap := s.MapRotation.NextMap(s.Mode(), s.Map)
 
 	// start 5 second timer
 	s.PendingMapChange = time.AfterFunc(5*time.Second, func() {
-		s.ChangeMap(s.GameMode.ID(), nextMap)
+		s.ChangeMap(s.Mode().ID(), nextMap)
 	})
 
 	// TODO: send server messages with some top stats
@@ -205,8 +205,8 @@ func (s *Server) Intermission() {
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	// cancel pending game mode goroutines
-	if s.GameMode != nil {
-		s.GameMode.CleanUp()
+	if s.Mode() != nil {
+		s.Mode().CleanUp()
 	}
 
 	// stop any pending map change
@@ -215,15 +215,15 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	}
 
 	s.Map = mapp
-	s.GameMode = NewGame(mode)
-	s.Clients.ForEach(s.GameMode.Join)
+	s.Game = NewGame(mode)
+	s.Clients.ForEach(s.Mode().Join)
 
-	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
+	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.Mode().ID(), s.Mode().NeedMapInfo())
 	s.timer.Restart()
 	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 
-	s.GameMode.Start()
+	s.Game.Start()
 
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
 }
@@ -236,7 +236,7 @@ func (s *Server) PauseGame(c *Client) {
 	}
 	s.Clients.Broadcast(nil, nmc.PauseGame, 1, cn)
 	s.timer.Pause()
-	s.GameMode.Pause()
+	s.Mode().Pause()
 }
 
 func (s *Server) ResumeGame(c *Client) {
@@ -245,7 +245,7 @@ func (s *Server) ResumeGame(c *Client) {
 		cn = int(c.CN)
 	}
 	s.timer.ResumeWithCountdown(cn)
-	s.GameMode.Resume()
+	s.Mode().Resume()
 }
 
 type hit struct {
@@ -365,9 +365,9 @@ func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapo
 
 func (s *Server) handleDeath(fragger, victim *Client) {
 	victim.Die()
-	fragger.GameState.Frags += s.GameMode.FragValue(fragger, victim)
+	fragger.GameState.Frags += s.Mode().FragValue(fragger, victim)
 	// TODO: effectiveness
-	s.GameMode.HandleDeath(fragger, victim)
+	s.Mode().HandleDeath(fragger, victim)
 	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, fragger.Team.Frags)
 	// TODO teamkills
 }

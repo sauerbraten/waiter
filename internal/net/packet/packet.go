@@ -9,6 +9,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/sound"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
@@ -46,6 +47,9 @@ func Encode(args ...interface{}) protocol.Packet {
 
 		case byte:
 			p = append(p, v)
+
+		case playerstate.ID:
+			p.PutInt(int32(v))
 
 		case armour.ID:
 			p.PutInt(int32(v))

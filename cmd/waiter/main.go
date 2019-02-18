@@ -64,8 +64,8 @@ func init() {
 		Auth:        auth.NewManager(users),
 		MapRotation: &mr,
 	}
-	s.GameMode = NewGame(conf.FallbackGameMode)
-	s.Map = s.MapRotation.NextMap(s.GameMode, "")
+	s.Game = NewGame(conf.FallbackGameMode)
+	s.Map = s.MapRotation.NextMap(s.Mode(), "")
 
 	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
 	if err != nil {

@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/internal/auth"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
-func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
-	challenge, requestID, err := s.Auth.GenerateChallenge(client.CN, domain, name)
+func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess auth.CallbackWithRole, onFailure auth.Callback) {
+	challenge, requestID, err := s.Auth.GenerateChallenge(client.CN, domain, name, onSuccess, onFailure)
 	if err != nil {
 		log.Println(err)
 		return
@@ -21,8 +21,8 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string) {
 	client.Send(nmc.AuthChallenge, domain, requestID, challenge)
 }
 
-func (s *Server) handleGlobalAuthRequest(client *Client, name string) {
-	requestID := s.Auth.RegisterAuthRequest(client.CN, "", name, role.Auth)
+func (s *Server) handleGlobalAuthRequest(client *Client, name string, onSuccess, onFailure auth.Callback) {
+	requestID := s.Auth.RegisterAuthRequest(client.CN, "", name, onSuccess, onFailure)
 
 	callback := func(sessionID int32) func(string) {
 		return func(challenge string) {
@@ -52,14 +52,7 @@ func (s *Server) handleAuthAnswer(client *Client, domain string, p *protocol.Pac
 		log.Println("could not read answer from auth answer packet:", p)
 		return
 	}
-	sucess, name, prvlg := s.Auth.CheckAnswer(uint32(requestID), client.CN, domain, answer)
-	if !sucess {
-		if client.AuthRequiredBecause > disconnectreason.None {
-			s.Disconnect(client, client.AuthRequiredBecause)
-		}
-		return
-	}
-	s.setAuthRole(client, prvlg, domain, name)
+	s.Auth.CheckAnswer(uint32(requestID), client.CN, domain, answer)
 }
 
 func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
@@ -75,23 +68,26 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 		return
 	}
 
-	name, ok := s.Auth.LookupAuthName(requestID)
+	onSuccess, onFailure, ok := s.Auth.LookupGlobalAuthRequest(requestID)
 	if !ok {
 		log.Println("no pending request with ID", requestID)
 	}
 
 	callback := func(sessionID int32) func(bool) {
-		return func(sucess bool) {
-			if client == nil || client.SessionID != sessionID || !sucess {
+		return func(success bool) {
+			if client == nil || client.SessionID != sessionID {
 				return
 			}
-			s.setAuthRole(client, role.Auth, "", name)
+			if success {
+				onSuccess()
+			} else {
+				onFailure()
+			}
 		}
 	}(client.SessionID)
 
 	err := ms.ConfirmAuthAnswer(requestID, answer, callback)
 	if err != nil {
-		s.Auth.ClearAuthRequest(requestID)
 		client.Send(nmc.ServerMessage, cubecode.Error("not connected to authentication server"))
 		return
 	}
@@ -140,9 +136,6 @@ func (s *Server) setRole(client *Client, targetCN uint32, rol role.ID) {
 
 func (s *Server) _setRole(client *Client, rol role.ID) {
 	client.Role = rol
-	if rol > role.None {
-		client.AuthRequiredBecause = disconnectreason.None
-	}
 	pup, _ := s.Clients.PrivilegedUsersPacket()
 	s.Clients.Broadcast(nil, pup)
 }

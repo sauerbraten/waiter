@@ -11,6 +11,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
+	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
@@ -31,6 +32,20 @@ type Server struct {
 	KeepTeams        bool
 }
 
+func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
+	if s.NumClients() >= s.MaxClients {
+		return disconnectreason.Full
+	}
+	if s.MasterMode >= mastermode.Private {
+		return disconnectreason.PrivateMode
+	}
+	if ban, ok := bm.GetBan(c.Peer.Address.IP); ok {
+		log.Println("connecting client", c, "is banned:", ban)
+		return disconnectreason.IPBanned
+	}
+	return disconnectreason.None
+}
+
 func (s *Server) Connect(peer *enet.Peer) {
 	client := s.Clients.Add(peer)
 	client.Position, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
@@ -45,11 +60,48 @@ func (s *Server) Connect(peer *enet.Peer) {
 	)
 }
 
-// Puts a client into the current game, using the data the client provided with his N_JOIN packet.
-func (s *Server) Join(c *Client, name string, playerModel int32, authDomain, authName string) {
-	c.Joined = true
+// checks the server state and decides wether the client has to authenticate to join the game.
+func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, authName string) {
 	c.Name = name
 	c.PlayerModel = playerModel
+
+	onAutoAuthSuccess := func(rol role.ID) {
+		s.setAuthRole(c, rol, authDomain, authName)
+	}
+
+	onAutoAuthFailure := func() {
+		log.Println("unsuccessful auth try at connect by", c, "as", authName, "["+authDomain+"]")
+	}
+
+	c.AuthRequiredBecause = s.AuthRequiredBecause(c)
+
+	if c.AuthRequiredBecause == disconnectreason.None {
+		s.Join(c)
+		go s.handleAuthRequest(c, authDomain, authName, onAutoAuthSuccess, onAutoAuthFailure)
+	} else if authDomain == s.PrimaryAuthDomain && authName != "" {
+		// not in a new goroutine, so client does not get confused and sends nmc.ClientPing before the player joined
+		s.handleAuthRequest(c, authDomain, authName,
+			func(rol role.ID) {
+				if rol == role.None {
+					return
+				}
+				c.AuthRequiredBecause = disconnectreason.None
+				s.Join(c)
+				onAutoAuthSuccess(rol)
+			},
+			func() {
+				onAutoAuthFailure()
+				s.Disconnect(c, c.AuthRequiredBecause)
+			},
+		)
+	} else {
+		s.Disconnect(c, c.AuthRequiredBecause)
+	}
+}
+
+// Puts a client into the current game, using the data the client provided with his nmc.TryJoin packet.
+func (s *Server) Join(c *Client) {
+	c.Joined = true
 
 	if s.MasterMode == mastermode.Locked {
 		c.GameState.State = playerstate.Spectator
@@ -64,10 +116,6 @@ func (s *Server) Join(c *Client, name string, playerModel int32, authDomain, aut
 	s.Clients.InformOthersOfJoin(c)
 
 	c.Send(nmc.ServerMessage, s.MessageOfTheDay)
-
-	if authDomain != "" && authName != "" {
-		s.handleAuthRequest(c, authDomain, authName)
-	}
 
 	log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", s.Clients.UniqueName(c), c.Peer.Address.IP)))
 }
@@ -84,6 +132,32 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	if s.Clients.NumberOfClientsConnected() == 0 {
 		s.Empty()
 	}
+}
+
+func (s *Server) Kick(client *Client, victim *Client, reason string) {
+	if client.Role <= victim.Role {
+		client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
+		return
+	}
+	msg := fmt.Sprintf("%s kicked %s", s.Clients.UniqueName(client), s.Clients.UniqueName(victim))
+	if reason != "" {
+		msg += " for: " + reason
+	}
+	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	s.Disconnect(victim, disconnectreason.Kick)
+}
+
+func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, victim *Client, reason string) {
+	if rol <= victim.Role {
+		client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
+		return
+	}
+	msg := fmt.Sprintf("%s as %s [%s] kicked %s", s.Clients.UniqueName(client), cubecode.Magenta(name), cubecode.Green(domain), s.Clients.UniqueName(victim))
+	if reason != "" {
+		msg += " for: " + reason
+	}
+	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	s.Disconnect(victim, disconnectreason.Kick)
 }
 
 func (s *Server) Empty() {

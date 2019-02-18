@@ -3,7 +3,7 @@ package nmc
 type ID int32 // network message code
 
 const (
-	Join ID = iota // = CONNECT
+	TryJoin ID = iota // = CONNECT
 	ServerInfo
 	Welcome
 	InitializeClient

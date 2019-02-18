@@ -30,6 +30,9 @@ func init() {
 	mrand.Seed(time.Now().UnixNano())
 }
 
+type CallbackWithRole func(rol role.ID)
+type Callback func()
+
 // request holds the data we need to remember between
 // generating a challenge and checking the response.
 type request struct {
@@ -37,8 +40,10 @@ type request struct {
 	domain   string
 	name     string
 	cn       uint32
-	role     role.ID
 	solution string
+
+	onSuccess Callback
+	onFailure Callback
 }
 
 type Manager struct {
@@ -57,33 +62,39 @@ func NewManager(users []*User) *Manager {
 	return m
 }
 
-func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, role role.ID) (requestID uint32) {
+func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, onSuccess, onFailure Callback) (requestID uint32) {
 	requestID = mrand.Uint32()
 	req := &request{
 		id:     requestID,
 		domain: domain,
 		name:   name,
 		cn:     cn,
-		role:   role,
+
+		onSuccess: onSuccess,
+		onFailure: onFailure,
 	}
 	m.pending[requestID] = req
 	return
 }
-func (m *Manager) LookupAuthName(requestID uint32) (string, bool) {
+
+func (m *Manager) LookupGlobalAuthRequest(requestID uint32) (Callback, Callback, bool) {
+	defer m.ClearAuthRequest(requestID)
 	req, ok := m.pending[requestID]
-	return req.name, ok
+	return req.onSuccess, req.onFailure, ok
 }
 
 func (m *Manager) ClearAuthRequest(requestID uint32) { delete(m.pending, requestID) }
 
-func (m *Manager) GenerateChallenge(cn uint32, domain, name string) (challenge string, requestID uint32, err error) {
+func (m *Manager) GenerateChallenge(cn uint32, domain, name string, onSuccess CallbackWithRole, onFailure Callback) (challenge string, requestID uint32, err error) {
 	log.Println("generating challenge for", name, domain)
 	u, ok := m.users[UserIdentifier{Name: name, Domain: domain}]
 	if !ok {
 		return "", 0, errors.New("auth: user not found")
 	}
 
-	requestID = m.RegisterAuthRequest(cn, domain, name, u.Role)
+	onSuccessWithRole := func() { onSuccess(u.Role) }
+
+	requestID = m.RegisterAuthRequest(cn, domain, name, onSuccessWithRole, onFailure)
 
 	challenge, solution, err := generateChallenge(u.PublicKey)
 	if err != nil {
@@ -96,13 +107,18 @@ func (m *Manager) GenerateChallenge(cn uint32, domain, name string) (challenge s
 	return challenge, requestID, nil
 }
 
-func (m *Manager) CheckAnswer(requestID, cn uint32, domain string, answer string) (bool, string, role.ID) {
+func (m *Manager) CheckAnswer(requestID, cn uint32, domain string, answer string) {
 	defer m.ClearAuthRequest(requestID)
 	req, ok := m.pending[requestID]
 	if !ok {
-		return false, "", role.None
+		return
 	}
-	return requestID == req.id && domain == req.domain && cn == req.cn && answer == req.solution, req.name, req.role
+	successful := requestID == req.id && domain == req.domain && cn == req.cn && answer == req.solution
+	if successful {
+		req.onSuccess()
+	} else {
+		req.onFailure()
+	}
 }
 
 func generateChallenge(pub publicKey) (challenge, solution string, err error) {

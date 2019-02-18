@@ -19,10 +19,38 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
+// checks if the client is allowed to send a certain type of message to us.
+func isValidMessage(c *Client, networkMessageCode nmc.ID) bool {
+	if networkMessageCode == nmc.Ping {
+		return true
+	}
+
+	if !c.Joined {
+		if c.AuthRequiredBecause > disconnectreason.None {
+			return networkMessageCode == nmc.AuthAnswer
+		}
+		return networkMessageCode == nmc.TryJoin
+	} else if networkMessageCode == nmc.TryJoin {
+		return false
+	}
+
+	for _, soNMC := range nmc.ServerOnlyNMCs {
+		if soNMC == networkMessageCode {
+			return false
+		}
+	}
+
+	return true
+}
+
 // parses a packet and decides what to do based on the network message code at the front of the packet
 func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet) {
 	// this implementation does not support channel 2 (for coop edit purposes) yet.
-	if client == nil || channelID > 1 {
+	if client == nil || 0 > channelID || channelID > 1 {
+		return
+	}
+
+	if !client.Joined && channelID == 0 {
 		return
 	}
 
@@ -96,7 +124,7 @@ outer:
 
 		// channel 1 traffic
 
-		case nmc.Join:
+		case nmc.TryJoin:
 			name, ok := p.GetString()
 			if !ok {
 				log.Println("could not read name from join packet:", p)
@@ -122,7 +150,7 @@ outer:
 				log.Println("could not read auth name from join packet:", p)
 				return
 			}
-			s.Join(client, name, playerModel, authDomain, authName)
+			s.TryJoin(client, name, playerModel, authDomain, authName)
 
 		case nmc.AuthTry:
 			// client wants us to send him a challenge
@@ -137,9 +165,51 @@ outer:
 				return
 			}
 			if domain == "" {
-				s.handleGlobalAuthRequest(client, name)
+				go s.handleGlobalAuthRequest(client, name,
+					func() { s.setAuthRole(client, role.Auth, "", name) },
+					func() { log.Println("unsuccessful gauth try by", client, "as", name) })
 			} else {
-				s.handleAuthRequest(client, domain, name)
+				go s.handleAuthRequest(client, domain, name,
+					func(rol role.ID) { s.setAuthRole(client, rol, domain, name) },
+					func() { log.Println("unsuccessful auth try by", client, "as", name, "["+domain+"]") },
+				)
+			}
+
+		case nmc.AuthKick:
+			domain, ok := p.GetString()
+			if !ok {
+				log.Println("could not read domain from auth kick packet:", p)
+				continue
+			}
+			name, ok := p.GetString()
+			if !ok {
+				log.Println("could not read name from auth kick packet:", p)
+				return
+			}
+			_cn, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read cn from auth kick packet:", p)
+				return
+			}
+			cn := uint32(_cn)
+			reason, ok := p.GetString()
+			if !ok {
+				log.Println("could not read reason from auth kick packet:", p)
+				return
+			}
+			victim := s.Clients.GetClientByCN(cn)
+			if victim == nil {
+				return
+			}
+			if domain == "" {
+				go s.handleGlobalAuthRequest(client, name,
+					func() { s.AuthKick(client, role.Auth, domain, name, victim, reason) },
+					func() { log.Println("unsuccessful gauth kick try by", client, "as", name, "vs", victim) })
+			} else {
+				go s.handleAuthRequest(client, domain, name,
+					func(rol role.ID) { s.AuthKick(client, rol, domain, name, victim, reason) },
+					func() { log.Println("unsuccessful auth kick try by", client, "as", name, "["+domain+"]", "vs", victim) },
+				)
 			}
 
 		case nmc.AuthAnswer:
@@ -195,16 +265,7 @@ outer:
 			if victim == nil {
 				return
 			}
-			if client.Role <= victim.Role {
-				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
-				return
-			}
-			if reason != "" {
-				s.Clients.Broadcast(nil, nmc.ServerMessage, fmt.Sprintf("%s kicked %s for: %s", s.Clients.UniqueName(client), s.Clients.UniqueName(victim), reason))
-			} else {
-				s.Clients.Broadcast(nil, nmc.ServerMessage, fmt.Sprintf("%s kicked %s", s.Clients.UniqueName(client), s.Clients.UniqueName(victim)))
-			}
-			s.Disconnect(victim, disconnectreason.Kick)
+			s.Kick(client, victim, reason)
 
 		case nmc.MasterMode:
 			log.Println(p)
@@ -521,26 +582,6 @@ outer:
 	}
 
 	return
-}
-
-// checks if the client is allowed to send a certain type of message to us.
-func isValidMessage(c *Client, networkMessageCode nmc.ID) bool {
-	if !c.Joined {
-		if c.AuthRequiredBecause > disconnectreason.None {
-			return networkMessageCode == nmc.AuthAnswer || networkMessageCode == nmc.Ping
-		}
-		return networkMessageCode == nmc.Join || networkMessageCode == nmc.Ping
-	} else if networkMessageCode == nmc.Join {
-		return false
-	}
-
-	for _, soNMC := range nmc.ServerOnlyNMCs {
-		if soNMC == networkMessageCode {
-			return false
-		}
-	}
-
-	return true
 }
 
 func parsePosition(p *protocol.Packet) (pos *geom.Vector) {

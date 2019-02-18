@@ -16,7 +16,8 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 
 	switch cmd {
 	case "help":
-		if c.Role > role.None {
+		switch c.Role {
+		case role.None:
 			c.Send(nmc.ServerMessage, "available commands: keepteams (=persist), queuemap")
 		}
 
@@ -47,7 +48,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 			}
 		}
 
-	case "queuemap", "queuedmap", "queuemaps", "queuedmaps":
+	case "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue":
 		if c.Role == role.None {
 			return
 		}

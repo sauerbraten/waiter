@@ -90,11 +90,6 @@ func main() {
 
 		switch event.Type {
 		case enet.EVENT_TYPE_CONNECT:
-			if ban, ok := bm.GetBan(event.Peer.Address.IP); ok {
-				log.Println("peer's IP is banned:", ban)
-				event.Peer.Disconnect(uint32(disconnectreason.IPBanned))
-				continue
-			}
 			s.Connect(event.Peer)
 
 		case enet.EVENT_TYPE_DISCONNECT:

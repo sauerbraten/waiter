@@ -64,7 +64,11 @@ You can then start the server with `./waiter`.
 
 ## To Do
 
-Implement ffa (item pick ups), then capture and regen capture (capture base events).
+- implement ffa (item pick ups), capture and regen capture (capture base events)
+- intermission stats (depending on mode)
+- #stats command
+- competitive mode (auto-pause on leave, specs muted for players, ...)
+- store frags, deaths, etc. in case a player re-connects
 
 
 ## Project Structure

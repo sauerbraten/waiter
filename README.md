@@ -19,14 +19,17 @@ What works:
 - setting mastermode
 - forcing gamemode and/or map
 - pausing & resuming (with countdown)
-- locking teams
+- locking teams (`keepteams` server command)
+- queueing maps (`queuemap` server command)
 - changing your name
 - extinfo (server mod ID: -9)
 
 Server commands:
 
-- `#keepteams 0|1` (a.k.a. `#persist`): set to 1 to disable randomizing teams on map load
-- `#queuemap [map...]`: check the map queue or enqueue one or more maps
+These can be used either as `#cmd bla foo` or `/servcmd cmd bla foo`:
+
+- `keepteams 0|1` (a.k.a. `persist`): set to 1 to disable randomizing teams on map load
+- `queuemap [map...]`: check the map queue or enqueue one or more maps
 
 Pretty much everything else is not yet implemented:
 

@@ -94,9 +94,9 @@ func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
 }
 
 func (s *Server) setAuthRole(client *Client, prvlg role.ID, domain, name string) {
-	msg := fmt.Sprintf("%s claimed %s privileges as %s", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name))
+	msg := fmt.Sprintf("%s claimed %s privileges as '%s'", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name))
 	if domain != "" {
-		msg = fmt.Sprintf("%s claimed %s privileges as %s [%s]", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name), cubecode.Green(domain))
+		msg = fmt.Sprintf("%s claimed %s privileges as '%s' [%s]", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name), cubecode.Green(domain))
 	}
 	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
 	log.Println(cubecode.SanitizeString(msg))

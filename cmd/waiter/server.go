@@ -22,14 +22,16 @@ import (
 type Server struct {
 	*Config
 	*State
-	timer       *GameTimer
-	relay       *Relay
-	Clients     *ClientManager
-	Auth        *auth.Manager
-	MapRotation *MapRotation
-
+	timer            *GameTimer
+	relay            *Relay
+	Clients          *ClientManager
+	Auth             *auth.Manager
+	MapRotation      *MapRotation
 	PendingMapChange *time.Timer
-	KeepTeams        bool
+
+	// non-standard stuff
+	KeepTeams       bool
+	CompetitiveMode bool
 }
 
 func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
@@ -152,7 +154,7 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 		client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 		return
 	}
-	msg := fmt.Sprintf("%s as %s [%s] kicked %s", s.Clients.UniqueName(client), cubecode.Magenta(name), cubecode.Green(domain), s.Clients.UniqueName(victim))
+	msg := fmt.Sprintf("%s as '%s' [%s] kicked %s", s.Clients.UniqueName(client), cubecode.Magenta(name), cubecode.Green(domain), s.Clients.UniqueName(victim))
 	if reason != "" {
 		msg += " for: " + reason
 	}
@@ -201,20 +203,15 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.Clients.ForEach(s.GameMode.Join)
 
 	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
-	s.timer.Restart()
+	if s.CompetitiveMode {
+		s.Clients.Broadcast(nil, nmc.PauseGame, 1, -1)
+	} else {
+		s.timer.Restart()
+	}
 	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
-}
-
-func (s *Server) SetKeepTeams(keepTeams bool) {
-	s.KeepTeams = keepTeams
-	if keepTeams {
-		s.Clients.Broadcast(nil, nmc.ServerMessage, "keeping teams")
-	} else {
-		s.Clients.Broadcast(nil, nmc.ServerMessage, "teams will be shuffled on map change")
-	}
 }
 
 type hit struct {

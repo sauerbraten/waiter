@@ -127,6 +127,21 @@ func (s *Server) Spawn(client *Client) {
 	s.GameMode.Spawn(client.GameState)
 }
 
+func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
+	if client.GameState.State != playerstate.Dead || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawnAttempt.IsZero() {
+		// client may not spawn
+		return
+	}
+
+	client.GameState.State = playerstate.Alive
+	client.GameState.SelectedWeapon = weapon.ByID(weapon.ID(_weapon))
+	client.GameState.LastSpawnAttempt = time.Time{}
+
+	client.Packets.Publish(nmc.ConfirmSpawn, client.GameState.ToWire())
+
+	s.GameMode.ConfirmSpawn(client)
+}
+
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(client)
 	s.relay.RemoveClient(client.CN)
@@ -165,9 +180,10 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 func (s *Server) Empty() {
 	s.MapRotation.queue = s.MapRotation.queue[:0]
 	s.KeepTeams = false
+	s.CompetitiveMode = false
 	s.MasterMode = mastermode.Open
 	if s.GameMode.ID() != s.FallbackGameMode {
-		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(StartGame(s.FallbackGameMode), s.Map))
+		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(NewGame(s.FallbackGameMode), s.Map))
 	}
 }
 
@@ -190,7 +206,7 @@ func (s *Server) Intermission() {
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	// cancel pending game mode goroutines
 	if s.GameMode != nil {
-		s.GameMode.End()
+		s.GameMode.CleanUp()
 	}
 
 	// stop any pending map change
@@ -199,19 +215,37 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	}
 
 	s.Map = mapp
-	s.GameMode = StartGame(mode)
+	s.GameMode = NewGame(mode)
 	s.Clients.ForEach(s.GameMode.Join)
 
 	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
-	if s.CompetitiveMode {
-		s.Clients.Broadcast(nil, nmc.PauseGame, 1, -1)
-	} else {
-		s.timer.Restart()
-	}
+	s.timer.Restart()
 	s.Clients.Broadcast(nil, nmc.TimeLeft, s.timer.TimeLeft/1000)
 	s.Clients.MapChange()
 
+	s.GameMode.Start()
+
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
+}
+
+func (s *Server) PauseGame(c *Client) {
+	log.Println("pausing game at", s.timer.TimeLeft/1000, "seconds left")
+	cn := -1
+	if c != nil {
+		cn = int(c.CN)
+	}
+	s.Clients.Broadcast(nil, nmc.PauseGame, 1, cn)
+	s.timer.Pause()
+	s.GameMode.Pause()
+}
+
+func (s *Server) ResumeGame(c *Client) {
+	cn := -1
+	if c != nil {
+		cn = int(c.CN)
+	}
+	s.timer.ResumeWithCountdown(cn)
+	s.GameMode.Resume()
 }
 
 type hit struct {

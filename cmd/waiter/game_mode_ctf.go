@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/ivahaev/timer"
+
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
@@ -24,7 +26,7 @@ type flag struct {
 	dropTime      time.Time
 	dropLocation  *geom.Vector
 	spawnLocation *geom.Vector
-	pendingReset  *time.Timer
+	pendingReset  *timer.Timer
 }
 
 type flagMode struct {
@@ -32,6 +34,7 @@ type flagMode struct {
 }
 
 type ctfMode struct {
+	baseMode
 	teamMode
 	flagMode
 	good flag
@@ -41,6 +44,26 @@ type ctfMode struct {
 func NewCTFMode(keepTeams bool) ctfMode {
 	return ctfMode{
 		teamMode: NewTeamMode(false, keepTeams, "good", "evil"),
+	}
+}
+
+func (ctf *ctfMode) Start() {}
+
+func (ctf *ctfMode) Pause() {
+	if ctf.good.pendingReset != nil {
+		ctf.good.pendingReset.Pause()
+	}
+	if ctf.evil.pendingReset != nil {
+		ctf.evil.pendingReset.Pause()
+	}
+}
+
+func (ctf *ctfMode) Resume() {
+	if ctf.good.pendingReset != nil {
+		ctf.good.pendingReset.Start()
+	}
+	if ctf.evil.pendingReset != nil {
+		ctf.evil.pendingReset.Start()
 	}
 }
 
@@ -229,11 +252,12 @@ func (ctf *ctfMode) DropFlag(client *Client) {
 	f.version++
 
 	s.Clients.Broadcast(nil, nmc.DropFlag, client.CN, f.id, f.version, f.dropLocation.Mul(geom.DMF))
-	f.pendingReset = time.AfterFunc(10*time.Second, func() {
+	f.pendingReset = timer.AfterFunc(10*time.Second, func() {
 		ctf.returnFlag(f)
 		f.version++
 		s.Clients.Broadcast(nil, nmc.ResetFlag, f.id, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
 	})
+	f.pendingReset.Start()
 }
 
 func (ctf *ctfMode) returnFlag(f *flag) {
@@ -286,7 +310,11 @@ func (ctf *ctfMode) HandleDeath(_, victim *Client) {
 	ctf.DropFlag(victim)
 }
 
-func (ctf *ctfMode) End() {
+func (ctf *ctfMode) Intermission() {
+	// todo: print most flag scores/returns/steals
+}
+
+func (ctf *ctfMode) CleanUp() {
 	if ctf.good.pendingReset != nil {
 		ctf.good.pendingReset.Stop()
 	}

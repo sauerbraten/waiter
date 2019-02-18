@@ -28,7 +28,7 @@ func StartTimer(duration time.Duration, intermission func()) *GameTimer {
 	return gt
 }
 
-func (gt *GameTimer) ResumeWithCountdown(c *Client) {
+func (gt *GameTimer) ResumeWithCountdown(cn int) {
 	if len(gt.pendingResumeActions) > 0 {
 		for _, action := range gt.pendingResumeActions {
 			if action != nil {
@@ -52,7 +52,7 @@ func (gt *GameTimer) ResumeWithCountdown(c *Client) {
 			log.Println("resuming game at", s.timer.TimeLeft/1000, "seconds left")
 			gt.Ticker.Resume()
 			gt.pendingResumeActions = nil
-			s.Clients.Broadcast(nil, nmc.PauseGame, 0, c.CN)
+			s.Clients.Broadcast(nil, nmc.PauseGame, 0, cn)
 		}),
 	}
 }

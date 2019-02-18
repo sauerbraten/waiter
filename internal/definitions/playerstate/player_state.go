@@ -1,7 +1,9 @@
 package playerstate
 
+type ID uint32
+
 const (
-	Alive uint32 = iota
+	Alive ID = iota
 	Dead
 	Spawning
 	Lagged

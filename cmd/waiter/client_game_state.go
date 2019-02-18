@@ -12,7 +12,7 @@ import (
 // The game state of a client.
 type GameState struct {
 	// fields that change at spawn
-	State          uint32
+	State          playerstate.ID
 	Health         int32
 	MaxHealth      int32
 	Armour         int32

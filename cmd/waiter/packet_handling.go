@@ -363,8 +363,8 @@ outer:
 				return
 			}
 
-			s.ChangeMap(modeID, mapp)
 			log.Println(client, "forced", modeID, "on", mapp)
+			s.ChangeMap(modeID, mapp)
 
 		case nmc.Ping:
 			// client pinging server → send pong
@@ -491,17 +491,7 @@ outer:
 				log.Println("could not read weapon ID from spawn packet:", p)
 				return
 			}
-
-			if client.GameState.State != playerstate.Dead || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawnAttempt.IsZero() {
-				// client may not spawn
-				return
-			}
-
-			client.GameState.State = playerstate.Alive
-			client.GameState.SelectedWeapon = weapon.ByID(weapon.ID(_weapon))
-			client.GameState.LastSpawnAttempt = time.Time{}
-
-			client.Packets.Publish(nmc.ConfirmSpawn, client.GameState.ToWire())
+			s.ConfirmSpawn(client, lifeSequence, _weapon)
 
 		case nmc.ChangeWeapon:
 			// player changing weapon
@@ -543,22 +533,20 @@ outer:
 			client.Packets.Publish(nmc.Sound, sound)
 
 		case nmc.PauseGame:
-			if s.MasterMode < mastermode.Locked {
-				if client.Role == role.None {
-					return
-				}
-			}
 			pause, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read pause toggle from pause packet:", p)
 				return
 			}
+			if s.MasterMode < mastermode.Locked {
+				if client.Role == role.None {
+					return
+				}
+			}
 			if pause == 1 {
-				log.Println("pausing game at", s.timer.TimeLeft/1000, "seconds left")
-				s.Clients.Broadcast(nil, nmc.PauseGame, 1, client.CN)
-				s.timer.Pause()
+				s.PauseGame(client)
 			} else {
-				s.timer.ResumeWithCountdown(client)
+				s.ResumeGame(client)
 			}
 
 		case nmc.ItemList:

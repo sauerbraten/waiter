@@ -14,16 +14,21 @@ import (
 
 type GameMode interface {
 	ID() gamemode.ID
+	Start()
+	Pause()
+	Resume()
 	NeedMapInfo() bool
 	Join(*Client)
 	Init(*Client)
 	Leave(*Client)
 	CanSpawn(*Client) bool
 	Spawn(*GameState) // sets armour, ammo, and health
+	ConfirmSpawn(*Client)
 	HandleDeath(fragger, victim *Client)
 	FragValue(fragger, victim *Client) int
 	HandlePacket(*Client, nmc.ID, *protocol.Packet) bool
-	End()
+	Intermission()
+	CleanUp()
 }
 
 // assert interface implementations at compile time
@@ -32,28 +37,43 @@ var (
 	_ TeamMode = &InstaTeam{}
 )
 
-func StartGame(id gamemode.ID) GameMode {
-	switch id {
-	case gamemode.Insta:
-		return NewInsta()
-	case gamemode.InstaTeam:
-		return NewInstaTeam(s.KeepTeams)
-	case gamemode.Effic:
-		return NewEffic()
-	case gamemode.EfficTeam:
-		return NewEfficTeam(s.KeepTeams)
-	case gamemode.Tactics:
-		return NewTactics()
-	case gamemode.TacticsTeam:
-		return NewTacticsTeam(s.KeepTeams)
-	case gamemode.InstaCTF:
-		return NewInstaCTF(s.KeepTeams)
-	case gamemode.EfficCTF:
-		return NewEfficCTF(s.KeepTeams)
-	default:
-		return nil
+func NewGame(id gamemode.ID) GameMode {
+	game := func() GameMode {
+		switch id {
+		case gamemode.Insta:
+			return NewInsta()
+		case gamemode.InstaTeam:
+			return NewInstaTeam(s.KeepTeams)
+		case gamemode.Effic:
+			return NewEffic()
+		case gamemode.EfficTeam:
+			return NewEfficTeam(s.KeepTeams)
+		case gamemode.Tactics:
+			return NewTactics()
+		case gamemode.TacticsTeam:
+			return NewTacticsTeam(s.KeepTeams)
+		case gamemode.InstaCTF:
+			return NewInstaCTF(s.KeepTeams)
+		case gamemode.EfficCTF:
+			return NewEfficCTF(s.KeepTeams)
+		default:
+			return nil
+		}
+	}()
+
+	if s.CompetitiveMode {
+		return NewCompetitiveGame(game)
+	} else {
+		return game
 	}
 }
+
+// non-competitive
+type baseMode struct{}
+
+func (*baseMode) Start() {}
+
+func (*baseMode) ConfirmSpawn(*Client) {}
 
 type teamlessMode struct{}
 
@@ -68,6 +88,12 @@ func (*teamlessMode) FragValue(fragger, victim *Client) int {
 	return 1
 }
 
+type deathmatchMode struct{}
+
+func (*deathmatchMode) Intermission() {
+	// todo: print some stats
+}
+
 // no spawn timeout
 type noSpawnWaitMode struct{}
 
@@ -75,6 +101,10 @@ func (*noSpawnWaitMode) CanSpawn(*Client) bool { return true }
 
 // no pick-ups, no flags, no bases
 type noItemsMode struct{}
+
+func (*noItemsMode) Pause() {}
+
+func (*noItemsMode) Resume() {}
 
 func (*noItemsMode) NeedMapInfo() bool { return false }
 
@@ -84,7 +114,7 @@ func (*noItemsMode) HandleDeath(*Client, *Client) {}
 
 func (*noItemsMode) HandlePacket(*Client, nmc.ID, *protocol.Packet) bool { return false }
 
-func (*noItemsMode) End() {}
+func (*noItemsMode) CleanUp() {}
 
 type TeamMode interface {
 	GameMode
@@ -204,6 +234,8 @@ func (*efficMode) Spawn(gs *GameState) {
 }
 
 type Effic struct {
+	baseMode
+	deathmatchMode
 	efficMode
 	noSpawnWaitMode
 	noItemsMode
@@ -215,6 +247,8 @@ func NewEffic() GameMode { return &Effic{} }
 func (*Effic) ID() gamemode.ID { return gamemode.Effic }
 
 type EfficTeam struct {
+	baseMode
+	deathmatchMode
 	efficMode
 	noSpawnWaitMode
 	noItemsMode
@@ -238,6 +272,8 @@ func (*instaMode) Spawn(gs *GameState) {
 }
 
 type Insta struct {
+	baseMode
+	deathmatchMode
 	instaMode
 	noSpawnWaitMode
 	noItemsMode
@@ -249,6 +285,8 @@ func NewInsta() GameMode { return &Insta{} }
 func (*Insta) ID() gamemode.ID { return gamemode.Insta }
 
 type InstaTeam struct {
+	baseMode
+	deathmatchMode
 	instaMode
 	noSpawnWaitMode
 	noItemsMode
@@ -272,6 +310,8 @@ func (*tacticsMode) Spawn(gs *GameState) {
 }
 
 type Tactics struct {
+	baseMode
+	deathmatchMode
 	tacticsMode
 	noSpawnWaitMode
 	noItemsMode
@@ -283,6 +323,8 @@ func NewTactics() GameMode { return &Tactics{} }
 func (*Tactics) ID() gamemode.ID { return gamemode.Tactics }
 
 type TacticsTeam struct {
+	baseMode
+	deathmatchMode
 	tacticsMode
 	noSpawnWaitMode
 	noItemsMode

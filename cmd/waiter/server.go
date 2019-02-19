@@ -15,6 +15,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/utils"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
@@ -118,9 +119,17 @@ func (s *Server) Join(c *Client) {
 	s.GameMode.Init(c)       // may send additional welcome info like flags
 	s.Clients.InformOthersOfJoin(c)
 
-	c.Send(nmc.ServerMessage, s.MessageOfTheDay)
+	go func() {
+		uniqueName := s.Clients.UniqueName(c)
+		country := utils.CountryByIP(c.Peer.Address.IP)
+		if country != "" {
+			s.Clients.Relay(c, nmc.ServerMessage, fmt.Sprintf("%s connected from %s", uniqueName, country))
+		}
 
-	log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", s.Clients.UniqueName(c), c.Peer.Address.IP)))
+		c.Send(nmc.ServerMessage, s.MessageOfTheDay)
+
+		log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", uniqueName, c.Peer.Address.IP)))
+	}()
 }
 
 func (s *Server) Spawn(client *Client) {

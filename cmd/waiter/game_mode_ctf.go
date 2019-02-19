@@ -15,7 +15,7 @@ import (
 
 type CTFMode interface {
 	TeamMode
-	DropFlag(*Client) // used as marker for ctf modes
+	IsCTF() // used as marker for ctf modes
 }
 
 type flag struct {
@@ -34,34 +34,41 @@ type flagMode struct {
 }
 
 type ctfMode struct {
+	timedMode
 	teamMode
 	flagMode
 	good flag
 	evil flag
 }
 
-func NewCTFMode(keepTeams bool) ctfMode {
+func newCTFMode(duration time.Duration, keepTeams bool, intermission func()) ctfMode {
 	return ctfMode{
-		teamMode: NewTeamMode(false, keepTeams, "good", "evil"),
+		timedMode: newTimedMode(duration, intermission),
+		teamMode:  newTeamMode(false, keepTeams, "good", "evil"),
 	}
 }
 
-func (ctf *ctfMode) Pause() {
+// implement CTFMode interface
+func (*ctfMode) IsCTF() {}
+
+func (ctf *ctfMode) Pause(c *Client) {
 	if ctf.good.pendingReset != nil {
 		ctf.good.pendingReset.Pause()
 	}
 	if ctf.evil.pendingReset != nil {
 		ctf.evil.pendingReset.Pause()
 	}
+	ctf.timedMode.Pause(c)
 }
 
-func (ctf *ctfMode) Resume() {
+func (ctf *ctfMode) Resume(c *Client) {
 	if ctf.good.pendingReset != nil {
 		ctf.good.pendingReset.Start()
 	}
 	if ctf.evil.pendingReset != nil {
 		ctf.evil.pendingReset.Start()
 	}
+	ctf.timedMode.Resume(c)
 }
 
 func (ctf *ctfMode) flagByID(id int32) (*flag, bool) {
@@ -321,27 +328,47 @@ func (ctf *ctfMode) CleanUp() {
 }
 
 type EfficCTF struct {
+	casualMode
 	efficMode
 	ctfMode
 }
 
-func NewEfficCTF(keepTeams bool) GameMode {
-	return &EfficCTF{
-		ctfMode: NewCTFMode(keepTeams),
+// assert interface implementations at compile time
+var (
+	_ GameMode = NewEfficCTF(1*time.Minute, false)
+	_ TeamMode = NewEfficCTF(1*time.Minute, false)
+	_ CTFMode  = NewEfficCTF(1*time.Minute, false)
+)
+
+func NewEfficCTF(duration time.Duration, keepTeams bool) *EfficCTF {
+	var ectf *EfficCTF
+	ectf = &EfficCTF{
+		ctfMode: newCTFMode(duration, keepTeams, func() { ectf.Intermission() }),
 	}
+	return ectf
 }
 
 func (*EfficCTF) ID() gamemode.ID { return gamemode.EfficCTF }
 
 type InstaCTF struct {
+	casualMode
 	instaMode
 	ctfMode
 }
 
-func NewInstaCTF(keepTeams bool) GameMode {
-	return &InstaCTF{
-		ctfMode: NewCTFMode(keepTeams),
+// assert interface implementations at compile time
+var (
+	_ GameMode = NewInstaCTF(1*time.Minute, false)
+	_ TeamMode = NewInstaCTF(1*time.Minute, false)
+	_ CTFMode  = NewInstaCTF(1*time.Minute, false)
+)
+
+func NewInstaCTF(duration time.Duration, keepTeams bool) *InstaCTF {
+	var ictf *InstaCTF
+	ictf = &InstaCTF{
+		ctfMode: newCTFMode(duration, keepTeams, func() { ictf.Intermission() }),
 	}
+	return ictf
 }
 
 func (*InstaCTF) ID() gamemode.ID { return gamemode.InstaCTF }

@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sort"
+	"time"
 
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
@@ -14,26 +15,105 @@ import (
 
 type GameMode interface {
 	ID() gamemode.ID
-	Pause()
-	Resume()
+
 	NeedMapInfo() bool
+	Start()
+	Intermission()
+	CleanUp()
+
+	Pause(*Client)
+	Paused() bool
+	Resume(*Client)
+	TimeLeft() time.Duration
+
 	Join(*Client)
 	Init(*Client)
 	Leave(*Client)
 	CanSpawn(*Client) bool
 	Spawn(*GameState) // sets armour, ammo, and health
-	HandleDeath(fragger, victim *Client)
+	ConfirmSpawn(*Client)
+
 	FragValue(fragger, victim *Client) int
+	HandleDeath(fragger, victim *Client)
 	HandlePacket(*Client, nmc.ID, *protocol.Packet) bool
-	Intermission()
-	CleanUp()
 }
 
-// assert interface implementations at compile time
-var (
-	_ TeamMode = &EfficCTF{}
-	_ TeamMode = &InstaTeam{}
-)
+type TeamMode interface {
+	GameMode
+	Teams() map[string]*Team
+	ForEach(func(*Team))
+	ChangeTeam(*Client, string, bool)
+}
+
+type timedMode struct {
+	t *GameTimer
+}
+
+func newTimedMode(d time.Duration, intermission func()) timedMode {
+	return timedMode{StartTimer(d, intermission)}
+}
+
+func (tm *timedMode) Pause(c *Client) {
+	cn := -1
+	if c != nil {
+		cn = int(c.CN)
+	}
+	s.Clients.Broadcast(nil, nmc.PauseGame, 1, cn)
+	tm.t.Pause()
+}
+
+func (tm *timedMode) Paused() bool { return tm.t.Paused() }
+
+func (tm *timedMode) Resume(c *Client) {
+	cn := -1
+	if c != nil {
+		cn = int(c.CN)
+	}
+	s.Clients.Broadcast(nil, nmc.PauseGame, 0, cn)
+	tm.t.Resume()
+}
+
+func (tm *timedMode) TimeLeft() time.Duration { return tm.t.TimeLeft }
+
+// methods that are shadowed by CompetitiveMode so all modes implement GameMode
+type casualMode struct{}
+
+func (*casualMode) Start() {}
+
+func (*casualMode) ConfirmSpawn(*Client) {}
+
+// prints intermission stats based on frags
+type deathmatchMode struct {
+	timedMode
+}
+
+func newDeathmatchMode(duration time.Duration, intermission func()) deathmatchMode {
+	return deathmatchMode{
+		timedMode: newTimedMode(duration, intermission),
+	}
+}
+
+func (*deathmatchMode) Intermission() {
+	// todo: print some stats
+}
+
+// no spawn timeout
+type noSpawnWaitMode struct{}
+
+func (*noSpawnWaitMode) CanSpawn(*Client) bool { return true }
+
+// no pick-ups, no flags, no bases
+type noItemsMode struct{}
+
+func (*noItemsMode) NeedMapInfo() bool { return false }
+
+func (*noItemsMode) Init(*Client) {}
+
+func (*noItemsMode) HandleDeath(*Client, *Client) {}
+
+func (*noItemsMode) HandlePacket(*Client, nmc.ID, *protocol.Packet) bool { return false }
+
+func (*noItemsMode) CleanUp() {}
 
 type teamlessMode struct{}
 
@@ -48,48 +128,13 @@ func (*teamlessMode) FragValue(fragger, victim *Client) int {
 	return 1
 }
 
-type deathmatchMode struct{}
-
-func (*deathmatchMode) Intermission() {
-	// todo: print some stats
-}
-
-// no spawn timeout
-type noSpawnWaitMode struct{}
-
-func (*noSpawnWaitMode) CanSpawn(*Client) bool { return true }
-
-// no pick-ups, no flags, no bases
-type noItemsMode struct{}
-
-func (*noItemsMode) Pause() {}
-
-func (*noItemsMode) Resume() {}
-
-func (*noItemsMode) NeedMapInfo() bool { return false }
-
-func (*noItemsMode) Init(*Client) {}
-
-func (*noItemsMode) HandleDeath(*Client, *Client) {}
-
-func (*noItemsMode) HandlePacket(*Client, nmc.ID, *protocol.Packet) bool { return false }
-
-func (*noItemsMode) CleanUp() {}
-
-type TeamMode interface {
-	GameMode
-	Teams() map[string]*Team
-	ForEach(func(*Team))
-	ChangeTeam(*Client, string, bool)
-}
-
 type teamMode struct {
 	teams             map[string]*Team
 	otherTeamsAllowed bool
 	keepTeams         bool
 }
 
-func NewTeamMode(otherTeamsAllowed, keepTeams bool, names ...string) teamMode {
+func newTeamMode(otherTeamsAllowed, keepTeams bool, names ...string) teamMode {
 	teams := map[string]*Team{}
 	for _, name := range names {
 		teams[name] = NewTeam(name)
@@ -155,7 +200,7 @@ func (tm *teamMode) ChangeTeam(c *Client, newTeamName string, forced bool) {
 	reason := -1 // = none = silent
 	if c.GameState.State != playerstate.Spectator {
 		if forced {
-			reason = 1
+			reason = 1 // = forced
 		} else {
 			reason = 0 // = voluntary
 		}
@@ -186,6 +231,18 @@ func (tm *teamMode) ChangeTeam(c *Client, newTeamName string, forced bool) {
 	}
 }
 
+type teamDeathmatchMode struct {
+	teamMode
+	deathmatchMode
+}
+
+func newTeamDeathmatchMode(duration time.Duration, keepTeams bool, intermission func()) teamDeathmatchMode {
+	return teamDeathmatchMode{
+		teamMode:       newTeamMode(true, keepTeams, "good", "evil"),
+		deathmatchMode: newDeathmatchMode(duration, intermission),
+	}
+}
+
 type efficMode struct{}
 
 func (*efficMode) Spawn(gs *GameState) {
@@ -194,6 +251,7 @@ func (*efficMode) Spawn(gs *GameState) {
 }
 
 type Effic struct {
+	casualMode
 	deathmatchMode
 	efficMode
 	noSpawnWaitMode
@@ -201,22 +259,36 @@ type Effic struct {
 	teamlessMode
 }
 
-func NewEffic() GameMode { return &Effic{} }
+func NewEffic(duration time.Duration) *Effic {
+	var effic *Effic
+	effic = &Effic{
+		deathmatchMode: newDeathmatchMode(duration, func() { effic.Intermission() }),
+	}
+	return effic
+}
 
 func (*Effic) ID() gamemode.ID { return gamemode.Effic }
 
 type EfficTeam struct {
-	deathmatchMode
+	casualMode
+	teamDeathmatchMode
 	efficMode
 	noSpawnWaitMode
 	noItemsMode
-	teamMode
 }
 
-func NewEfficTeam(keepTeams bool) GameMode {
-	return &EfficTeam{
-		teamMode: NewTeamMode(true, keepTeams, "good", "evil"),
+// assert interface implementations at compile time
+var (
+	_ GameMode = NewEfficTeam(1*time.Minute, false)
+	_ TeamMode = NewEfficTeam(1*time.Minute, false)
+)
+
+func NewEfficTeam(duration time.Duration, keepTeams bool) *EfficTeam {
+	var efficTeam *EfficTeam
+	efficTeam = &EfficTeam{
+		teamDeathmatchMode: newTeamDeathmatchMode(duration, keepTeams, func() { efficTeam.Intermission() }),
 	}
+	return efficTeam
 }
 
 func (*EfficTeam) ID() gamemode.ID { return gamemode.EfficTeam }
@@ -230,6 +302,8 @@ func (*instaMode) Spawn(gs *GameState) {
 }
 
 type Insta struct {
+	timedMode
+	casualMode
 	deathmatchMode
 	instaMode
 	noSpawnWaitMode
@@ -237,22 +311,41 @@ type Insta struct {
 	teamlessMode
 }
 
-func NewInsta() GameMode { return &Insta{} }
+// assert interface implementations at compile time
+var (
+	_ GameMode = NewInsta(1 * time.Minute)
+)
+
+func NewInsta(duration time.Duration) *Insta {
+	var insta *Insta
+	insta = &Insta{
+		timedMode: newTimedMode(duration, func() { insta.Intermission() }),
+	}
+	return insta
+}
 
 func (*Insta) ID() gamemode.ID { return gamemode.Insta }
 
 type InstaTeam struct {
-	deathmatchMode
+	casualMode
+	teamDeathmatchMode
 	instaMode
 	noSpawnWaitMode
 	noItemsMode
-	teamMode
 }
 
-func NewInstaTeam(keepTeams bool) GameMode {
-	return &InstaTeam{
-		teamMode: NewTeamMode(true, keepTeams, "good", "evil"),
+// assert interface implementations at compile time
+var (
+	_ GameMode = NewInstaTeam(1*time.Minute, false)
+	_ TeamMode = NewInstaTeam(1*time.Minute, false)
+)
+
+func NewInstaTeam(duration time.Duration, keepTeams bool) *InstaTeam {
+	var instaTeam *InstaTeam
+	instaTeam = &InstaTeam{
+		teamDeathmatchMode: newTeamDeathmatchMode(duration, keepTeams, func() { instaTeam.Intermission() }),
 	}
+	return instaTeam
 }
 
 func (*InstaTeam) ID() gamemode.ID { return gamemode.InstaTeam }
@@ -266,6 +359,8 @@ func (*tacticsMode) Spawn(gs *GameState) {
 }
 
 type Tactics struct {
+	timedMode
+	casualMode
 	deathmatchMode
 	tacticsMode
 	noSpawnWaitMode
@@ -273,22 +368,41 @@ type Tactics struct {
 	teamlessMode
 }
 
-func NewTactics() GameMode { return &Tactics{} }
+// assert interface implementations at compile time
+var (
+	_ GameMode = NewTactics(1 * time.Minute)
+)
+
+func NewTactics(duration time.Duration) *Tactics {
+	var tactics *Tactics
+	tactics = &Tactics{
+		timedMode: newTimedMode(duration, func() { tactics.Intermission() }),
+	}
+	return tactics
+}
 
 func (*Tactics) ID() gamemode.ID { return gamemode.Tactics }
 
 type TacticsTeam struct {
-	deathmatchMode
+	casualMode
+	teamDeathmatchMode
 	tacticsMode
 	noSpawnWaitMode
 	noItemsMode
-	teamMode
 }
 
-func NewTacticsTeam(keepTeams bool) GameMode {
-	return &TacticsTeam{
-		teamMode: NewTeamMode(true, keepTeams, "good", "evil"),
+// assert interface implementations at compile time
+var (
+	_ GameMode = NewTacticsTeam(1*time.Minute, false)
+	_ TeamMode = NewTacticsTeam(1*time.Minute, false)
+)
+
+func NewTacticsTeam(duration time.Duration, keepTeams bool) *TacticsTeam {
+	var tacticsTeam *TacticsTeam
+	tacticsTeam = &TacticsTeam{
+		teamDeathmatchMode: newTeamDeathmatchMode(duration, keepTeams, func() { tacticsTeam.Intermission() }),
 	}
+	return tacticsTeam
 }
 
 func (*TacticsTeam) ID() gamemode.ID { return gamemode.TacticsTeam }

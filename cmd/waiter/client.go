@@ -22,9 +22,7 @@ type Client struct {
 	GameState           *GameState
 	Joined              bool                // true if the player is actually in the game
 	AuthRequiredBecause disconnectreason.ID // e.g. server is in private mode
-	IsBot               bool                // wether this is a bot or not
-	BotSkill            int32
-	InUse               bool // true if this client's *enet.Peer is in use (i.e. the client object belongs to a connection)
+	InUse               bool                // true if this client's *enet.Peer is in use (i.e. the client object belongs to a connection)
 	Peer                *enet.Peer
 	SessionID           int32
 	Ping                int32
@@ -68,8 +66,6 @@ func (c *Client) Reset() {
 	}
 	c.Joined = false
 	c.AuthRequiredBecause = disconnectreason.None
-	c.IsBot = false
-	c.BotSkill = -1
 	c.InUse = false
 	c.Peer = nil
 	c.SessionID = utils.RNG.Int31()

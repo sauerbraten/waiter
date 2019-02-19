@@ -3,6 +3,7 @@ package packet
 import (
 	"log"
 	"net"
+	"time"
 
 	"github.com/sauerbraten/waiter/internal/definitions/armour"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
@@ -83,6 +84,9 @@ func Encode(args ...interface{}) protocol.Packet {
 
 		case net.IP:
 			p = append(p, v...)
+
+		case time.Duration:
+			p.PutInt(int32(v / time.Second))
 
 		case bool:
 			if v {

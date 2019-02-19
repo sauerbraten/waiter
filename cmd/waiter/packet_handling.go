@@ -321,11 +321,11 @@ outer:
 				if client.GameState.State == playerstate.Alive {
 					s.handleDeath(spectator, spectator)
 				}
-				s.Game.Leave(spectator)
+				s.GameMode.Leave(spectator)
 				spectator.GameState.State = playerstate.Spectator
 			} else {
 				spectator.GameState.State = playerstate.Dead
-				s.Mode().Join(spectator)
+				s.GameMode.Join(spectator)
 				// todo: checkmap
 			}
 			s.Clients.Broadcast(nil, nmc.Spectator, spectator.CN, toggle)
@@ -432,7 +432,7 @@ outer:
 				return
 			}
 
-			teamMode, ok := s.Mode().(TeamMode)
+			teamMode, ok := s.GameMode.(TeamMode)
 			if !ok {
 				return
 			}
@@ -457,7 +457,7 @@ outer:
 				return
 			}
 
-			teamMode, ok := s.Mode().(TeamMode)
+			teamMode, ok := s.GameMode.(TeamMode)
 			if !ok {
 				return
 			}
@@ -474,7 +474,7 @@ outer:
 			log.Println("todo: MAPCRC")
 
 		case nmc.TrySpawn:
-			if !client.Joined || client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() || !s.Mode().CanSpawn(client) {
+			if !client.Joined || client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() || !s.GameMode.CanSpawn(client) {
 				return
 			}
 			s.Spawn(client)
@@ -544,9 +544,9 @@ outer:
 				}
 			}
 			if pause == 1 {
-				s.PauseGame(client)
+				s.GameMode.Pause(client)
 			} else {
-				s.ResumeGame(client)
+				s.GameMode.Resume(client)
 			}
 
 		case nmc.ItemList:
@@ -561,7 +561,7 @@ outer:
 			s.HandleCommand(client, cmd)
 
 		default:
-			ok := s.Mode().HandlePacket(client, packetType, &p)
+			ok := s.GameMode.HandlePacket(client, packetType, &p)
 			if !ok {
 				log.Println("received", packetType, p, "on channel", channelID)
 				break outer

@@ -89,8 +89,8 @@ func (cm *ClientManager) Relay(from *Client, args ...interface{}) {
 func (cm *ClientManager) SendWelcome(c *Client) {
 	p := []interface{}{
 		nmc.Welcome,
-		nmc.MapChange, s.Map, s.Mode().ID(), s.Mode().NeedMapInfo(), // currently played mode & map
-		nmc.TimeLeft, s.timer.TimeLeft / 1000, // time left in this round
+		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo(), // currently played mode & map
+		nmc.TimeLeft, s.GameMode.TimeLeft(), // time left in this round
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level
@@ -99,11 +99,11 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 		p = append(p, pup)
 	}
 
-	if s.timer.Paused() {
+	if s.GameMode.Paused() {
 		p = append(p, nmc.PauseGame, 1, -1)
 	}
 
-	if teamMode, ok := s.Mode().(TeamMode); ok {
+	if teamMode, ok := s.GameMode.(TeamMode); ok {
 		p = append(p, nmc.TeamInfo)
 		teamMode.ForEach(func(t *Team) {
 			if t.Frags > 0 {

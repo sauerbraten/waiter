@@ -77,7 +77,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 			if err != nil || (val != 0 && val != 1) {
 				return
 			}
-			game, active := s.Game.(*CompetitiveGame)
+			comp, active := s.GameMode.(*CompetitiveMode)
 			changed = s.CompetitiveMode != (val == 1)
 			switch val {
 			case 1:
@@ -86,17 +86,14 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 			default:
 				if active {
 					// stops immediately
-					s.Game = &CasualGame{game.GameMode}
-					if s.timer.Paused() {
-						s.ResumeGame(nil)
-					}
+					s.GameMode = comp.ToCasual()
 					s.CompetitiveMode = false
 				}
 			}
 		}
 		if changed {
 			if s.CompetitiveMode {
-				s.Clients.Broadcast(nil, nmc.ServerMessage, "competitive mode enabled")
+				s.Clients.Broadcast(nil, nmc.ServerMessage, "competitive mode will be enabled with next game")
 			} else {
 				s.Clients.Broadcast(nil, nmc.ServerMessage, "competitive mode disabled")
 			}

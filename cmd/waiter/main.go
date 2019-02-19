@@ -58,14 +58,13 @@ func init() {
 			UpSince:    time.Now(),
 			NumClients: cs.NumberOfClientsConnected,
 		},
-		timer:       StartTimer(conf.GameDuration*time.Minute, func() { s.Intermission() }),
 		relay:       NewRelay(),
 		Clients:     cs,
 		Auth:        auth.NewManager(users),
 		MapRotation: &mr,
 	}
-	s.Game = NewGame(conf.FallbackGameMode)
-	s.Map = s.MapRotation.NextMap(s.Mode(), "")
+	s.GameMode = NewGame(conf.FallbackGameMode)
+	s.Map = s.MapRotation.NextMap(s.GameMode, "")
 
 	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
 	if err != nil {

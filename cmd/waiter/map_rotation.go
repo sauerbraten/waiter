@@ -13,7 +13,7 @@ type MapRotation struct {
 }
 
 func (mr *MapRotation) NextMap(mode GameMode, currentMap string) string {
-	if mode.ID() == s.Mode().ID() {
+	if mode.ID() == s.GameMode.ID() {
 		if len(mr.queue) > 0 {
 			mapp := mr.queue[0]
 			mr.queue = mr.queue[1:]
@@ -76,8 +76,8 @@ func (mr *MapRotation) queueMap(mapp string) (err string) {
 	if mr.inQueue(mapp) {
 		return mapp + " is already queued!"
 	}
-	if !mr.inPool(s.Mode(), mapp) {
-		return mapp + " is not in the map pool for " + s.Mode().ID().String() + "!"
+	if !mr.inPool(s.GameMode, mapp) {
+		return mapp + " is not in the map pool for " + s.GameMode.ID().String() + "!"
 	}
 	mr.queue = append(mr.queue, mapp)
 	return ""

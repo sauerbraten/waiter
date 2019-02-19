@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -22,13 +23,16 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 		}
 
 	case "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue":
-		queueMap(c, parts[1:])
+		go queueMap(c, parts[1:])
 
 	case "keepteams", "persist", "persistteams":
 		toggleKeepTeams(c, parts[1:])
 
 	case "competitive":
 		toggleCompetitiveMode(c, parts[1:])
+
+	case "ip", "ips":
+		go lookupIPs(c, parts[1:])
 
 	default:
 		c.Send(nmc.ServerMessage, cubecode.Fail("unknown command"))
@@ -118,6 +122,29 @@ func toggleCompetitiveMode(c *Client, args []string) {
 			c.Send(nmc.ServerMessage, "competitive mode is on")
 		} else {
 			c.Send(nmc.ServerMessage, "competitive mode is off")
+		}
+	}
+}
+
+func lookupIPs(c *Client, args []string) {
+	if c.Role < role.Auth || len(args) < 1 {
+		return
+	}
+	for _, query := range args {
+		var target *Client
+		// try CN
+		cn, err := strconv.Atoi(query)
+		if err == nil {
+			target = s.Clients.GetClientByCN(uint32(cn))
+		}
+		if err != nil || target == nil {
+			target = s.Clients.FindClientByName(query)
+		}
+
+		if target != nil {
+			c.Send(nmc.ServerMessage, fmt.Sprintf("%s has IP %s", s.Clients.UniqueName(target), target.Peer.Address.IP))
+		} else {
+			c.Send(nmc.ServerMessage, fmt.Sprintf("could not find a client matching '%s'", query))
 		}
 	}
 }

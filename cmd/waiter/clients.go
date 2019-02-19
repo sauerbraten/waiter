@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
@@ -54,6 +55,16 @@ func (cm *ClientManager) GetClientByPeer(peer *enet.Peer) *Client {
 		}
 	}
 
+	return nil
+}
+
+func (cm *ClientManager) FindClientByName(name string) *Client {
+	name = strings.ToLower(name)
+	for _, c := range cm.cs {
+		if strings.Contains(c.Name, name) {
+			return c
+		}
+	}
 	return nil
 }
 

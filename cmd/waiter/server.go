@@ -192,14 +192,14 @@ func (s *Server) Intermission() {
 	// notify all clients
 	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
 
+	s.GameMode.End()
+
 	nextMap := s.MapRotation.NextMap(s.GameMode, s.Map)
 
 	// start 5 second timer
 	s.PendingMapChange = time.AfterFunc(5*time.Second, func() {
 		s.ChangeMap(s.GameMode.ID(), nextMap)
 	})
-
-	// TODO: send server messages with some top stats
 
 	s.Clients.Broadcast(nil, nmc.ServerMessage, "next up: "+nextMap)
 }

@@ -69,6 +69,7 @@ func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
 
 	switch nmc.ID(payload[0]) {
 	case nmc.Position,
+		nmc.ServerInfo,
 		nmc.Welcome,
 		nmc.InitializeClient,
 		nmc.Leave,

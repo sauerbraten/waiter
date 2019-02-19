@@ -41,10 +41,10 @@ type ctfMode struct {
 	evil flag
 }
 
-func newCTFMode(duration time.Duration, keepTeams bool, intermission func()) ctfMode {
+func newCTFMode() ctfMode {
 	return ctfMode{
-		timedMode: newTimedMode(duration, intermission),
-		teamMode:  newTeamMode(false, keepTeams, "good", "evil"),
+		timedMode: newTimedMode(),
+		teamMode:  newTeamMode(false, "good", "evil"),
 	}
 }
 
@@ -314,7 +314,7 @@ func (ctf *ctfMode) HandleDeath(_, victim *Client) {
 	ctf.DropFlag(victim)
 }
 
-func (ctf *ctfMode) Intermission() {
+func (ctf *ctfMode) End() {
 	// todo: print most flag scores/returns/steals
 }
 
@@ -335,15 +335,15 @@ type EfficCTF struct {
 
 // assert interface implementations at compile time
 var (
-	_ GameMode = NewEfficCTF(1*time.Minute, false)
-	_ TeamMode = NewEfficCTF(1*time.Minute, false)
-	_ CTFMode  = NewEfficCTF(1*time.Minute, false)
+	_ GameMode = &EfficCTF{}
+	_ TeamMode = &EfficCTF{}
+	_ CTFMode  = &EfficCTF{}
 )
 
-func NewEfficCTF(duration time.Duration, keepTeams bool) *EfficCTF {
+func NewEfficCTF() *EfficCTF {
 	var ectf *EfficCTF
 	ectf = &EfficCTF{
-		ctfMode: newCTFMode(duration, keepTeams, func() { ectf.Intermission() }),
+		ctfMode: newCTFMode(),
 	}
 	return ectf
 }
@@ -358,15 +358,15 @@ type InstaCTF struct {
 
 // assert interface implementations at compile time
 var (
-	_ GameMode = NewInstaCTF(1*time.Minute, false)
-	_ TeamMode = NewInstaCTF(1*time.Minute, false)
-	_ CTFMode  = NewInstaCTF(1*time.Minute, false)
+	_ GameMode = &InstaCTF{}
+	_ TeamMode = &InstaCTF{}
+	_ CTFMode  = &InstaCTF{}
 )
 
-func NewInstaCTF(duration time.Duration, keepTeams bool) *InstaCTF {
+func NewInstaCTF() *InstaCTF {
 	var ictf *InstaCTF
 	ictf = &InstaCTF{
-		ctfMode: newCTFMode(duration, keepTeams, func() { ictf.Intermission() }),
+		ctfMode: newCTFMode(),
 	}
 	return ictf
 }

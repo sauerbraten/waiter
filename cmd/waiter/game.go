@@ -9,25 +9,24 @@ import (
 )
 
 func NewGame(id gamemode.ID) GameMode {
-	d := s.GameDuration
 	mode := func() GameMode {
 		switch id {
 		case gamemode.Insta:
-			return NewInsta(d)
+			return NewInsta()
 		case gamemode.InstaTeam:
-			return NewInstaTeam(d, s.KeepTeams)
+			return NewInstaTeam()
 		case gamemode.Effic:
-			return NewEffic(d)
+			return NewEffic()
 		case gamemode.EfficTeam:
-			return NewEfficTeam(d, s.KeepTeams)
+			return NewEfficTeam()
 		case gamemode.Tactics:
-			return NewTactics(d)
+			return NewTactics()
 		case gamemode.TacticsTeam:
-			return NewTacticsTeam(d, s.KeepTeams)
+			return NewTacticsTeam()
 		case gamemode.InstaCTF:
-			return NewInstaCTF(d, s.KeepTeams)
+			return NewInstaCTF()
 		case gamemode.EfficCTF:
-			return NewEfficCTF(d, s.KeepTeams)
+			return NewEfficCTF()
 		default:
 			return nil
 		}

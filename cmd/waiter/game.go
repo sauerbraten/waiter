@@ -50,7 +50,7 @@ type CasualGame struct {
 	GameMode
 }
 
-func (cg *CasualGame) Mode() GameMode { return cg.GameMode }
+func (g *CasualGame) Mode() GameMode { return g.GameMode }
 
 func (*CasualGame) Start() {}
 
@@ -58,19 +58,20 @@ func (*CasualGame) ConfirmSpawn(*Client) {}
 
 type CompetitiveGame struct {
 	GameMode
+	started        bool
 	mapLoadPending map[*Client]struct{}
 }
 
-func NewCompetitiveGame(mode GameMode) CompetitiveGame {
-	return CompetitiveGame{
+func NewCompetitiveGame(mode GameMode) *CompetitiveGame {
+	return &CompetitiveGame{
 		GameMode:       mode,
 		mapLoadPending: map[*Client]struct{}{},
 	}
 }
 
-func (g CompetitiveGame) Mode() GameMode { return g.GameMode }
+func (g *CompetitiveGame) Mode() GameMode { return g.GameMode }
 
-func (g CompetitiveGame) Start() {
+func (g *CompetitiveGame) Start() {
 	s.Clients.Broadcast(nil, nmc.ServerMessage, "waiting for all players to load the map")
 	s.PauseGame(nil)
 	s.Clients.ForEach(func(c *Client) {
@@ -80,18 +81,20 @@ func (g CompetitiveGame) Start() {
 	})
 }
 
-func (comp CompetitiveGame) ConfirmSpawn(c *Client) {
-	delete(comp.mapLoadPending, c)
-	if len(comp.mapLoadPending) == 0 {
-		s.Clients.Broadcast(nil, nmc.ServerMessage, "all players spawned")
-		s.ResumeGame(nil)
+func (g *CompetitiveGame) ConfirmSpawn(c *Client) {
+	if _, ok := g.mapLoadPending[c]; ok {
+		delete(g.mapLoadPending, c)
+		if len(g.mapLoadPending) == 0 {
+			s.Clients.Broadcast(nil, nmc.ServerMessage, "all players spawned")
+			s.ResumeGame(nil)
+		}
 	}
 }
 
-func (comp CompetitiveGame) Leave(c *Client) {
+func (g *CompetitiveGame) Leave(c *Client) {
 	if c.GameState.State == playerstate.Dead || c.GameState.State == playerstate.Alive {
 		s.PauseGame(nil)
 		s.Clients.Broadcast(nil, nmc.ServerMessage, "a player left the game")
 	}
-	comp.GameMode.Leave(c)
+	g.GameMode.Leave(c)
 }

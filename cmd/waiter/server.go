@@ -79,7 +79,9 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 
 	if c.AuthRequiredBecause == disconnectreason.None {
 		s.Join(c)
-		go s.handleAuthRequest(c, authDomain, authName, onAutoAuthSuccess, onAutoAuthFailure)
+		if authDomain == s.PrimaryAuthDomain && authName != "" {
+			go s.handleAuthRequest(c, authDomain, authName, onAutoAuthSuccess, onAutoAuthFailure)
+		}
 	} else if authDomain == s.PrimaryAuthDomain && authName != "" {
 		// not in a new goroutine, so client does not get confused and sends nmc.ClientPing before the player joined
 		s.handleAuthRequest(c, authDomain, authName,

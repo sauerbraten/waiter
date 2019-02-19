@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"sort"
 	"time"
 
@@ -150,11 +149,9 @@ func newTeamMode(otherTeamsAllowed bool, names ...string) teamMode {
 }
 
 func (tm *teamMode) selectTeam(c *Client) *Team {
-	if s.KeepTeams {
-		log.Println("trying to keep team")
+	if s.KeepTeams || s.CompetitiveMode {
 		for _, t := range tm.teams {
 			if c.Team.Name == t.Name {
-				log.Println("leaving", c, "in team", t.Name)
 				return t
 			}
 		}

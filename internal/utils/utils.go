@@ -293,5 +293,8 @@ func CountryByIP(ip net.IP) string {
 		return ""
 	}
 
-	return countryByISO2[strings.TrimSpace(string(content))]
+	bla := string(content)
+	log.Println("ipinfo.io returned", bla)
+	log.Println("returning", countryByISO2[strings.TrimSpace(bla)])
+	return countryByISO2[strings.TrimSpace(bla)]
 }

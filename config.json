@@ -23,7 +23,7 @@
 
 	// wether ot not to send client's IPs via netinfo. when set to true, the first 3 bytes of the IPs will be sent (e.g. 53.253.53.0),
 	// otherwise, "0.0.0.0" will be sent for every client.
-	"send_client_ips_via_extinfo": true,
+	"send_client_ips_via_extinfo": false,
 
 	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things do not work!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
 

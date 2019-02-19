@@ -52,14 +52,10 @@ func (s *Server) handleExtinfoRequests() {
 	log.Println("listening for info requests on", laddr.String())
 
 	for {
-		req := make(protocol.Packet, 16)
+		req := make(protocol.Packet, 64)
 		n, raddr, err := conn.ReadFromUDP(req)
 		if err != nil {
 			log.Println(err)
-			continue
-		}
-		if n > 5 {
-			log.Println("malformed info request:", req[:n], "from", raddr)
 			continue
 		}
 		req = req[:n]

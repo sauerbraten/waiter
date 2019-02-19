@@ -280,7 +280,7 @@ var countryByISO2 = map[string]string{
 }
 
 func CountryByIP(ip net.IP) string {
-	resp, err := http.Get("https://ipinfo.io/" + ip.String() + "/json")
+	resp, err := http.Get("https://ipinfo.io/" + ip.String() + "/country")
 	if err != nil {
 		log.Println("error looking up country of", ip, "at ipinfo.io:", err)
 		return ""
@@ -293,8 +293,5 @@ func CountryByIP(ip net.IP) string {
 		return ""
 	}
 
-	bla := string(content)
-	log.Println("ipinfo.io returned", bla)
-	log.Println("returning", countryByISO2[strings.TrimSpace(bla)])
-	return countryByISO2[strings.TrimSpace(bla)]
+	return countryByISO2[strings.TrimSpace(string(content))]
 }

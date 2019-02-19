@@ -94,3 +94,21 @@ func Valid(gm ID) bool {
 		return false
 	}
 }
+
+func IsCTF(gm ID) bool {
+	switch gm {
+	case InstaCTF, EfficCTF:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsCapture(gm ID) bool {
+	switch gm {
+	case Capture, RegenCapture:
+		return true
+	default:
+		return false
+	}
+}

@@ -18,6 +18,7 @@ type GameMode interface {
 	NeedMapInfo() bool
 	Start()
 	End()
+	Ended() bool
 	CleanUp()
 
 	Pause(*Client)
@@ -49,7 +50,11 @@ type timedMode struct {
 }
 
 func newTimedMode() timedMode {
-	return timedMode{StartTimer(s.GameDuration*time.Minute, s.Intermission)}
+	return timedMode{}
+}
+func (tm *timedMode) Start() {
+	tm.t = StartTimer(s.GameDuration, s.Intermission)
+	s.Clients.Broadcast(nil, nmc.TimeLeft, s.GameDuration)
 }
 
 func (tm *timedMode) Pause(c *Client) {
@@ -73,6 +78,16 @@ func (tm *timedMode) Resume(c *Client) {
 }
 
 func (tm *timedMode) End() {
+	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
+	tm.t.Stop()
+}
+
+func (tm *timedMode) Ended() bool { return tm.t.Stopped() }
+
+func (tm *timedMode) CleanUp() {
+	if tm.Paused() {
+		tm.Resume(nil)
+	}
 	tm.t.Stop()
 }
 
@@ -80,8 +95,6 @@ func (tm *timedMode) TimeLeft() time.Duration { return tm.t.TimeLeft }
 
 // methods that are shadowed by CompetitiveMode so all modes implement GameMode
 type casualMode struct{}
-
-func (*casualMode) Start() {}
 
 func (*casualMode) ConfirmSpawn(*Client) {}
 
@@ -116,8 +129,6 @@ func (*noItemsMode) Init(*Client) {}
 func (*noItemsMode) HandleDeath(*Client, *Client) {}
 
 func (*noItemsMode) HandlePacket(*Client, nmc.ID, *protocol.Packet) bool { return false }
-
-func (*noItemsMode) CleanUp() {}
 
 type teamlessMode struct{}
 

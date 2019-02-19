@@ -275,16 +275,7 @@ outer:
 				return
 			}
 			mm := mastermode.ID(_mm)
-			if mm < mastermode.Open || mm > mastermode.Private {
-				log.Println("invalid mastermode", mm, "requested")
-				return
-			}
-			if client.Role == role.None {
-				client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
-				return
-			}
-			s.MasterMode = mm
-			s.Clients.Broadcast(nil, nmc.MasterMode, mm)
+			s.SetMasterMode(client, mm)
 
 		case nmc.Spectator:
 			_spectator, ok := p.GetInt()

@@ -1,12 +1,14 @@
 package pausableticker
 
 import (
+	"sync"
 	"time"
 )
 
 type Ticker struct {
 	C <-chan time.Time // The channel on which the ticks are delivered.
 
+	sync.Mutex
 	pause  chan bool
 	paused bool
 	stop   chan struct{}
@@ -32,6 +34,8 @@ func New(d time.Duration) *Ticker {
 }
 
 func (t *Ticker) run(c chan<- time.Time) {
+	defer close(t.stop)
+
 	for {
 		select {
 		case c <- <-t.ticker.C:
@@ -39,20 +43,27 @@ func (t *Ticker) run(c chan<- time.Time) {
 			if shouldPause {
 				t.paused = true
 				for shouldPause {
-					shouldPause = <-t.pause
+					select {
+					case shouldPause = <-t.pause:
+					case <-t.stop:
+						return
+					}
 				}
 				t.paused = false
 			}
 		case <-t.stop:
-			close(t.pause)
-			close(t.stop)
 			return
 		}
 	}
 }
 
 func (t *Ticker) Pause() {
-	t.pause <- true
+	t.Lock()
+	defer t.Unlock()
+
+	if t.pause != nil {
+		t.pause <- true
+	}
 }
 
 func (t *Ticker) Paused() bool {
@@ -60,11 +71,28 @@ func (t *Ticker) Paused() bool {
 }
 
 func (t *Ticker) Resume() {
-	t.pause <- false
+	t.Lock()
+	defer t.Unlock()
+
+	if t.pause != nil {
+		t.pause <- false
+	}
 }
 
 func (t *Ticker) Stop() {
-	t.stop <- struct{}{}
-	<-t.stop
-	t.ticker.Stop()
+	t.Lock()
+	defer t.Unlock()
+
+	if t.stop != nil {
+		close(t.pause)
+		t.pause = nil
+		t.stop <- struct{}{}
+		<-t.stop
+		t.stop = nil
+		go t.ticker.Stop()
+	}
+}
+
+func (t *Ticker) Stopped() bool {
+	return t.stop == nil
 }

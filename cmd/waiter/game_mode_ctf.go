@@ -13,11 +13,6 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
-type CTFMode interface {
-	TeamMode
-	IsCTF() // used as marker for ctf modes
-}
-
 type flag struct {
 	id            int32
 	team          int32
@@ -47,9 +42,6 @@ func newCTFMode() ctfMode {
 		teamMode:  newTeamMode(false, "good", "evil"),
 	}
 }
-
-// implement CTFMode interface
-func (*ctfMode) IsCTF() {}
 
 func (ctf *ctfMode) Pause(c *Client) {
 	if ctf.good.pendingReset != nil {
@@ -314,10 +306,6 @@ func (ctf *ctfMode) HandleDeath(_, victim *Client) {
 	ctf.DropFlag(victim)
 }
 
-func (ctf *ctfMode) End() {
-	// todo: print most flag scores/returns/steals
-}
-
 func (ctf *ctfMode) CleanUp() {
 	if ctf.good.pendingReset != nil {
 		ctf.good.pendingReset.Stop()
@@ -325,6 +313,7 @@ func (ctf *ctfMode) CleanUp() {
 	if ctf.evil.pendingReset != nil {
 		ctf.evil.pendingReset.Stop()
 	}
+	ctf.timedMode.CleanUp()
 }
 
 type EfficCTF struct {
@@ -337,7 +326,6 @@ type EfficCTF struct {
 var (
 	_ GameMode = &EfficCTF{}
 	_ TeamMode = &EfficCTF{}
-	_ CTFMode  = &EfficCTF{}
 )
 
 func NewEfficCTF() *EfficCTF {
@@ -360,7 +348,6 @@ type InstaCTF struct {
 var (
 	_ GameMode = &InstaCTF{}
 	_ TeamMode = &InstaCTF{}
-	_ CTFMode  = &InstaCTF{}
 )
 
 func NewInstaCTF() *InstaCTF {

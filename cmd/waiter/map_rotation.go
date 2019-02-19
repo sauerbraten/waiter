@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/utils"
 )
 
@@ -33,18 +34,17 @@ func (mr *MapRotation) NextMap(mode GameMode, currentMap string) string {
 		return pool[utils.RNG.Intn(len(pool))]
 	}
 
-	switch mode.(type) {
-	case CTFMode:
+	if gamemode.IsCTF(mode.ID()) {
 		return nextMap(mr.CTF)
-	case CaptureMode:
+	} else if gamemode.IsCapture(mode.ID()) {
 		return nextMap(mr.Capture)
-	default:
+	} else {
 		return nextMap(mr.Deathmatch)
 	}
 }
 
-func (mr *MapRotation) inPool(mode GameMode, mapp string) bool {
-	_inPool := func(pool []string) bool {
+func (mr *MapRotation) InPool(mode GameMode, mapp string) bool {
+	inPool := func(pool []string) bool {
 		for _, m := range pool {
 			if m == mapp {
 				return true
@@ -53,13 +53,12 @@ func (mr *MapRotation) inPool(mode GameMode, mapp string) bool {
 		return false
 	}
 
-	switch mode.(type) {
-	case CTFMode:
-		return _inPool(mr.CTF)
-	case CaptureMode:
-		return _inPool(mr.Capture)
-	default:
-		return _inPool(mr.Deathmatch)
+	if gamemode.IsCTF(mode.ID()) {
+		return inPool(mr.CTF)
+	} else if gamemode.IsCapture(mode.ID()) {
+		return inPool(mr.Capture)
+	} else {
+		return inPool(mr.Deathmatch)
 	}
 }
 
@@ -76,7 +75,7 @@ func (mr *MapRotation) queueMap(mapp string) (err string) {
 	if mr.inQueue(mapp) {
 		return mapp + " is already queued!"
 	}
-	if !mr.inPool(s.GameMode, mapp) {
+	if !mr.InPool(s.GameMode, mapp) {
 		return mapp + " is not in the map pool for " + s.GameMode.ID().String() + "!"
 	}
 	mr.queue = append(mr.queue, mapp)

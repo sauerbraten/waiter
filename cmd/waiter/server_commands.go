@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
 	"github.com/sauerbraten/waiter/internal/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
@@ -103,6 +104,8 @@ func toggleCompetitiveMode(c *Client, args []string) {
 		case 1:
 			// starts at next map
 			s.CompetitiveMode = true
+			// but lock server now
+			s.SetMasterMode(c, mastermode.Locked)
 		default:
 			if active {
 				// stops immediately

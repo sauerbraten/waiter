@@ -63,8 +63,10 @@ func init() {
 		Auth:        auth.NewManager(users),
 		MapRotation: &mr,
 	}
+	s.GameDuration = s.GameDuration * time.Minute // duration is parsed without unit from config file
 	s.GameMode = NewGame(conf.FallbackGameMode)
 	s.Map = s.MapRotation.NextMap(s.GameMode, "")
+	s.GameMode.Start()
 
 	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
 	if err != nil {

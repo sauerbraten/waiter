@@ -198,9 +198,6 @@ func (s *Server) Empty() {
 }
 
 func (s *Server) Intermission() {
-	// notify all clients
-	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
-
 	s.GameMode.End()
 
 	nextMap := s.MapRotation.NextMap(s.GameMode, s.Map)
@@ -214,7 +211,7 @@ func (s *Server) Intermission() {
 }
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
-	// cancel pending game mode goroutines
+	// cancel pending timers
 	if s.GameMode != nil {
 		s.GameMode.CleanUp()
 	}
@@ -226,15 +223,26 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 
 	s.Map = mapp
 	s.GameMode = NewGame(mode)
+
 	s.Clients.ForEach(s.GameMode.Join)
-
 	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
-
+	s.GameMode.Start()
 	s.Clients.MapChange()
 
-	s.GameMode.Start()
-
 	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
+}
+
+func (s *Server) SetMasterMode(c *Client, mm mastermode.ID) {
+	if mm < mastermode.Open || mm > mastermode.Private {
+		log.Println("invalid mastermode", mm, "requested")
+		return
+	}
+	if c.Role == role.None {
+		c.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
+		return
+	}
+	s.MasterMode = mm
+	s.Clients.Broadcast(nil, nmc.MasterMode, mm)
 }
 
 type hit struct {

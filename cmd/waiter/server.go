@@ -156,6 +156,9 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(client)
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
+	if len(s.Clients.PrivilegedUsers()) == 0 {
+		s.Unsupervised()
+	}
 	if s.Clients.NumberOfClientsConnected() == 0 {
 		s.Empty()
 	}
@@ -187,11 +190,15 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 	s.Disconnect(victim, disconnectreason.Kick)
 }
 
+func (s *Server) Unsupervised() {
+	s.GameMode.Resume(nil)
+	s.MasterMode = mastermode.Open
+}
+
 func (s *Server) Empty() {
 	s.MapRotation.queue = s.MapRotation.queue[:0]
 	s.KeepTeams = false
 	s.CompetitiveMode = false
-	s.MasterMode = mastermode.Open
 	if s.GameMode.ID() != s.FallbackGameMode {
 		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(NewGame(s.FallbackGameMode), s.Map))
 	}

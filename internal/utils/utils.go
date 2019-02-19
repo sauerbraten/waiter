@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 )
@@ -281,7 +280,7 @@ var countryByISO2 = map[string]string{
 }
 
 func CountryByIP(ip net.IP) string {
-	resp, err := http.Get(path.Join("http://ipinfo.io", ip.String(), "json"))
+	resp, err := http.Get("https://ipinfo.io/" + ip.String() + "/json")
 	if err != nil {
 		log.Println("error looking up country of", ip, "at ipinfo.io:", err)
 		return ""

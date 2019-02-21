@@ -14,10 +14,9 @@
 package auth
 
 import (
+	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"log"
 	"math/big"
 	mrand "math/rand"
@@ -89,7 +88,7 @@ func (m *Manager) GenerateChallenge(cn uint32, domain, name string, onSuccess Ca
 	log.Println("generating challenge for", name, domain)
 	u, ok := m.users[UserIdentifier{Name: name, Domain: domain}]
 	if !ok {
-		return "", 0, errors.New("auth: user not found")
+		return "", 0, errors.New("auth: user '" + name + "' not found in domain '" + domain + "'")
 	}
 
 	onSuccessWithRole := func() { onSuccess(u.Role) }
@@ -121,30 +120,26 @@ func (m *Manager) CheckAnswer(requestID, cn uint32, domain string, answer string
 	}
 }
 
-func generateChallenge(pub publicKey) (challenge, solution string, err error) {
-	secret := make([]byte, 24)
-	_, err = rand.Read(secret)
-	if err != nil {
-		return "", "", fmt.Errorf("auth: not enough entropy to create a challenge: %v", err)
+// from ecjacobian::print() in shared/crypto.cpp
+func encodePoint(x, y *big.Int) (s string) {
+	if y.Bit(0) == 1 {
+		s += "-"
+	} else {
+		s += "+"
 	}
+	s += x.Text(16)
+	return
+}
 
-	// from ecjacobian::print() in shared/crypto.cpp
-	encodePoint := func(x, y *big.Int) (s string) {
-		if y.Sign() > 0 {
-			s += "+"
-		} else {
-			s += "-"
-		}
-		s += hex.EncodeToString(x.Bytes())
-		return
-	}
+func generateChallenge(pub publicKey) (challenge, solution string, err error) {
+	secret, x, y, err := elliptic.GenerateKey(p192, rand.Reader)
 
 	// what we send to the client
-	challenge = encodePoint(p192.ScalarBaseMult(secret))
+	challenge = encodePoint(x, y)
 
 	// what the client should return if she applies her private key to the challenge
-	solutionX, _ := p192.ScalarMult(pub.x, pub.y, secret)
-	solution = hex.EncodeToString(solutionX.Bytes())
+	solX, _ := p192.ScalarMult(pub.x, pub.y, secret)
+	solution = solX.Text(16)
 
 	return
 }

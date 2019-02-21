@@ -1,65 +1,44 @@
 [
-	{
+        {
                 "name": "pix",
                 "domain": "waiter",
-                "public_key": {
-                        "x": "6a3913aa4e4a7a45aa890d289dfe099ed7825a80927c2edb",
-                        "y": "4dc4740fd32e91326cdcb2c8ee9d5eed4bb080def0e2b329"
-                },
+                "public_key": "+6a3913aa4e4a7a45aa890d289dfe099ed7825a80927c2edb",
                 "role": "admin"
         },
         {
                 "name": "miu",
                 "domain": "waiter",
-                "public_key": {
-                        "x": "ae6b173130fb836b5260ae11e30bee912e1ab0b35916c843",
-                        "y": "ebf7d8f2727768a18903d8cd91f936737aa9349af19fbad1"
-                },
+                "public_key": "+ae6b173130fb836b5260ae11e30bee912e1ab0b35916c843",
                 "role": "admin"
         },
         {
                 "name": "Tagger",
                 "domain": "waiter",
-                "public_key": {
-                        "x": "a1e915b99c0a2cc5a1b3590377e04bdc490f46fab7a7fc00",
-                        "y": "4b710459cf8b5eeb6d42e89ae16838a8f1f08397489190d4"
-                },
+                "public_key": "+a1e915b99c0a2cc5a1b3590377e04bdc490f46fab7a7fc00",
                 "role": "admin"
         },
         {
                 "name": "Ignis",
                 "domain": "waiter",
-                "public_key": {
-                        "x": "984eac6f4eaffe7b3b8d92aba55ab0f5f68265036960e79",
-                        "y": "9f0de9959135871a207b5c2e668c7a9015828263fa71a37f"
-                },
+                "public_key": "+984eac6f4eaffe7b3b8d92aba55ab0f5f68265036960e79",
                 "role": "admin"
         },
         {
                 "name": "Alli",
                 "domain": "waiter",
-                "public_key": {
-                        "x": "1f1820a79067e18d3f5de01b14cb7b4ff04609976dccc0cf",
-                        "y": "32e05ddc585fcd9c665d7d459d66a7f385e6e0215f57035d"
-                },
+                "public_key": "+1f1820a79067e18d3f5de01b14cb7b4ff04609976dccc0cf",
                 "role": "admin"
         },
         {
                 "name": "Agalloch",
                 "domain": "waiter",
-                "public_key": {
-                        "x": "8c70ece0fdc0c5500bd1ca1c0628b427fc068fbd4cceda8",
-                        "y": "74974e29398515bf738bd961484a455aa122d0273c6da8a4"
-                },
+                "public_key": "+8c70ece0fdc0c5500bd1ca1c0628b427fc068fbd4cceda8",
                 "role": "admin"
         },
         {
                 "name": "Frosty",
                 "domain": "waiter",
-                "public_key": {
-                        "x": "99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2",
-                        "y": "2c3b89d5359440d6d19adcf765d9d8a9861fc47c7a73d41"
-                },
+                "public_key": "+99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2",
                 "role": "master"
         }
 ]

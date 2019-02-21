@@ -11,7 +11,7 @@ import (
 
 	"github.com/sauerbraten/chef/pkg/ips"
 
-	"github.com/sauerbraten/waiter/internal/bans"
+	"github.com/sauerbraten/waiter/pkg/bans"
 )
 
 // master server protocol constants

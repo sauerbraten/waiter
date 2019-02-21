@@ -8,10 +8,10 @@ import (
 	"github.com/sauerbraten/jsonfile"
 
 	"github.com/sauerbraten/waiter/internal/auth"
-	"github.com/sauerbraten/waiter/internal/bans"
 	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/masterserver"
 	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 

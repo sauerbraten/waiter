@@ -6,10 +6,10 @@ import (
 
 	"github.com/ivahaev/timer"
 
+	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
-	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
@@ -88,6 +88,7 @@ func (ctf *ctfMode) teamByFlag(f *flag) string {
 func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.Packet) bool {
 	switch packetType {
 	case nmc.InitFlags:
+		log.Println("init flag packet received:", p)
 		ctf.initFlags(ctf.parseFlags(p))
 
 	case nmc.TakeFlag:
@@ -104,6 +105,7 @@ func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.
 		ctf.touchFlag(client, id, version)
 
 	case nmc.TryDropFlag:
+		log.Println("drop flag packet received:", p)
 		ctf.DropFlag(client)
 
 	default:

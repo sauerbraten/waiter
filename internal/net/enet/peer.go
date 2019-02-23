@@ -87,12 +87,12 @@ func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
 		nmc.ServerMessage,
 		nmc.CurrentMaster,
 		nmc.AuthChallenge,
-		//nmc.InitFlags,
-		//nmc.DropFlag,
-		//nmc.ReturnFlag,
-		//nmc.TakeFlag,
-		//nmc.ScoreFlag,
-		//nmc.ResetFlag,
+		nmc.InitFlags,
+		nmc.DropFlag,
+		nmc.ReturnFlag,
+		nmc.TakeFlag,
+		nmc.ScoreFlag,
+		nmc.ResetFlag,
 		nmc.Client:
 	// do nothing
 	default:

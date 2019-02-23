@@ -14,7 +14,7 @@ import (
 )
 
 type flag struct {
-	id            int32
+	index         int32
 	team          int32
 	owner         *Client
 	version       int32
@@ -32,14 +32,16 @@ type ctfMode struct {
 	timedMode
 	teamMode
 	flagMode
-	good flag
-	evil flag
+	good         flag
+	evil         flag
+	flagsByIndex map[int32]*flag
 }
 
 func newCTFMode() ctfMode {
 	return ctfMode{
-		timedMode: newTimedMode(),
-		teamMode:  newTeamMode(false, "good", "evil"),
+		timedMode:    newTimedMode(),
+		teamMode:     newTeamMode(false, "good", "evil"),
+		flagsByIndex: map[int32]*flag{},
 	}
 }
 
@@ -63,14 +65,14 @@ func (ctf *ctfMode) Resume(c *Client) {
 	ctf.timedMode.Resume(c)
 }
 
-func (ctf *ctfMode) flagByID(id int32) (*flag, bool) {
-	switch id {
-	case 0:
-		return &ctf.good, true
+func (ctf *ctfMode) flagByTeamID(team int32) *flag {
+	switch team {
 	case 1:
-		return &ctf.evil, true
+		return &ctf.good
+	case 2:
+		return &ctf.evil
 	default:
-		return nil, false
+		return nil
 	}
 }
 
@@ -88,11 +90,10 @@ func (ctf *ctfMode) teamByFlag(f *flag) string {
 func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.Packet) bool {
 	switch packetType {
 	case nmc.InitFlags:
-		log.Println("init flag packet received:", p)
-		ctf.initFlags(ctf.parseFlags(p))
+		ctf.initFlags(p)
 
 	case nmc.TakeFlag:
-		id, ok := p.GetInt()
+		i, ok := p.GetInt()
 		if !ok {
 			log.Println("could not read flag ID from takeflag packet (packet too short):", p)
 			break
@@ -102,11 +103,10 @@ func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.
 			log.Println("could not read flag version from takeflag packet (packet too short):", p)
 			break
 		}
-		ctf.touchFlag(client, id, version)
+		ctf.touchFlag(client, i, version)
 
 	case nmc.TryDropFlag:
-		log.Println("drop flag packet received:", p)
-		ctf.DropFlag(client)
+		ctf.dropFlag(client)
 
 	default:
 		return false
@@ -115,7 +115,7 @@ func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.
 	return true
 }
 
-func (*ctfMode) parseFlags(p *protocol.Packet) (f1, f2 *flag) {
+func (ctf *ctfMode) initFlags(p *protocol.Packet) (f1, f2 *flag) {
 	numFlags, ok := p.GetInt()
 	if !ok {
 		log.Println("could not read number of flags from initflags packet (packet too short):", p)
@@ -126,56 +126,43 @@ func (*ctfMode) parseFlags(p *protocol.Packet) (f1, f2 *flag) {
 		return
 	}
 
-	f1, f2 = &flag{}, &flag{}
-	for id, flag := range []*flag{f1, f2} {
-		flag.id = int32(id)
-
-		flag.team, ok = p.GetInt()
+	for i := int32(0); i < numFlags; i++ {
+		team, ok := p.GetInt()
 		if !ok {
 			log.Println("could not read flag team from initflags packet (packet too short):", p)
 			return
 		}
 
-		flag.spawnLocation, ok = parseVector(p)
+		spawnLocation, ok := parseVector(p)
 		if !ok {
 			log.Println("could not read flag spawn location from initflags packet (packet too short):", p)
 			return
 		}
-		flag.spawnLocation = flag.spawnLocation.Mul(1 / geom.DMF)
+		spawnLocation = spawnLocation.Mul(1 / geom.DMF)
+
+		flag := ctf.flagByTeamID(team)
+		if flag == nil {
+			log.Printf("received invalid team ID '%d' in CTF mode", team)
+			continue
+		}
+
+		flag.index, flag.team, flag.spawnLocation = i, team, spawnLocation
+		ctf.flagsByIndex[i] = flag
 	}
+
+	ctf.flagsInitialized = true
 
 	return
 }
 
-func (ctf *ctfMode) initFlags(f1, f2 *flag) {
-	if ctf.flagsInitialized || f1 == nil || f2 == nil {
-		log.Println("ignoring init flags")
-		return
-	}
-
-	for _, f := range []*flag{f1, f2} {
-		flag, ok := ctf.flagByID(f.id)
-		if !ok {
-			log.Printf("received invalid flag ID '%d' in CTF mode", f.id)
-			continue
-		}
-
-		*flag = *f
-	}
-
-	log.Println("flags initialized")
-
-	ctf.flagsInitialized = true
-}
-
-func (ctf *ctfMode) touchFlag(client *Client, id int32, version int32) {
+func (ctf *ctfMode) touchFlag(client *Client, i int32, version int32) {
 	if !ctf.flagsInitialized {
 		return
 	}
 
-	flag, ok := ctf.flagByID(id)
-	if !ok {
-		log.Printf("received invalid flag id '%d' in CTF mode", id)
+	flag := ctf.flagsByIndex[i]
+	if flag == nil {
+		log.Printf("received invalid flag index '%d' in CTF mode", i)
 		return
 	}
 
@@ -192,12 +179,12 @@ func (ctf *ctfMode) touchFlag(client *Client, id int32, version int32) {
 		// player touches her own, dropped flag
 		ctf.returnFlag(flag)
 		flag.version++
-		s.Clients.Broadcast(nil, nmc.ReturnFlag, client.CN, flag.id, flag.version)
+		s.Clients.Broadcast(nil, nmc.ReturnFlag, client.CN, flag.index, flag.version)
 		return
 	} else {
-		// player touches her own, spawned flag
-		enemyFlag, ok := ctf.flagByID(1 - id)
-		if !ok {
+		// player touches her own flag at its base
+		enemyFlag := ctf.flagsByIndex[1-flag.index]
+		if enemyFlag == nil {
 			log.Println("could not get other flag in CTF mode")
 			return
 		}
@@ -208,7 +195,7 @@ func (ctf *ctfMode) touchFlag(client *Client, id int32, version int32) {
 			ctf.teams[team].Score++
 			flag.version++
 			enemyFlag.version++
-			s.Clients.Broadcast(nil, nmc.ScoreFlag, client.CN, enemyFlag.id, enemyFlag.version, flag.id, flag.version, 0, flag.team, ctf.teams[team].Score, client.GameState.Flags)
+			s.Clients.Broadcast(nil, nmc.ScoreFlag, client.CN, enemyFlag.index, enemyFlag.version, flag.index, flag.version, 0, flag.team, ctf.teams[team].Score, client.GameState.Flags)
 			if ctf.teams[team].Score >= 10 {
 				s.Intermission()
 			}
@@ -224,14 +211,12 @@ func (ctf *ctfMode) takeFlag(client *Client, f *flag) {
 	}
 
 	f.version++
-	s.Clients.Broadcast(nil, nmc.TakeFlag, client.CN, f.id, f.version)
+	s.Clients.Broadcast(nil, nmc.TakeFlag, client.CN, f.index, f.version)
 	f.owner = client
 }
 
-func (ctf *ctfMode) DropFlag(client *Client) {
-	log.Println("got drop event from", client)
+func (ctf *ctfMode) dropFlag(client *Client) {
 	if !ctf.flagsInitialized {
-		log.Println("ignoring since flags not initialized")
 		return
 	}
 
@@ -254,11 +239,11 @@ func (ctf *ctfMode) DropFlag(client *Client) {
 	f.owner = nil
 	f.version++
 
-	s.Clients.Broadcast(nil, nmc.DropFlag, client.CN, f.id, f.version, f.dropLocation.Mul(geom.DMF))
+	s.Clients.Broadcast(nil, nmc.DropFlag, client.CN, f.index, f.version, f.dropLocation.Mul(geom.DMF))
 	f.pendingReset = timer.AfterFunc(10*time.Second, func() {
 		ctf.returnFlag(f)
 		f.version++
-		s.Clients.Broadcast(nil, nmc.ResetFlag, f.id, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
+		s.Clients.Broadcast(nil, nmc.ResetFlag, f.index, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
 	})
 	f.pendingReset.Start()
 }
@@ -277,12 +262,14 @@ func (ctf *ctfMode) Init(client *Client) {
 		ctf.teams["evil"].Score,
 	}
 
-	log.Println("iniializing client:", client)
-
 	if ctf.flagsInitialized {
-		log.Println("sending flags")
-		q = append(q, 2)
-		for _, f := range []flag{ctf.good, ctf.evil} {
+		q = append(q, len(ctf.flagsByIndex))
+		for _, i := range []int32{0, 1} {
+			f := ctf.flagsByIndex[i]
+			if f == nil {
+				continue
+			}
+
 			var ownerCN int32 = -1
 			if f.owner != nil {
 				ownerCN = int32(f.owner.CN)
@@ -297,7 +284,6 @@ func (ctf *ctfMode) Init(client *Client) {
 			}
 		}
 	} else {
-		log.Println("not sending flags")
 		q = append(q, 0)
 	}
 
@@ -305,7 +291,7 @@ func (ctf *ctfMode) Init(client *Client) {
 }
 
 func (ctf *ctfMode) Leave(client *Client) {
-	ctf.DropFlag(client)
+	ctf.dropFlag(client)
 	ctf.teamMode.Leave(client)
 }
 
@@ -314,7 +300,7 @@ func (ctf *ctfMode) CanSpawn(c *Client) bool {
 }
 
 func (ctf *ctfMode) HandleDeath(_, victim *Client) {
-	ctf.DropFlag(victim)
+	ctf.dropFlag(victim)
 }
 
 func (ctf *ctfMode) CleanUp() {

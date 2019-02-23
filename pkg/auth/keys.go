@@ -8,44 +8,44 @@ import (
 	"math/big"
 )
 
-type privateKey []byte
+type PrivateKey []byte
 
-type publicKey struct {
+type PublicKey struct {
 	x *big.Int
 	y *big.Int
 }
 
-func (k publicKey) MarshalJSON() ([]byte, error) {
-	return json.Marshal(formatPublicKey(k))
+func (k PublicKey) MarshalJSON() ([]byte, error) {
+	return json.Marshal(FormatPublicKey(k))
 }
 
-func (k *publicKey) UnmarshalJSON(data []byte) error {
+func (k *PublicKey) UnmarshalJSON(data []byte) error {
 	var proxy string
 	err := json.Unmarshal(data, &proxy)
 	if err != nil {
 		return err
 	}
-	pub, err := parsePublicKey(proxy)
+	pub, err := ParsePublicKey(proxy)
 	k.x, k.y = pub.x, pub.y
 	return err
 }
 
-func GenerateKeyPair() (priv privateKey, pub publicKey, err error) {
+func GenerateKeyPair() (priv PrivateKey, pub PublicKey, err error) {
 	priv, pub.x, pub.y, err = elliptic.GenerateKey(p192, rand.Reader)
 	return
 }
 
-func formatPublicKey(pub publicKey) (s string) { return encodePoint(pub.x, pub.y) }
+func FormatPublicKey(pub PublicKey) (s string) { return encodePoint(pub.x, pub.y) }
 
-func parsePublicKey(s string) (publicKey, error) {
+func ParsePublicKey(s string) (PublicKey, error) {
 	if len(s) < 1 {
-		return publicKey{}, errors.New("auth: could not parse public key: too short")
+		return PublicKey{}, errors.New("auth: could not parse public key: too short")
 	}
 
 	neg := s[0] == '-'
 
 	var (
-		pub = publicKey{
+		pub = PublicKey{
 			x: new(big.Int),
 			y: new(big.Int),
 		}
@@ -56,7 +56,7 @@ func parsePublicKey(s string) (publicKey, error) {
 
 	_, ok := pub.x.SetString(s[1:], 16)
 	if !ok {
-		return publicKey{}, errors.New("auth: could not set X coordinate of public key")
+		return PublicKey{}, errors.New("auth: could not set X coordinate of public key")
 	}
 
 	// the next steps find y using the formula y^2 = x^3 - 3*x + B

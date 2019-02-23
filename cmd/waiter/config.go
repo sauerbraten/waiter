@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 )
 
 type Config struct {

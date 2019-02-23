@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sauerbraten/waiter/internal/definitions/mastermode"
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 

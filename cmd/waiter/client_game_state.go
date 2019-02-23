@@ -3,10 +3,10 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/armour"
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
-	"github.com/sauerbraten/waiter/internal/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/net/packet"
+	"github.com/sauerbraten/waiter/pkg/definitions/armour"
+	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
+	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
 )
 
 // The game state of a client.

@@ -6,9 +6,9 @@ import (
 
 	"github.com/ivahaev/timer"
 
-	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
@@ -147,6 +147,7 @@ func (*ctfMode) parseFlags(p *protocol.Packet) (f1, f2 *flag) {
 
 func (ctf *ctfMode) initFlags(f1, f2 *flag) {
 	if ctf.flagsInitialized || f1 == nil || f2 == nil {
+		log.Println("ignoring init flags")
 		return
 	}
 
@@ -159,6 +160,8 @@ func (ctf *ctfMode) initFlags(f1, f2 *flag) {
 
 		*flag = *f
 	}
+
+	log.Println("flags initialized")
 
 	ctf.flagsInitialized = true
 }
@@ -224,7 +227,9 @@ func (ctf *ctfMode) takeFlag(client *Client, f *flag) {
 }
 
 func (ctf *ctfMode) DropFlag(client *Client) {
+	log.Println("got drop event from", client)
 	if !ctf.flagsInitialized {
+		log.Println("ignoring since flags not initialized")
 		return
 	}
 
@@ -270,7 +275,10 @@ func (ctf *ctfMode) Init(client *Client) {
 		ctf.teams["evil"].Score,
 	}
 
+	log.Println("iniializing client:", client)
+
 	if ctf.flagsInitialized {
+		log.Println("sending flags")
 		q = append(q, 2)
 		for _, f := range []flag{ctf.good, ctf.evil} {
 			var ownerCN int32 = -1
@@ -287,6 +295,7 @@ func (ctf *ctfMode) Init(client *Client) {
 			}
 		}
 	} else {
+		log.Println("not sending flags")
 		q = append(q, 0)
 	}
 

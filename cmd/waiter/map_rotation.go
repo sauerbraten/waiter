@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 	"github.com/sauerbraten/waiter/internal/utils"
 )
 

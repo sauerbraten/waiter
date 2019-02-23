@@ -12,7 +12,7 @@ import (
 	"net"
 	"unsafe"
 
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 )
 
 type PeerState uint

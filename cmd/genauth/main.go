@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/sauerbraten/waiter/internal/auth"
-	"github.com/sauerbraten/waiter/internal/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
 )
 
 func main() {

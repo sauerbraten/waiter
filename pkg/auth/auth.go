@@ -22,15 +22,12 @@ import (
 	mrand "math/rand"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
 )
 
 func init() {
 	mrand.Seed(time.Now().UnixNano())
 }
-
-type CallbackWithRole func(rol role.ID)
-type Callback func()
 
 // request holds the data we need to remember between
 // generating a challenge and checking the response.
@@ -41,8 +38,8 @@ type request struct {
 	cn       uint32
 	solution string
 
-	onSuccess Callback
-	onFailure Callback
+	onSuccess func()
+	onFailure func()
 }
 
 type Manager struct {
@@ -61,7 +58,7 @@ func NewManager(users []*User) *Manager {
 	return m
 }
 
-func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, onSuccess, onFailure Callback) (requestID uint32) {
+func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, onSuccess, onFailure func()) (requestID uint32) {
 	requestID = mrand.Uint32()
 	req := &request{
 		id:     requestID,
@@ -76,7 +73,7 @@ func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, onSuccess,
 	return
 }
 
-func (m *Manager) LookupGlobalAuthRequest(requestID uint32) (Callback, Callback, bool) {
+func (m *Manager) LookupGlobalAuthRequest(requestID uint32) (func(), func(), bool) {
 	defer m.ClearAuthRequest(requestID)
 	req, ok := m.pending[requestID]
 	return req.onSuccess, req.onFailure, ok
@@ -84,7 +81,7 @@ func (m *Manager) LookupGlobalAuthRequest(requestID uint32) (Callback, Callback,
 
 func (m *Manager) ClearAuthRequest(requestID uint32) { delete(m.pending, requestID) }
 
-func (m *Manager) GenerateChallenge(cn uint32, domain, name string, onSuccess CallbackWithRole, onFailure Callback) (challenge string, requestID uint32, err error) {
+func (m *Manager) GenerateChallenge(cn uint32, domain, name string, onSuccess func(rol role.ID), onFailure func()) (challenge string, requestID uint32, err error) {
 	log.Println("generating challenge for", name, domain)
 	u, ok := m.users[UserIdentifier{Name: name, Domain: domain}]
 	if !ok {
@@ -131,7 +128,7 @@ func encodePoint(x, y *big.Int) (s string) {
 	return
 }
 
-func generateChallenge(pub publicKey) (challenge, solution string, err error) {
+func generateChallenge(pub PublicKey) (challenge, solution string, err error) {
 	secret, x, y, err := elliptic.GenerateKey(p192, rand.Reader)
 
 	// what we send to the client

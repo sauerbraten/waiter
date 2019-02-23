@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/definitions/role"
-	"github.com/sauerbraten/waiter/pkg/auth"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
-func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess auth.CallbackWithRole, onFailure auth.Callback) {
+func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess func(rol role.ID), onFailure func()) {
 	challenge, requestID, err := s.Auth.GenerateChallenge(client.CN, domain, name, onSuccess, onFailure)
 	if err != nil {
 		log.Println(err)
@@ -21,7 +20,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string, o
 	client.Send(nmc.AuthChallenge, domain, requestID, challenge)
 }
 
-func (s *Server) handleGlobalAuthRequest(client *Client, name string, onSuccess, onFailure auth.Callback) {
+func (s *Server) handleGlobalAuthRequest(client *Client, name string, onSuccess, onFailure func()) {
 	requestID := s.Auth.RegisterAuthRequest(client.CN, "", name, onSuccess, onFailure)
 
 	callback := func(sessionID int32) func(string) {

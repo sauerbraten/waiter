@@ -1,6 +1,6 @@
 package armour
 
-import "github.com/sauerbraten/waiter/internal/definitions/gamemode"
+import "github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 
 type ID int32
 

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
 )
 
 func NewGame(id gamemode.ID) GameMode {

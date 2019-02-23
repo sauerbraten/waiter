@@ -7,7 +7,7 @@ import (
 
 	"github.com/sauerbraten/jsonfile"
 
-	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/masterserver"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/pkg/auth"

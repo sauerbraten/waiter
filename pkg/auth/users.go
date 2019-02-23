@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sauerbraten/waiter/internal/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
 )
 
 type UserIdentifier struct {
@@ -14,7 +14,7 @@ type UserIdentifier struct {
 
 type User struct {
 	UserIdentifier
-	PublicKey publicKey `json:"public_key"`
+	PublicKey PublicKey `json:"public_key"`
 	Role      role.ID   `json:"-"`
 }
 
@@ -32,7 +32,7 @@ func (u *User) MarshalJSON() ([]byte, error) {
 func (u *User) UnmarshalJSON(data []byte) error {
 	proxy := &struct {
 		UserIdentifier
-		PublicKey publicKey `json:"public_key"`
+		PublicKey PublicKey `json:"public_key"`
 		Role      string    `json:"role"`
 	}{}
 	err := json.Unmarshal(data, proxy)

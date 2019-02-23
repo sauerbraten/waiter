@@ -3,7 +3,7 @@ package weapon
 import (
 	"math/rand"
 
-	"github.com/sauerbraten/waiter/internal/definitions/sound"
+	"github.com/sauerbraten/waiter/pkg/definitions/sound"
 )
 
 type ID int32

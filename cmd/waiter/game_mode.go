@@ -4,11 +4,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/armour"
-	"github.com/sauerbraten/waiter/internal/definitions/gamemode"
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
-	"github.com/sauerbraten/waiter/internal/definitions/playerstate"
-	"github.com/sauerbraten/waiter/internal/definitions/weapon"
+	"github.com/sauerbraten/waiter/pkg/definitions/armour"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
+	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 

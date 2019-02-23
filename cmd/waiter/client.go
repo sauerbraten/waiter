@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/sauerbraten/waiter/internal/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/internal/definitions/role"
-	"github.com/sauerbraten/waiter/internal/definitions/weapon"
+	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"

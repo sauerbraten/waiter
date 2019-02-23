@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 )

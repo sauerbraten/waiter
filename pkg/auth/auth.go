@@ -18,6 +18,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"log"
+	"math"
 	"math/big"
 	mrand "math/rand"
 	"time"
@@ -43,8 +44,9 @@ type request struct {
 }
 
 type Manager struct {
-	users   map[UserIdentifier]*User
-	pending map[uint32]*request
+	_nextRequestID uint32
+	users          map[UserIdentifier]*User
+	pending        map[uint32]*request
 }
 
 func NewManager(users []*User) *Manager {
@@ -58,8 +60,17 @@ func NewManager(users []*User) *Manager {
 	return m
 }
 
+func (m *Manager) nextRequestID() uint32 {
+	id := m._nextRequestID
+	m._nextRequestID++
+	if m._nextRequestID == math.MaxUint32 {
+		m._nextRequestID = 0
+	}
+	return id
+}
+
 func (m *Manager) RegisterAuthRequest(cn uint32, domain, name string, onSuccess, onFailure func()) (requestID uint32) {
-	requestID = mrand.Uint32()
+	requestID = m.nextRequestID()
 	req := &request{
 		id:     requestID,
 		domain: domain,

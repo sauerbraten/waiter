@@ -2,7 +2,9 @@ package masterserver
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -33,10 +35,11 @@ const (
 )
 
 type MasterServer struct {
-	In  *bufio.Scanner
-	Out *bufio.Writer
+	raddr      *net.TCPAddr
+	listenPort int
+	bans       *bans.BanManager
 
-	Bans *bans.BanManager
+	conn *net.TCPConn
 
 	requestChallengeCallbacks map[uint32]func(challenge string)
 	confirmAnswerCallbacks    map[uint32]func(sucess bool)
@@ -49,33 +52,39 @@ func New(addr string, listenPort int, bans *bans.BanManager) (ms *MasterServer, 
 		return nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)
 	}
 
-	conn, err := net.DialTCP("tcp", nil, raddr)
-	if err != nil {
-		return nil, fmt.Errorf("error connecting to master server: %v", err)
-	}
-
 	ms = &MasterServer{
-		In:   bufio.NewScanner(conn),
-		Out:  bufio.NewWriter(conn),
-		Bans: bans,
+		raddr: raddr,
+
+		listenPort: listenPort,
+		bans:       bans,
 
 		requestChallengeCallbacks: map[uint32]func(string){},
 		confirmAnswerCallbacks:    map[uint32]func(sucess bool){},
 	}
 
-	go ms.keepRegistered(listenPort)
-	go ms.handleIncoming()
-
-	return
+	return ms, ms.connect()
 }
 
-func (ms *MasterServer) keepRegistered(listenPort int) {
+func (ms *MasterServer) connect() error {
+	conn, err := net.DialTCP("tcp", nil, ms.raddr)
+	if err != nil {
+		return fmt.Errorf("error connecting to master server: %v", err)
+	}
+
+	ms.conn = conn
+	go ms.handleIncoming(bufio.NewScanner(conn))
+	go ms.keepRegistered()
+	return nil
+}
+
+func (ms *MasterServer) keepRegistered() {
 	t := time.NewTicker(1 * time.Hour)
 	for {
 		log.Println("registering at master server")
-		err := ms.Request("%s %d", registerServer, listenPort)
+		err := ms.Request("%s %d", registerServer, ms.listenPort)
 		if err != nil {
 			log.Println("registering at master server failed:", err)
+			return
 		}
 		<-t.C
 	}
@@ -98,19 +107,39 @@ func (ms *MasterServer) ConfirmAuthAnswer(requestID uint32, answer string, callb
 }
 
 func (ms *MasterServer) Request(format string, args ...interface{}) error {
-	_, err := ms.Out.WriteString(fmt.Sprintf(format+"\n", args...))
-	if err != nil {
-		return err
+	if ms.conn == nil {
+		return errors.New("not connected to master server")
 	}
 
-	err = ms.Out.Flush()
-
+	_, err := ms.conn.Write([]byte(fmt.Sprintf(format+"\n", args...)))
+	if err != nil {
+		log.Println("write to master failed:", err)
+	}
 	return err
 }
 
-func (ms *MasterServer) handleIncoming() {
-	for ms.In.Scan() {
-		msg := ms.In.Text()
+func (ms *MasterServer) Reconnect(err error) {
+	ms.conn = nil
+
+	try, maxTries := 1, 10
+	for err != nil && try <= maxTries {
+		time.Sleep(time.Duration(try) * time.Minute)
+		log.Printf("trying to reconnect (attempt %d)", try)
+
+		err = ms.connect()
+		try++
+	}
+
+	if err == nil {
+		log.Println("reconnected to master server")
+	} else {
+		log.Println("could not reconnect to master server:", err)
+	}
+}
+
+func (ms *MasterServer) handleIncoming(in *bufio.Scanner) {
+	for in.Scan() {
+		msg := in.Text()
 		msgParts := strings.Split(msg, " ")
 
 		switch msgParts[0] {
@@ -121,7 +150,7 @@ func (ms *MasterServer) handleIncoming() {
 			log.Println("master server registration failed:", strings.Join(msgParts[1:], " "))
 
 		case clearBans:
-			ms.Bans.ClearGlobalBans()
+			ms.bans.ClearGlobalBans()
 
 		case addBan:
 			ms.handleAddGlobalBan(msgParts[1:])
@@ -140,8 +169,11 @@ func (ms *MasterServer) handleIncoming() {
 		}
 	}
 
-	if err := ms.In.Err(); err != nil {
+	if err := in.Err(); err != nil {
 		log.Println(err)
+	} else {
+		log.Println("EOF from master server")
+		ms.Reconnect(io.EOF)
 	}
 }
 
@@ -154,7 +186,7 @@ func (ms *MasterServer) handleAddGlobalBan(args []string) {
 	ipString := args[0]
 	network := ips.GetSubnet(ipString)
 
-	ms.Bans.AddBan(network, "banned by master server", time.Time{}, true)
+	ms.bans.AddBan(network, "banned by master server", time.Time{}, true)
 }
 
 func (ms *MasterServer) handleAuthChallenge(args []string) {

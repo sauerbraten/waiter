@@ -30,6 +30,7 @@ These can be used either as `#cmd bla foo` or `/servcmd cmd bla foo`:
 
 - `keepteams 0|1` (a.k.a. `persist`): set to 1 to disable randomizing teams on map load
 - `queuemap [map...]`: check the map queue or enqueue one or more maps
+- `competitive 0|1`: in competitive mode, the server waits for all players to load the map before starting the game, and automatically pauses the game when a player leaves or goes to spectating mode
 
 Pretty much everything else is not yet implemented:
 

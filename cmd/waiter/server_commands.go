@@ -17,10 +17,12 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	cmd := parts[0]
 
 	switch cmd {
-	case "help":
+	case "help", "commands":
 		switch c.Role {
-		case role.Master, role.Admin:
-			c.Send(nmc.ServerMessage, "available commands: keepteams (=persist), queuemap, competitive")
+		case role.Master, role.Auth:
+			c.Send(nmc.ServerMessage, "available commands: keepteams 1|0 (=persist), queuemap <map>..., competitive 0|1")
+		case role.Admin:
+			c.Send(nmc.ServerMessage, "available commands: keepteams 1|0 (=persist), queuemap <map>..., competitive 0|1, ip <name|cn>")
 		}
 
 	case "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue":
@@ -29,7 +31,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	case "keepteams", "persist", "persistteams":
 		toggleKeepTeams(c, parts[1:])
 
-	case "competitive":
+	case "competitive", "compet":
 		toggleCompetitiveMode(c, parts[1:])
 
 	case "ip", "ips":
@@ -130,7 +132,7 @@ func toggleCompetitiveMode(c *Client, args []string) {
 }
 
 func lookupIPs(c *Client, args []string) {
-	if c.Role < role.Auth || len(args) < 1 {
+	if c.Role < role.Admin || len(args) < 1 {
 		return
 	}
 	for _, query := range args {

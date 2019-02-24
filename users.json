@@ -40,5 +40,11 @@
                 "domain": "waiter",
                 "public_key": "+99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2",
                 "role": "master"
+        },
+        {
+                "name": "Murrr",
+                "domain": "waiter",
+                "public_key": "-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f",
+                "role": "master"
         }
 ]

@@ -97,7 +97,7 @@ func (s *Server) setAuthRole(client *Client, prvlg role.ID, domain, name string)
 	if domain != "" {
 		msg = fmt.Sprintf("%s claimed %s privileges as '%s' [%s]", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name), cubecode.Green(domain))
 	}
-	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	s.Clients.Broadcast(nmc.ServerMessage, msg)
 	log.Println(cubecode.SanitizeString(msg))
 
 	s._setRole(client, prvlg)
@@ -127,7 +127,7 @@ func (s *Server) setRole(client *Client, targetCN uint32, rol role.ID) {
 	} else {
 		msg = fmt.Sprintf("%s gave %s privileges to %s", s.Clients.UniqueName(client), rol, s.Clients.UniqueName(target))
 	}
-	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	s.Clients.Broadcast(nmc.ServerMessage, msg)
 	log.Println(cubecode.SanitizeString(msg))
 
 	s._setRole(target, rol)
@@ -135,6 +135,6 @@ func (s *Server) setRole(client *Client, targetCN uint32, rol role.ID) {
 
 func (s *Server) _setRole(client *Client, rol role.ID) {
 	client.Role = rol
-	pup, _ := s.Clients.PrivilegedUsersPacket()
-	s.Clients.Broadcast(nil, pup)
+	typ, pup, _ := s.Clients.PrivilegedUsersPacket()
+	s.Clients.Broadcast(typ, pup)
 }

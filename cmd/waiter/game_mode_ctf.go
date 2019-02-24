@@ -179,7 +179,7 @@ func (ctf *ctfMode) touchFlag(client *Client, i int32, version int32) {
 		// player touches her own, dropped flag
 		ctf.returnFlag(flag)
 		flag.version++
-		s.Clients.Broadcast(nil, nmc.ReturnFlag, client.CN, flag.index, flag.version)
+		s.Clients.Broadcast(nmc.ReturnFlag, client.CN, flag.index, flag.version)
 		return
 	} else {
 		// player touches her own flag at its base
@@ -195,7 +195,7 @@ func (ctf *ctfMode) touchFlag(client *Client, i int32, version int32) {
 			ctf.teams[team].Score++
 			flag.version++
 			enemyFlag.version++
-			s.Clients.Broadcast(nil, nmc.ScoreFlag, client.CN, enemyFlag.index, enemyFlag.version, flag.index, flag.version, 0, flag.team, ctf.teams[team].Score, client.GameState.Flags)
+			s.Clients.Broadcast(nmc.ScoreFlag, client.CN, enemyFlag.index, enemyFlag.version, flag.index, flag.version, 0, flag.team, ctf.teams[team].Score, client.GameState.Flags)
 			if ctf.teams[team].Score >= 10 {
 				s.Intermission()
 			}
@@ -211,7 +211,7 @@ func (ctf *ctfMode) takeFlag(client *Client, f *flag) {
 	}
 
 	f.version++
-	s.Clients.Broadcast(nil, nmc.TakeFlag, client.CN, f.index, f.version)
+	s.Clients.Broadcast(nmc.TakeFlag, client.CN, f.index, f.version)
 	f.owner = client
 }
 
@@ -239,11 +239,11 @@ func (ctf *ctfMode) dropFlag(client *Client) {
 	f.owner = nil
 	f.version++
 
-	s.Clients.Broadcast(nil, nmc.DropFlag, client.CN, f.index, f.version, f.dropLocation.Mul(geom.DMF))
+	s.Clients.Broadcast(nmc.DropFlag, client.CN, f.index, f.version, f.dropLocation.Mul(geom.DMF))
 	f.pendingReset = timer.AfterFunc(10*time.Second, func() {
 		ctf.returnFlag(f)
 		f.version++
-		s.Clients.Broadcast(nil, nmc.ResetFlag, f.index, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
+		s.Clients.Broadcast(nmc.ResetFlag, f.index, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
 	})
 	f.pendingReset.Start()
 }
@@ -256,8 +256,7 @@ func (ctf *ctfMode) returnFlag(f *flag) {
 func (ctf *ctfMode) NeedMapInfo() bool { return !ctf.flagsInitialized }
 
 func (ctf *ctfMode) Init(client *Client) {
-	q := []interface{}{
-		nmc.InitFlags,
+	typ, q := nmc.InitFlags, []interface{}{
 		ctf.teams["good"].Score,
 		ctf.teams["evil"].Score,
 	}
@@ -287,7 +286,7 @@ func (ctf *ctfMode) Init(client *Client) {
 		q = append(q, 0)
 	}
 
-	client.Send(q...)
+	client.Send(typ, q...)
 }
 
 func (ctf *ctfMode) Leave(client *Client) {

@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
-	"github.com/sauerbraten/waiter/internal/net/enet"
-	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
@@ -69,20 +69,24 @@ func (cm *ClientManager) FindClientByName(name string) *Client {
 }
 
 // Send a packet to a client's team, but not the client himself, over the specified channel.
-func (cm *ClientManager) SendToTeam(c *Client, args ...interface{}) {
+func (cm *ClientManager) SendToTeam(c *Client, typ nmc.ID, args ...interface{}) {
 	excludeSelfAndOtherTeams := func(_c *Client) bool {
 		return _c == c || _c.Team != c.Team
 	}
-	cm.Broadcast(excludeSelfAndOtherTeams, args...)
+	cm.broadcast(excludeSelfAndOtherTeams, typ, args...)
 }
 
 // Sends a packet to all clients currently in use.
-func (cm *ClientManager) Broadcast(exclude func(*Client) bool, args ...interface{}) {
+func (cm *ClientManager) Broadcast(typ nmc.ID, args ...interface{}) {
+	cm.broadcast(nil, typ, args...)
+}
+
+func (cm *ClientManager) broadcast(exclude func(*Client) bool, typ nmc.ID, args ...interface{}) {
 	for _, c := range cm.cs {
 		if !c.InUse || (exclude != nil && exclude(c)) {
 			continue
 		}
-		c.Send(args...)
+		c.Send(typ, args...)
 	}
 }
 
@@ -92,22 +96,21 @@ func exclude(c *Client) func(*Client) bool {
 	}
 }
 
-func (cm *ClientManager) Relay(from *Client, args ...interface{}) {
-	cm.Broadcast(exclude(from), args...)
+func (cm *ClientManager) Relay(from *Client, typ nmc.ID, args ...interface{}) {
+	cm.broadcast(exclude(from), typ, args...)
 }
 
 // Sends 'welcome' information to a newly joined client like map, mode, time left, other players, etc.
 func (cm *ClientManager) SendWelcome(c *Client) {
-	p := []interface{}{
-		nmc.Welcome,
+	typ, p := nmc.Welcome, []interface{}{
 		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo(), // currently played mode & map
 		nmc.TimeLeft, s.GameMode.TimeLeft(), // time left in this round
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level
-	pup, empty := cm.PrivilegedUsersPacket()
+	pupTyp, pup, empty := cm.PrivilegedUsersPacket()
 	if !empty {
-		p = append(p, pup)
+		p = append(p, pupTyp, pup)
 	}
 
 	if s.GameMode.Paused() {
@@ -151,7 +154,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 		}
 	}
 
-	c.Send(p...)
+	c.Send(typ, p...)
 }
 
 // Tells other clients that the client disconnected, giving a disconnect reason in case it's not a normal leave.
@@ -204,8 +207,8 @@ func (cm *ClientManager) PrivilegedUsers() (privileged []*Client) {
 	return
 }
 
-func (cm *ClientManager) PrivilegedUsersPacket() (p protocol.Packet, noPrivilegedUsers bool) {
-	q := []interface{}{nmc.CurrentMaster, s.MasterMode}
+func (cm *ClientManager) PrivilegedUsersPacket() (typ nmc.ID, p protocol.Packet, noPrivilegedUsers bool) {
+	q := []interface{}{s.MasterMode}
 
 	cm.ForEach(func(c *Client) {
 		if c.Role > role.None {
@@ -215,7 +218,7 @@ func (cm *ClientManager) PrivilegedUsersPacket() (p protocol.Packet, noPrivilege
 
 	q = append(q, -1)
 
-	return packet.Encode(q...), len(q) <= 3
+	return nmc.CurrentMaster, packet.Encode(q...), len(q) <= 3
 }
 
 // Returns the number of connected clients.

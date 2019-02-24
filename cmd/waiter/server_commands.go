@@ -75,9 +75,9 @@ func toggleKeepTeams(c *Client, args []string) {
 	}
 	if changed {
 		if s.KeepTeams {
-			s.Clients.Broadcast(nil, nmc.ServerMessage, "teams will be kept")
+			s.Clients.Broadcast(nmc.ServerMessage, "teams will be kept")
 		} else {
-			s.Clients.Broadcast(nil, nmc.ServerMessage, "teams will be shuffled")
+			s.Clients.Broadcast(nmc.ServerMessage, "teams will be shuffled")
 		}
 	} else {
 		if s.KeepTeams {
@@ -116,9 +116,9 @@ func toggleCompetitiveMode(c *Client, args []string) {
 	}
 	if changed {
 		if s.CompetitiveMode {
-			s.Clients.Broadcast(nil, nmc.ServerMessage, "competitive mode will be enabled with next game")
+			s.Clients.Broadcast(nmc.ServerMessage, "competitive mode will be enabled with next game")
 		} else {
-			s.Clients.Broadcast(nil, nmc.ServerMessage, "competitive mode disabled")
+			s.Clients.Broadcast(nmc.ServerMessage, "competitive mode disabled")
 		}
 	} else {
 		if s.CompetitiveMode {

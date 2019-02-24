@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
-	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/utils"
+	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
 )
 
 // Describes a client.
@@ -82,6 +83,6 @@ func (c *Client) String() string {
 	return fmt.Sprintf("%s (%d)", c.Name, c.CN)
 }
 
-func (c *Client) Send(args ...interface{}) {
-	c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(args...))
+func (c *Client) Send(typ nmc.ID, args ...interface{}) {
+	c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(typ, packet.Encode(args...)))
 }

@@ -54,7 +54,7 @@ func newTimedMode() timedMode {
 }
 func (tm *timedMode) Start() {
 	tm.t = StartTimer(s.GameDuration, s.Intermission)
-	s.Clients.Broadcast(nil, nmc.TimeLeft, s.GameDuration)
+	s.Clients.Broadcast(nmc.TimeLeft, s.GameDuration)
 }
 
 func (tm *timedMode) Pause(c *Client) {
@@ -62,7 +62,7 @@ func (tm *timedMode) Pause(c *Client) {
 	if c != nil {
 		cn = int(c.CN)
 	}
-	s.Clients.Broadcast(nil, nmc.PauseGame, 1, cn)
+	s.Clients.Broadcast(nmc.PauseGame, 1, cn)
 	tm.t.Pause()
 }
 
@@ -73,12 +73,12 @@ func (tm *timedMode) Resume(c *Client) {
 	if c != nil {
 		cn = int(c.CN)
 	}
-	s.Clients.Broadcast(nil, nmc.PauseGame, 0, cn)
+	s.Clients.Broadcast(nmc.PauseGame, 0, cn)
 	tm.t.Resume()
 }
 
 func (tm *timedMode) End() {
-	s.Clients.Broadcast(nil, nmc.TimeLeft, 0)
+	s.Clients.Broadcast(nmc.TimeLeft, 0)
 	tm.t.Stop()
 }
 
@@ -183,7 +183,7 @@ func (tm *teamMode) selectWeakestTeam() *Team {
 func (tm *teamMode) Join(c *Client) {
 	team := tm.selectTeam(c)
 	team.Add(c)
-	s.Clients.Broadcast(nil, nmc.SetTeam, c.CN, c.Team.Name, -1)
+	s.Clients.Broadcast(nmc.SetTeam, c.CN, c.Team.Name, -1)
 }
 
 func (*teamMode) Leave(c *Client) {
@@ -223,7 +223,7 @@ func (tm *teamMode) ChangeTeam(c *Client, newTeamName string, forced bool) {
 		}
 		old.Remove(c)
 		new.Add(c)
-		s.Clients.Broadcast(nil, nmc.SetTeam, c.CN, c.Team.Name, reason)
+		s.Clients.Broadcast(nmc.SetTeam, c.CN, c.Team.Name, reason)
 	}
 
 	// try existing teams first

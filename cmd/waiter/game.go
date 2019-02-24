@@ -66,7 +66,7 @@ func (g *CompetitiveMode) Start() {
 		}
 	})
 	if len(g.mapLoadPending) > 0 {
-		s.Clients.Broadcast(nil, nmc.ServerMessage, "waiting for all players to load the map")
+		s.Clients.Broadcast(nmc.ServerMessage, "waiting for all players to load the map")
 		g.Pause(nil)
 	}
 }
@@ -79,17 +79,17 @@ func (g *CompetitiveMode) Resume(c *Client) {
 			}
 		}
 		g.pendingResumeActions = nil
-		s.Clients.Broadcast(nil, nmc.ServerMessage, "resuming aborted")
+		s.Clients.Broadcast(nmc.ServerMessage, "resuming aborted")
 		return
 	}
 
 	if c != nil {
-		s.Clients.Broadcast(nil, nmc.ServerMessage, fmt.Sprintf("%s wants to resume the game", s.Clients.UniqueName(c)))
+		s.Clients.Broadcast(nmc.ServerMessage, fmt.Sprintf("%s wants to resume the game", s.Clients.UniqueName(c)))
 	}
-	s.Clients.Broadcast(nil, nmc.ServerMessage, "resuming game in 3 seconds")
+	s.Clients.Broadcast(nmc.ServerMessage, "resuming game in 3 seconds")
 	g.pendingResumeActions = []*time.Timer{
-		time.AfterFunc(1*time.Second, func() { s.Clients.Broadcast(nil, nmc.ServerMessage, "resuming game in 2 seconds") }),
-		time.AfterFunc(2*time.Second, func() { s.Clients.Broadcast(nil, nmc.ServerMessage, "resuming game in 1 second") }),
+		time.AfterFunc(1*time.Second, func() { s.Clients.Broadcast(nmc.ServerMessage, "resuming game in 2 seconds") }),
+		time.AfterFunc(2*time.Second, func() { s.Clients.Broadcast(nmc.ServerMessage, "resuming game in 1 second") }),
 		time.AfterFunc(3*time.Second, func() {
 			g.GameMode.Resume(c)
 			g.pendingResumeActions = nil
@@ -102,7 +102,7 @@ func (g *CompetitiveMode) ConfirmSpawn(c *Client) {
 	if _, ok := g.mapLoadPending[c]; ok {
 		delete(g.mapLoadPending, c)
 		if len(g.mapLoadPending) == 0 {
-			s.Clients.Broadcast(nil, nmc.ServerMessage, "all players spawned, starting game")
+			s.Clients.Broadcast(nmc.ServerMessage, "all players spawned, starting game")
 			g.Resume(nil)
 		}
 	}
@@ -111,7 +111,7 @@ func (g *CompetitiveMode) ConfirmSpawn(c *Client) {
 func (g *CompetitiveMode) Leave(c *Client) {
 	g.GameMode.Leave(c)
 	if c.GameState.State != playerstate.Spectator && !g.GameMode.Ended() {
-		s.Clients.Broadcast(nil, nmc.ServerMessage, "a player left the game")
+		s.Clients.Broadcast(nmc.ServerMessage, "a player left the game")
 		if !g.Paused() {
 			g.Pause(nil)
 		} else if len(g.pendingResumeActions) > 0 {

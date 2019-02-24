@@ -319,7 +319,7 @@ outer:
 				s.GameMode.Join(spectator)
 				// todo: checkmap
 			}
-			s.Clients.Broadcast(nil, nmc.Spectator, spectator.CN, toggle)
+			s.Clients.Broadcast(nmc.Spectator, spectator.CN, toggle)
 
 		case nmc.VoteMap:
 			mapp, ok := p.GetString()

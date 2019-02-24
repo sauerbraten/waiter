@@ -5,6 +5,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/sauerbraten/waiter/internal/geom"
+	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/utils"
+	"github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
@@ -12,10 +16,6 @@ import (
 	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
-	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/internal/net/enet"
-	"github.com/sauerbraten/waiter/internal/utils"
-	"github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
@@ -173,7 +173,7 @@ func (s *Server) Kick(client *Client, victim *Client, reason string) {
 	if reason != "" {
 		msg += " for: " + reason
 	}
-	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	s.Clients.Broadcast(nmc.ServerMessage, msg)
 	s.Disconnect(victim, disconnectreason.Kick)
 }
 
@@ -186,7 +186,7 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 	if reason != "" {
 		msg += " for: " + reason
 	}
-	s.Clients.Broadcast(nil, nmc.ServerMessage, msg)
+	s.Clients.Broadcast(nmc.ServerMessage, msg)
 	s.Disconnect(victim, disconnectreason.Kick)
 }
 
@@ -214,7 +214,7 @@ func (s *Server) Intermission() {
 		s.ChangeMap(s.GameMode.ID(), nextMap)
 	})
 
-	s.Clients.Broadcast(nil, nmc.ServerMessage, "next up: "+nextMap)
+	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
 }
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
@@ -232,11 +232,11 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 	s.GameMode = NewGame(mode)
 
 	s.Clients.ForEach(s.GameMode.Join)
-	s.Clients.Broadcast(nil, nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
+	s.Clients.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
 	s.GameMode.Start()
 	s.Clients.MapChange()
 
-	s.Clients.Broadcast(nil, nmc.ServerMessage, s.MessageOfTheDay)
+	s.Clients.Broadcast(nmc.ServerMessage, s.MessageOfTheDay)
 }
 
 func (s *Server) SetMasterMode(c *Client, mm mastermode.ID) {
@@ -249,7 +249,7 @@ func (s *Server) SetMasterMode(c *Client, mm mastermode.ID) {
 		return
 	}
 	s.MasterMode = mm
-	s.Clients.Broadcast(nil, nmc.MasterMode, mm)
+	s.Clients.Broadcast(nmc.MasterMode, mm)
 }
 
 type hit struct {
@@ -351,15 +351,15 @@ hits:
 
 func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapon.ID, dir *geom.Vector) {
 	victim.applyDamage(attacker, damage, wpnID, dir)
-	s.Clients.Broadcast(nil, nmc.Damage, victim.CN, attacker.CN, damage, victim.GameState.Armour, victim.GameState.Health)
+	s.Clients.Broadcast(nmc.Damage, victim.CN, attacker.CN, damage, victim.GameState.Armour, victim.GameState.Health)
 	// TODO: setpushed ???
 	if !dir.IsZero() {
 		dir = dir.Scale(geom.DNF)
-		p := []interface{}{nmc.HitPush, victim.CN, wpnID, damage, dir.X(), dir.Y(), dir.Z()}
+		typ, p := nmc.HitPush, []interface{}{victim.CN, wpnID, damage, dir.X(), dir.Y(), dir.Z()}
 		if victim.GameState.Health <= 0 {
-			s.Clients.Broadcast(nil, p...)
+			s.Clients.Broadcast(typ, p...)
 		} else {
-			victim.Send(p...)
+			victim.Send(typ, p...)
 		}
 	}
 	if victim.GameState.Health <= 0 {
@@ -372,6 +372,6 @@ func (s *Server) handleDeath(fragger, victim *Client) {
 	fragger.GameState.Frags += s.GameMode.FragValue(fragger, victim)
 	// TODO: effectiveness
 	s.GameMode.HandleDeath(fragger, victim)
-	s.Clients.Broadcast(nil, nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, fragger.Team.Frags)
+	s.Clients.Broadcast(nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, fragger.Team.Frags)
 	// TODO teamkills
 }

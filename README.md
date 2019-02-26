@@ -83,7 +83,7 @@ Other interesting packages:
 - [`internal/net/enet`](internal/net/enet)
 - [`internal/masterserver`](internal/masterserver)
 
-In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for users. This server uses a different representation for public keys, so the output of `/genauthkey` in the vanilla client will be useless.
+In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for users. While you can use auth keys generated with Sauerbraten's `/genauthkey` command, `genauth` provides better output (`auth.cfg` line for the player, JSON object for this server's `users.json` file).
 
 
 ## Why?

@@ -94,6 +94,7 @@ func (ms *MasterServer) connect() error {
 	}
 
 	ms.conn = conn
+	ms.Register()
 	return nil
 }
 

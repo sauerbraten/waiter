@@ -79,7 +79,6 @@ func init() {
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
-	ms.Register()
 }
 
 func main() {

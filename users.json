@@ -46,5 +46,11 @@
                 "domain": "waiter",
                 "public_key": "-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f",
                 "role": "master"
+        },
+        {
+                "name": "unnamed",
+                "domain": "test",
+                "public_key": "-d954ee56eddf2b71e206e67d48aaf4afe1cc70f8ca9d1058",
+                "role": "admin"
         }
 ]

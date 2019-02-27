@@ -114,7 +114,7 @@ func SpawnAmmoFFA() (map[ID]int32, Weapon) {
 	}, byID[Pistol]
 }
 
-// Flattens m into a slice by putting values in the order specified by keys.
+// Flattens m into a slice
 func FlattenAmmo(m map[ID]int32) (values []int32) {
 	values = make([]int32, len(WeaponsWithAmmo))
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
 func main() {

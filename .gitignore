@@ -19,11 +19,15 @@ _cgo_export.*
 
 _testmain.go
 
+*.go_
+
 *.exe
 
+waiter
 cmd/waiter/waiter
+genauth
 cmd/genauth/genauth
+cenc
 cmd/cenc/cenc
+cdec
 cmd/cdec/cdec
-
-*.go_

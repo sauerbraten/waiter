@@ -6,7 +6,7 @@ import (
 )
 
 type PickUp struct {
-	Sound  sound.Sound
+	Sound  sound.ID
 	Amount int32
 }
 

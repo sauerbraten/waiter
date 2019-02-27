@@ -11,30 +11,30 @@ import (
 
 // The game state of a client.
 type GameState struct {
-	// fields that change at spawn
-	State          playerstate.ID
+	State playerstate.ID
+
+	// fields that reset at spawn
+	LastSpawnAttempt time.Time
+	QuadTimeLeft     int32 // in milliseconds
+	LastShot         time.Time
+	GunReloadEnd     time.Time
+	// reset at spawn to value depending on mode
 	Health         int32
-	MaxHealth      int32
 	Armour         int32
 	ArmourType     armour.ID
-	QuadTimeLeft   int32 // in milliseconds
 	SelectedWeapon weapon.Weapon
-	GunReloadEnd   time.Time
 	Ammo           map[weapon.ID]int32 // weapon → ammo
-	Tokens         int32               // skulls
 
-	LastSpawnAttempt time.Time
-	LifeSequence     int32
-	LastShot         time.Time
-	LastDeath        time.Time
-
-	// fields that change at intermission
-	Frags      int
-	Deaths     int
-	Teamkills  int
-	ShotDamage int32
-	Damage     int32
-	Flags      int
+	// reset at map change
+	LifeSequence int32
+	LastDeath    time.Time
+	MaxHealth    int32
+	Frags        int
+	Deaths       int
+	Teamkills    int
+	ShotDamage   int32
+	Damage       int32
+	Flags        int
 }
 
 func NewGameState() *GameState {
@@ -56,12 +56,12 @@ func (gs *GameState) ToWire() []byte {
 }
 
 func (gs *GameState) Spawn() {
-	gs.QuadTimeLeft = 0
-	gs.GunReloadEnd = time.Time{}
-	gs.Tokens = 0
-	gs.LastSpawnAttempt = time.Now()
 	gs.LifeSequence = (gs.LifeSequence + 1) % 128
-	gs.Health = gs.MaxHealth
+
+	gs.LastSpawnAttempt = time.Now()
+	gs.QuadTimeLeft = 0
+	gs.LastShot = time.Time{}
+	gs.GunReloadEnd = time.Time{}
 }
 
 func (gs *GameState) SelectWeapon(id weapon.ID) (weapon.Weapon, bool) {
@@ -90,7 +90,6 @@ func (gs *GameState) Die() {
 	gs.State = playerstate.Dead
 	gs.Deaths++
 	gs.LastDeath = time.Now()
-	gs.LastShot = time.Time{}
 }
 
 // Resets a client's game state.

@@ -259,6 +259,7 @@ type efficMode struct{}
 func (*efficMode) Spawn(gs *GameState) {
 	gs.ArmourType, gs.Armour = armour.Green, 100
 	gs.Ammo, gs.SelectedWeapon = weapon.SpawnAmmoEffic()
+	gs.Health = 100
 }
 
 type Effic struct {

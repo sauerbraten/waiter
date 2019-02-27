@@ -39,30 +39,52 @@ type MasterServer struct {
 	listenPort int
 	bans       *bans.BanManager
 
-	conn *net.TCPConn
+	conn             *net.TCPConn
+	lastRegistration time.Time
 
 	requestChallengeCallbacks map[uint32]func(challenge string)
 	confirmAnswerCallbacks    map[uint32]func(sucess bool)
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func New(addr string, listenPort int, bans *bans.BanManager) (ms *MasterServer, err error) {
+func New(addr string, listenPort int, bans *bans.BanManager) (*MasterServer, <-chan string, error) {
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)
+		return nil, nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)
 	}
 
-	ms = &MasterServer{
-		raddr: raddr,
-
+	ms := &MasterServer{
+		raddr:      raddr,
 		listenPort: listenPort,
 		bans:       bans,
+
+		lastRegistration: time.Now().Add(-2 * time.Hour),
 
 		requestChallengeCallbacks: map[uint32]func(string){},
 		confirmAnswerCallbacks:    map[uint32]func(sucess bool){},
 	}
 
-	return ms, ms.connect()
+	err = ms.connect()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sc := bufio.NewScanner(ms.conn)
+	inc := make(chan string)
+
+	go func() {
+		for sc.Scan() {
+			inc <- sc.Text()
+		}
+		if err := sc.Err(); err != nil {
+			log.Println(err)
+		} else {
+			log.Println("EOF from master server")
+			ms.reconnect(io.EOF)
+		}
+	}()
+
+	return ms, inc, nil
 }
 
 func (ms *MasterServer) connect() error {
@@ -72,22 +94,36 @@ func (ms *MasterServer) connect() error {
 	}
 
 	ms.conn = conn
-	go ms.handleIncoming(bufio.NewScanner(conn))
-	go ms.keepRegistered()
 	return nil
 }
 
-func (ms *MasterServer) keepRegistered() {
-	t := time.NewTicker(1 * time.Hour)
-	for {
-		log.Println("registering at master server")
-		err := ms.Request("%s %d", registerServer, ms.listenPort)
-		if err != nil {
-			log.Println("registering at master server failed:", err)
-			return
-		}
-		<-t.C
+func (ms *MasterServer) reconnect(err error) {
+	ms.conn = nil
+
+	try, maxTries := 1, 10
+	for err != nil && try <= maxTries {
+		time.Sleep(time.Duration(try) * time.Minute)
+		log.Printf("trying to reconnect (attempt %d)", try)
+
+		err = ms.connect()
+		try++
 	}
+
+	if err == nil {
+		log.Println("reconnected to master server")
+	} else {
+		log.Println("could not reconnect to master server:", err)
+	}
+}
+
+func (ms *MasterServer) Register() {
+	log.Println("registering at master server")
+	err := ms.Request("%s %d", registerServer, ms.listenPort)
+	if err != nil {
+		log.Println("registering at master server failed:", err)
+		return
+	}
+	ms.lastRegistration = time.Now()
 }
 
 func (ms *MasterServer) RequestAuthChallenge(requestID uint32, name string, callback func(challenge string)) error {
@@ -118,62 +154,35 @@ func (ms *MasterServer) Request(format string, args ...interface{}) error {
 	return err
 }
 
-func (ms *MasterServer) Reconnect(err error) {
-	ms.conn = nil
+func (ms *MasterServer) Handle(msg string) {
+	msgParts := strings.Split(msg, " ")
+	cmd := msgParts[0]
+	args := msgParts[1:]
 
-	try, maxTries := 1, 10
-	for err != nil && try <= maxTries {
-		time.Sleep(time.Duration(try) * time.Minute)
-		log.Printf("trying to reconnect (attempt %d)", try)
+	switch cmd {
+	case registrationSuccessful:
+		log.Println("master server registration succeeded")
 
-		err = ms.connect()
-		try++
-	}
+	case registrationFailed:
+		log.Println("master server registration failed:", strings.Join(args, " "))
 
-	if err == nil {
-		log.Println("reconnected to master server")
-	} else {
-		log.Println("could not reconnect to master server:", err)
-	}
-}
+	case clearBans:
+		ms.bans.ClearGlobalBans()
 
-func (ms *MasterServer) handleIncoming(in *bufio.Scanner) {
-	for in.Scan() {
-		msg := in.Text()
-		msgParts := strings.Split(msg, " ")
+	case addBan:
+		ms.handleAddGlobalBan(args)
 
-		switch msgParts[0] {
-		case registrationSuccessful:
-			log.Println("master server registration succeeded")
+	case authChallenge:
+		ms.handleAuthChallenge(args)
 
-		case registrationFailed:
-			log.Println("master server registration failed:", strings.Join(msgParts[1:], " "))
+	case authFailed:
+		ms.handleAuthResult(false, authFailed, args)
 
-		case clearBans:
-			ms.bans.ClearGlobalBans()
+	case authSuccesful:
+		ms.handleAuthResult(true, authSuccesful, msgParts[1:])
 
-		case addBan:
-			ms.handleAddGlobalBan(msgParts[1:])
-
-		case authChallenge:
-			ms.handleAuthChallenge(msgParts[1:])
-
-		case authFailed:
-			ms.handleAuthResult(false, authFailed, msgParts[1:])
-
-		case authSuccesful:
-			ms.handleAuthResult(true, authSuccesful, msgParts[1:])
-
-		default:
-			log.Println("received from master:", msg)
-		}
-	}
-
-	if err := in.Err(); err != nil {
-		log.Println(err)
-	} else {
-		log.Println("EOF from master server")
-		ms.Reconnect(io.EOF)
+	default:
+		log.Println("received from master:", msg)
 	}
 }
 

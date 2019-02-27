@@ -17,7 +17,6 @@ ENetHost * initServer(const char *addr, int port) {
 	ENetAddress address;
 
 	// Bind the server to the provided address
-	//enet_address_set_host(&address, addr);
 	address.host = ENET_HOST_ANY;
 
 	// Bind the server to the provided port
@@ -37,10 +36,8 @@ ENetEvent serviceHost(ENetHost *host) {
 
 	int e = 0;
 	do {
-		e = enet_host_service(host, &event, 1); // 0 (= don't block) will hog an entire CPU core at 100%
+		  e = enet_host_service(host, &event, 1); // 0 (= don't block) will hog an entire CPU core at 100%
 	} while (e <= 0 || (event.type == ENET_EVENT_TYPE_RECEIVE && event.packet->dataLength == 0));
-
-	// TODO: investigate why we are receiving empty packets...
 
 	return event;
 }
@@ -49,6 +46,7 @@ import "C"
 
 import (
 	"errors"
+	"time"
 )
 
 var peers map[*C.ENetPeer]*Peer = map[*C.ENetPeer]*Peer{}
@@ -69,12 +67,14 @@ type Host struct {
 	enetHost *C.ENetHost
 }
 
-func (h *Host) Service() Event {
-	cEvent := C.serviceHost(h.enetHost)
-	event := eventFromCEvent(&cEvent)
-	return event
-}
-
-func (h *Host) Flush() {
-	C.enet_host_flush(h.enetHost)
+func (h *Host) Service() <-chan Event {
+	events := make(chan Event)
+	go func() {
+		for {
+			cEvent := C.serviceHost(h.enetHost)
+			events <- eventFromCEvent(&cEvent)
+			time.Sleep(1 * time.Millisecond) // TODO: not sure why, but without this, the server crashes
+		}
+	}()
+	return events
 }

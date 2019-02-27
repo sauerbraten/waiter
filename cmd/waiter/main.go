@@ -7,11 +7,11 @@ import (
 
 	"github.com/sauerbraten/jsonfile"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/internal/masterserver"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/bans"
+	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
@@ -23,7 +23,12 @@ var (
 	bm *bans.BanManager
 
 	// master server
-	ms *masterserver.MasterServer
+	ms        *masterserver.MasterServer
+	masterInc <-chan string
+
+	// info server
+	is      *infoServer
+	infoInc <-chan infoRequest
 )
 
 func init() {
@@ -68,10 +73,13 @@ func init() {
 	s.Map = s.MapRotation.NextMap(s.GameMode, "")
 	s.GameMode.Start()
 
-	ms, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
+	is, infoInc = s.StartListeningForInfoRequests()
+
+	ms, masterInc, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
+	ms.Register()
 }
 
 func main() {
@@ -82,39 +90,48 @@ func main() {
 
 	log.Println("server running on port", s.Config.ListenPort)
 
-	go s.handleExtinfoRequests()
-
 	go s.relay.loop()
 
+	gameInc := host.Service()
+
 	for {
-		event := host.Service()
+		select {
+		case event := <-gameInc:
+			handleEnetEvent(event)
+		case req := <-infoInc:
+			is.Handle(req)
+		case msg := <-masterInc:
+			go ms.Handle(msg)
+		case <-time.Tick(1 * time.Hour):
+			go ms.Register()
+		}
+	}
+}
 
-		switch event.Type {
-		case enet.EVENT_TYPE_CONNECT:
-			s.Connect(event.Peer)
+func handleEnetEvent(event enet.Event) {
+	switch event.Type {
+	case enet.EVENT_TYPE_CONNECT:
+		s.Connect(event.Peer)
 
-		case enet.EVENT_TYPE_DISCONNECT:
-			client := s.Clients.GetClientByPeer(event.Peer)
-			if client == nil {
-				continue
-			}
-			s.Disconnect(client, disconnectreason.None)
+	case enet.EVENT_TYPE_DISCONNECT:
+		client := s.Clients.GetClientByPeer(event.Peer)
+		if client == nil {
+			return
+		}
+		s.Disconnect(client, disconnectreason.None)
 
-		case enet.EVENT_TYPE_RECEIVE:
-			// TODO: fix this maybe?
-			if len(event.Packet.Data) == 0 {
-				log.Println("received empty packet on channel", event.ChannelID, "from", event.Peer.Address)
-				continue
-			}
-
-			client := s.Clients.GetClientByPeer(event.Peer)
-			if client == nil {
-				continue
-			}
-
-			s.handlePacket(client, event.ChannelID, protocol.Packet(event.Packet.Data))
+	case enet.EVENT_TYPE_RECEIVE:
+		// TODO: fix this maybe?
+		if len(event.Packet.Data) == 0 {
+			log.Println("received empty packet on channel", event.ChannelID, "from", event.Peer.Address)
+			return
 		}
 
-		host.Flush()
+		client := s.Clients.GetClientByPeer(event.Peer)
+		if client == nil {
+			return
+		}
+
+		s.handlePacket(client, event.ChannelID, protocol.Packet(event.Packet.Data))
 	}
 }

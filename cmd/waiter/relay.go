@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
+	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 )
 
 type sendFunc func(channel uint8, flags enet.PacketFlag, payload []byte)
@@ -186,7 +186,7 @@ func (r *Relay) flush(packets map[uint32][]byte, prefix func(uint32, []byte) []b
 
 	order := make([]uint32, 0, len(r.send))
 	lengths := map[uint32]int{}
-	combined := make([]byte, 0, 2*len(packets)*20)
+	combined := make([]byte, 0, 2*len(packets)*40)
 
 	for cn := range r.send {
 		order = append(order, cn)
@@ -194,9 +194,9 @@ func (r *Relay) flush(packets map[uint32][]byte, prefix func(uint32, []byte) []b
 		if pkt == nil {
 			continue
 		}
-		prfx := prefix(cn, pkt)
-		lengths[cn] = len(prfx) + len(pkt)
-		combined = append(append(combined, prfx...), pkt...)
+		pkt = append(prefix(cn, pkt), pkt...)
+		lengths[cn] = len(pkt)
+		combined = append(combined, pkt...)
 	}
 
 	if len(combined) == 0 {

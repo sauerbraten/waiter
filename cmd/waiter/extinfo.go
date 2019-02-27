@@ -35,74 +35,97 @@ const (
 	ServerMod int32 = -9
 )
 
-func (s *Server) handleExtinfoRequests() {
+type infoRequest struct {
+	raddr   *net.UDPAddr
+	payload []byte
+}
+
+type infoServer struct {
+	s    *Server
+	conn *net.UDPConn
+}
+
+func (s *Server) StartListeningForInfoRequests() (*infoServer, <-chan infoRequest) {
 	laddr, err := net.ResolveUDPAddr("udp", s.ListenAddress+":"+strconv.Itoa(s.ListenPort+1))
 	if err != nil {
 		log.Println(err)
-		return
+		return nil, nil
 	}
 
 	conn, err := net.ListenUDP("udp", laddr)
 	if err != nil {
 		log.Println(err)
-		return
+		return nil, nil
 	}
-	defer conn.Close()
+
+	inc := make(chan infoRequest)
+
+	go func() {
+		for {
+			pkt := make(protocol.Packet, 128)
+			n, raddr, err := conn.ReadFromUDP(pkt)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			inc <- infoRequest{
+				raddr:   raddr,
+				payload: pkt[:n],
+			}
+		}
+	}()
 
 	log.Println("listening for info requests on", laddr.String())
 
-	for {
-		req := make(protocol.Packet, 64)
-		n, raddr, err := conn.ReadFromUDP(req)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		req = req[:n]
+	return &infoServer{
+		s:    s,
+		conn: conn,
+	}, inc
+}
 
-		// prepare response header (we need to replay the request)
-		respHeader := req
+func (i *infoServer) Handle(req infoRequest) {
+	// prepare response header (we need to replay the request)
+	respHeader := req.payload
 
-		// interpret request as packet
-		p := protocol.Packet(req)
+	// interpret request as packet
+	p := protocol.Packet(req.payload)
 
-		reqType, ok := p.GetInt()
+	reqType, ok := p.GetInt()
+	if !ok {
+		log.Println("extinfo: info request packet too short: could not read request type:", p)
+		return
+	}
+
+	switch reqType {
+	case InfoTypeExtended:
+		extReqType, ok := p.GetInt()
 		if !ok {
-			log.Println("extinfo: info request packet too short: could not read request type:", p)
-			continue
+			log.Println("malformed info request: could not read extinfo request type:", p)
+			return
 		}
-
-		switch reqType {
-		case InfoTypeExtended:
-			extReqType, ok := p.GetInt()
+		switch extReqType {
+		case ExtInfoTypeUptime:
+			i.send(req.raddr, i.s.uptime(respHeader))
+		case ExtInfoTypeClientInfo:
+			cn, ok := p.GetInt()
 			if !ok {
-				log.Println("malformed info request: could not read extinfo request type:", p)
-				continue
+				log.Println("malformed info request: could not read CN from client info request:", p)
+				return
 			}
-			switch extReqType {
-			case ExtInfoTypeUptime:
-				s.send(conn, raddr, s.uptime(respHeader))
-			case ExtInfoTypeClientInfo:
-				cn, ok := p.GetInt()
-				if !ok {
-					log.Println("malformed info request: could not read CN from client info request:", p)
-					continue
-				}
-				s.send(conn, raddr, s.clientInfo(cn, respHeader)...)
-			case ExtInfoTypeTeamScores:
-				s.send(conn, raddr, s.teamScores(respHeader))
-			default:
-				log.Println("erroneous extinfo type queried:", reqType)
-			}
+			i.send(req.raddr, s.clientInfo(cn, respHeader)...)
+		case ExtInfoTypeTeamScores:
+			i.send(req.raddr, s.teamScores(respHeader))
 		default:
-			s.send(conn, raddr, s.basicInfo(respHeader))
+			log.Println("erroneous extinfo type queried:", reqType)
 		}
+	default:
+		i.send(req.raddr, s.basicInfo(respHeader))
 	}
 }
 
-func (s *Server) send(conn *net.UDPConn, raddr *net.UDPAddr, packets ...protocol.Packet) {
+func (i *infoServer) send(raddr *net.UDPAddr, packets ...protocol.Packet) {
 	for _, p := range packets {
-		n, err := conn.WriteToUDP(p, raddr)
+		n, err := i.conn.WriteToUDP(p, raddr)
 		if err != nil {
 			log.Println(err)
 		}

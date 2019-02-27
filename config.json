@@ -6,7 +6,7 @@
 	"listen_port": 28785,
 
 	// the address of the master server to report to (also the one used for global auth)
-	"master_server_address": "sauerbraten.org",
+	"master_server_address": "p1x.pw",
 
 	// port to use at the master server
 	"master_server_port": 28787,

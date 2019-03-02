@@ -29,7 +29,7 @@ var (
 	masterInc <-chan string
 
 	// stats server
-	statsAuth    *masterserver.MasterServer
+	statsAuth    *masterserver.StatsServer
 	statsAuthInc <-chan string
 
 	// info server
@@ -83,12 +83,12 @@ func init() {
 
 	is, infoInc = s.StartListeningForInfoRequests()
 
-	ms, masterInc, err = masterserver.New(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth)
+	ms, masterInc, err = masterserver.NewMaster(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth)
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
 
-	statsAuth, statsAuthInc, err = masterserver.New(conf.StatsServerAddress, conf.ListenPort, bm, role.None)
+	statsAuth, statsAuthInc, err = masterserver.NewStatsMaster(conf.StatsServerAddress, conf.ListenPort, s.HandleSuccStats, s.HandleFailStats)
 	if err != nil {
 		log.Println("could not connect to statsauth server:", err)
 	}

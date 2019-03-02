@@ -135,6 +135,8 @@ func (s *Server) Join(c *Client) {
 
 		log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", uniqueName, c.Peer.Address.IP)))
 	}()
+
+	go c.Send(nmc.RequestAuth, s.StatsServerAuthDomain)
 }
 
 func (s *Server) Spawn(client *Client) {
@@ -237,6 +239,22 @@ func (s *Server) ReportEndgameStats() {
 	})
 
 	statsAuth.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
+}
+
+func (s *Server) HandleSuccStats(reqID uint32) {
+	s.Clients.ForEach(func(c *Client) {
+		if a, ok := c.Authentications[s.StatsServerAuthDomain]; ok && a.reqID == reqID {
+			c.Send(nmc.ServerMessage, fmt.Sprintf("your game statistics were reported to %s", s.StatsServerAuthDomain))
+		}
+	})
+}
+
+func (s *Server) HandleFailStats(reqID uint32, reason string) {
+	s.Clients.ForEach(func(c *Client) {
+		if a, ok := c.Authentications[s.StatsServerAuthDomain]; ok && a.reqID == reqID {
+			c.Send(nmc.ServerMessage, fmt.Sprintf("reporting your game statistics failed: %s", reason))
+		}
+	})
 }
 
 func (s *Server) ChangeMap(mode gamemode.ID, mapname string) {

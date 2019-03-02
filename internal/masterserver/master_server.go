@@ -49,7 +49,7 @@ type MasterServer struct {
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func New(addr string, listenPort int, bans *bans.BanManager, authRole role.ID) (*MasterServer, <-chan string, error) {
+func NewMaster(addr string, listenPort int, bans *bans.BanManager, authRole role.ID) (*MasterServer, <-chan string, error) {
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)

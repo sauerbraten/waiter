@@ -93,7 +93,7 @@ const (
 	AuthKick
 	AuthChallenge
 	AuthAnswer
-	REQAUTH // 90
+	RequestAuth // 90
 	PauseGame
 	GAMESPEED
 	ADDBOT

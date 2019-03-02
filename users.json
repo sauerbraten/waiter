@@ -1,56 +1,42 @@
 [
         {
                 "name": "pix",
-                "domain": "waiter",
                 "public_key": "+6a3913aa4e4a7a45aa890d289dfe099ed7825a80927c2edb",
                 "role": "admin"
         },
         {
                 "name": "miu",
-                "domain": "waiter",
                 "public_key": "+ae6b173130fb836b5260ae11e30bee912e1ab0b35916c843",
                 "role": "admin"
         },
         {
                 "name": "Tagger",
-                "domain": "waiter",
                 "public_key": "+a1e915b99c0a2cc5a1b3590377e04bdc490f46fab7a7fc00",
                 "role": "admin"
         },
         {
                 "name": "Ignis",
-                "domain": "waiter",
                 "public_key": "+984eac6f4eaffe7b3b8d92aba55ab0f5f68265036960e79",
                 "role": "admin"
         },
         {
                 "name": "Alli",
-                "domain": "waiter",
                 "public_key": "+1f1820a79067e18d3f5de01b14cb7b4ff04609976dccc0cf",
                 "role": "admin"
         },
         {
                 "name": "Agalloch",
-                "domain": "waiter",
                 "public_key": "+8c70ece0fdc0c5500bd1ca1c0628b427fc068fbd4cceda8",
                 "role": "admin"
         },
         {
                 "name": "Frosty",
-                "domain": "waiter",
                 "public_key": "+99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2",
                 "role": "master"
         },
         {
                 "name": "Murrr",
-                "domain": "waiter",
                 "public_key": "-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f",
                 "role": "master"
-        },
-        {
-                "name": "unnamed",
-                "domain": "test",
-                "public_key": "-d954ee56eddf2b71e206e67d48aaf4afe1cc70f8ca9d1058",
-                "role": "admin"
         }
 ]

@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/sauerbraten/jsonfile"
@@ -12,6 +11,7 @@ import (
 	"github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
@@ -22,9 +22,15 @@ var (
 	// ban manager
 	bm *bans.BanManager
 
+	localAuth auth.Provider
+
 	// master server
 	ms        *masterserver.MasterServer
 	masterInc <-chan string
+
+	// stats server
+	statsAuth    *masterserver.MasterServer
+	statsAuthInc <-chan string
 
 	// info server
 	is      *infoServer
@@ -34,6 +40,12 @@ var (
 func init() {
 	var conf *Config
 	err := jsonfile.ParseFile("config.json", &conf)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var mr MapRotation
+	err = jsonfile.ParseFile("maps.json", &mr)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -48,12 +60,7 @@ func init() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	var mr MapRotation
-	err = jsonfile.ParseFile("maps.json", &mr)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	localAuth = auth.NewInMemoryProvider(users)
 
 	cs := &ClientManager{}
 
@@ -65,20 +72,32 @@ func init() {
 		},
 		relay:       NewRelay(),
 		Clients:     cs,
-		Auth:        auth.NewManager(users),
 		MapRotation: &mr,
 	}
 	s.GameDuration = s.GameDuration * time.Minute // duration is parsed without unit from config file
 	s.GameMode = NewGame(conf.FallbackGameMode)
 	s.Map = s.MapRotation.NextMap(s.GameMode, "")
 	s.GameMode.Start()
+	s.Unsupervised()
+	s.Empty()
 
 	is, infoInc = s.StartListeningForInfoRequests()
 
-	ms, masterInc, err = masterserver.New(s.Config.MasterServerAddress+":"+strconv.Itoa(s.Config.MasterServerPort), s.Config.ListenPort, bm)
+	ms, masterInc, err = masterserver.New(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth)
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
+
+	statsAuth, statsAuthInc, err = masterserver.New(conf.StatsServerAddress, conf.ListenPort, bm, role.None)
+	if err != nil {
+		log.Println("could not connect to statsauth server:", err)
+	}
+
+	s.AuthManager = auth.NewManager(map[string]auth.Provider{
+		"":                         ms.RemoteAuthProvider,
+		conf.PrimaryAuthDomain:     localAuth,
+		conf.StatsServerAuthDomain: statsAuth,
+	})
 }
 
 func main() {
@@ -101,8 +120,11 @@ func main() {
 			is.Handle(req)
 		case msg := <-masterInc:
 			go ms.Handle(msg)
+		case msg := <-statsAuthInc:
+			go statsAuth.Handle(msg)
 		case <-time.Tick(1 * time.Hour):
 			go ms.Register()
+			go statsAuth.Register()
 		}
 	}
 }
@@ -120,17 +142,10 @@ func handleEnetEvent(event enet.Event) {
 		s.Disconnect(client, disconnectreason.None)
 
 	case enet.EVENT_TYPE_RECEIVE:
-		// TODO: fix this maybe?
-		if len(event.Packet.Data) == 0 {
-			log.Println("received empty packet on channel", event.ChannelID, "from", event.Peer.Address)
-			return
-		}
-
 		client := s.Clients.GetClientByPeer(event.Peer)
 		if client == nil {
 			return
 		}
-
 		s.handlePacket(client, event.ChannelID, protocol.Packet(event.Packet.Data))
 	}
 }

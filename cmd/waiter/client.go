@@ -13,6 +13,11 @@ import (
 	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
 )
 
+type Authentication struct {
+	reqID uint32
+	name  string
+}
+
 // Describes a client.
 type Client struct {
 	CN                  uint32
@@ -30,16 +35,18 @@ type Client struct {
 	CurrentPos          *geom.Vector
 	Position            *Publisher
 	Packets             *Publisher
+	Authentications     map[string]*Authentication
 }
 
 func NewClient(cn uint32, peer *enet.Peer) *Client {
 	return &Client{
-		CN:        cn,
-		InUse:     true,
-		Peer:      peer,
-		SessionID: utils.RNG.Int31(),
-		Team:      NoTeam,
-		GameState: NewGameState(),
+		CN:              cn,
+		InUse:           true,
+		Peer:            peer,
+		SessionID:       utils.RNG.Int31(),
+		Team:            NoTeam,
+		GameState:       NewGameState(),
+		Authentications: map[string]*Authentication{},
 	}
 }
 
@@ -76,6 +83,9 @@ func (c *Client) Reset() {
 	}
 	if c.Packets != nil {
 		c.Packets.Close()
+	}
+	for domain := range c.Authentications {
+		delete(c.Authentications, domain)
 	}
 }
 

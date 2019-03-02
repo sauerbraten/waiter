@@ -10,9 +10,9 @@ type Config struct {
 	ListenAddress string `json:"listen_address"`
 	ListenPort    int    `json:"listen_port"`
 
-	MasterServerAddress string `json:"master_server_address"`
-	MasterServerPort    int    `json:"master_server_port"`
-
+	MasterServerAddress     string        `json:"master_server_address"`
+	StatsServerAddress      string        `json:"stats_server_address"`
+	StatsServerAuthDomain   string        `json:"stats_server_auth_domain"`
 	FallbackGameMode        gamemode.ID   `json:"fallback_game_mode"`
 	ServerDescription       string        `json:"server_description"`
 	MaxClients              int           `json:"max_clients"`

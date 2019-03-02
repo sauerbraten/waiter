@@ -6,6 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sauerbraten/waiter/internal/geom"
+	"github.com/sauerbraten/waiter/internal/net/packet"
+	"github.com/sauerbraten/waiter/internal/utils"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
@@ -13,8 +16,6 @@ import (
 	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
-	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
@@ -164,16 +165,23 @@ outer:
 				log.Println("could not read name from auth try packet:", p)
 				return
 			}
-			if domain == "" {
-				go s.handleGlobalAuthRequest(client, name,
-					func() { s.setAuthRole(client, role.Auth, "", name) },
-					func() { log.Println("unsuccessful gauth try by", client, "as", name) })
-			} else {
-				go s.handleAuthRequest(client, domain, name,
-					func(rol role.ID) { s.setAuthRole(client, rol, domain, name) },
-					func() { log.Println("unsuccessful auth try by", client, "as", name, "["+domain+"]") },
-				)
-			}
+			go s.AuthManager.TryAuthentication(
+				domain,
+				name,
+				func(reqID uint32, chal string) {
+					client.Authentications[domain] = &Authentication{reqID: reqID}
+					client.Send(nmc.AuthChallenge, domain, reqID, chal)
+				},
+				func(rol role.ID) {
+					utils.LogAuthTry(client.String(), domain, name, nil)
+					s.setAuthRole(client, rol, domain, name)
+					client.Authentications[domain].name = name
+				},
+				func(err error) {
+					delete(client.Authentications, domain)
+					utils.LogAuthTry(client.String(), domain, name, err)
+				},
+			)
 
 		case nmc.AuthKick:
 			domain, ok := p.GetString()
@@ -202,13 +210,15 @@ outer:
 				return
 			}
 			if domain == "" {
-				go s.handleGlobalAuthRequest(client, name,
-					func() { s.AuthKick(client, role.Auth, domain, name, victim, reason) },
-					func() { log.Println("unsuccessful gauth kick try by", client, "as", name, "vs", victim) })
+				go s.handleAuthRequest(client, domain, name,
+					func(role.ID) { s.AuthKick(client, role.Auth, domain, name, victim, reason) },
+					func(error) { log.Println("unsuccessful gauth kick try by", client, "as", name, "vs", victim) })
 			} else {
 				go s.handleAuthRequest(client, domain, name,
 					func(rol role.ID) { s.AuthKick(client, rol, domain, name, victim, reason) },
-					func() { log.Println("unsuccessful auth kick try by", client, "as", name, "["+domain+"]", "vs", victim) },
+					func(error) {
+						log.Println("unsuccessful auth kick try by", client, "as", name, "["+domain+"]", "vs", victim)
+					},
 				)
 			}
 
@@ -219,11 +229,17 @@ outer:
 				log.Println("could not read domain from auth answer packet:", p)
 				return
 			}
-			if domain == "" {
-				s.handleGlobalAuthAnswer(client, &p)
-			} else {
-				s.handleAuthAnswer(client, domain, &p)
+			_reqID, ok := p.GetInt()
+			if !ok {
+				log.Println("could not read request ID from auth answer packet:", p)
+				return
 			}
+			answer, ok := p.GetString()
+			if !ok {
+				log.Println("could not read answer from auth answer packet:", p)
+				return
+			}
+			s.handleAuthAnswer(client, domain, uint32(_reqID), answer)
 
 		case nmc.SetMaster:
 			_cn, ok := p.GetInt()
@@ -322,13 +338,13 @@ outer:
 			s.Clients.Broadcast(nmc.Spectator, spectator.CN, toggle)
 
 		case nmc.VoteMap:
-			mapp, ok := p.GetString()
+			mapname, ok := p.GetString()
 			if !ok {
 				log.Println("could not read map from map vote packet:", p)
 				return
 			}
-			if mapp == "" {
-				mapp = s.Map
+			if mapname == "" {
+				mapname = s.Map
 			}
 
 			_modeID, ok := p.GetInt()
@@ -354,8 +370,8 @@ outer:
 				return
 			}
 
-			log.Println(client, "forced", modeID, "on", mapp)
-			s.ChangeMap(modeID, mapp)
+			log.Println(client, "forced", modeID, "on", mapname)
+			s.ChangeMap(modeID, mapname)
 
 		case nmc.Ping:
 			// client pinging server → send pong

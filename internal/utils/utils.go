@@ -295,3 +295,19 @@ func CountryByIP(ip net.IP) string {
 
 	return countryByISO2[strings.TrimSpace(string(content))]
 }
+
+func LogAuthTry(player, domain, name string, err error) {
+	if err == nil {
+		if domain == "" {
+			log.Printf("successful gauth by %s as '%s'", player, name)
+		} else {
+			log.Printf("successful auth by %s as '%s' [%s]", player, name, domain)
+		}
+	} else {
+		if domain == "" {
+			log.Printf("unsuccessful gauth try by %s as '%s': %v", player, name, err)
+		} else {
+			log.Printf("unsuccessful auth try by %s as '%s' [%s]: %v", player, name, domain, err)
+		}
+	}
+}

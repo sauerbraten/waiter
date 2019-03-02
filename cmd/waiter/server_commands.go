@@ -34,6 +34,9 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	case "competitive", "compet":
 		toggleCompetitiveMode(c, parts[1:])
 
+	case "reportstats":
+		toggleReportStats(c, parts[1:])
+
 	case "ip", "ips":
 		go lookupIPs(c, parts[1:])
 
@@ -127,6 +130,34 @@ func toggleCompetitiveMode(c *Client, args []string) {
 			c.Send(nmc.ServerMessage, "competitive mode is on")
 		} else {
 			c.Send(nmc.ServerMessage, "competitive mode is off")
+		}
+	}
+}
+
+func toggleReportStats(c *Client, args []string) {
+	if c.Role < role.Admin {
+		return
+	}
+	changed := false
+	if len(args) >= 1 {
+		val, err := strconv.Atoi(args[0])
+		if err != nil || (val != 0 && val != 1) {
+			return
+		}
+		changed = s.ReportStats != (val == 1)
+		s.ReportStats = val == 1
+	}
+	if changed {
+		if s.ReportStats {
+			s.Clients.Broadcast(nmc.ServerMessage, "stats will be reported at intermission")
+		} else {
+			s.Clients.Broadcast(nmc.ServerMessage, "stats will not be reported")
+		}
+	} else {
+		if s.ReportStats {
+			c.Send(nmc.ServerMessage, "stats reporting is on")
+		} else {
+			c.Send(nmc.ServerMessage, "stats reporting is off")
 		}
 	}
 }

@@ -6,101 +6,41 @@ import (
 
 	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
-	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
-func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess func(rol role.ID), onFailure func()) {
-	challenge, requestID, err := s.Auth.GenerateChallenge(client.CN, domain, name, onSuccess, onFailure)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	client.Send(nmc.AuthChallenge, domain, requestID, challenge)
+func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess func(rol role.ID), onFailure func(error)) {
+	s.AuthManager.TryAuthentication(
+		domain,
+		name,
+		func(reqID uint32, chal string) {
+			client.Send(nmc.AuthChallenge, domain, reqID, chal)
+		},
+		onSuccess,
+		onFailure,
+	)
 }
 
-func (s *Server) handleGlobalAuthRequest(client *Client, name string, onSuccess, onFailure func()) {
-	requestID := s.Auth.RegisterAuthRequest(client.CN, "", name, onSuccess, onFailure)
-
-	callback := func(sessionID int32) func(string) {
-		return func(challenge string) {
-			if client == nil || client.SessionID != sessionID {
-				return
-			}
-			client.Send(nmc.AuthChallenge, "", requestID, challenge)
-		}
-	}(client.SessionID)
-
-	err := ms.RequestAuthChallenge(requestID, name, callback)
-	if err != nil {
-		s.Auth.ClearAuthRequest(requestID)
-		client.Send(nmc.ServerMessage, "not connected to authentication server")
-		return
-	}
+func (s *Server) handleAuthAnswer(client *Client, domain string, reqID uint32, answ string) {
+	s.AuthManager.CheckAnswer(reqID, domain, answ)
 }
 
-func (s *Server) handleAuthAnswer(client *Client, domain string, p *protocol.Packet) {
-	requestID, ok := p.GetInt()
-	if !ok {
-		log.Println("could not read request ID from auth answer packet:", p)
-		return
-	}
-	answer, ok := p.GetString()
-	if !ok {
-		log.Println("could not read answer from auth answer packet:", p)
-		return
-	}
-	s.Auth.CheckAnswer(uint32(requestID), client.CN, domain, answer)
-}
-
-func (s *Server) handleGlobalAuthAnswer(client *Client, p *protocol.Packet) {
-	_requestID, ok := p.GetInt()
-	if !ok {
-		log.Println("could not read request ID from auth answer packet:", p)
-		return
-	}
-	requestID := uint32(_requestID)
-	answer, ok := p.GetString()
-	if !ok {
-		log.Println("could not read answer from auth answer packet:", p)
-		return
-	}
-
-	onSuccess, onFailure, ok := s.Auth.LookupGlobalAuthRequest(requestID)
-	if !ok {
-		log.Println("no pending request with ID", requestID)
-	}
-
-	callback := func(sessionID int32) func(bool) {
-		return func(success bool) {
-			if client == nil || client.SessionID != sessionID {
-				return
-			}
-			if success {
-				onSuccess()
-			} else {
-				onFailure()
-			}
-		}
-	}(client.SessionID)
-
-	err := ms.ConfirmAuthAnswer(requestID, answer, callback)
-	if err != nil {
-		client.Send(nmc.ServerMessage, cubecode.Error("not connected to authentication server"))
-		return
-	}
-}
-
-func (s *Server) setAuthRole(client *Client, prvlg role.ID, domain, name string) {
-	msg := fmt.Sprintf("%s claimed %s privileges as '%s'", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name))
+func (s *Server) setAuthRole(client *Client, rol role.ID, domain, name string) {
+	authUser := fmt.Sprintf("'%s'", cubecode.Magenta(name))
 	if domain != "" {
-		msg = fmt.Sprintf("%s claimed %s privileges as '%s' [%s]", s.Clients.UniqueName(client), prvlg, cubecode.Magenta(name), cubecode.Green(domain))
+		authUser = fmt.Sprintf("'%s' [%s]", cubecode.Magenta(name), cubecode.Green(domain))
 	}
-	s.Clients.Broadcast(nmc.ServerMessage, msg)
-	log.Println(cubecode.SanitizeString(msg))
 
-	s._setRole(client, prvlg)
+	if client.Role >= rol {
+		msg := fmt.Sprintf("%s authenticated as %s", s.Clients.UniqueName(client), authUser)
+		s.Clients.Broadcast(nmc.ServerMessage, msg)
+		log.Println(cubecode.SanitizeString(msg))
+	} else {
+		msg := fmt.Sprintf("%s claimed %s privileges as %s", s.Clients.UniqueName(client), rol, authUser)
+		s.Clients.Broadcast(nmc.ServerMessage, msg)
+		log.Println(cubecode.SanitizeString(msg))
+		s._setRole(client, rol)
+	}
 }
 
 func (s *Server) setRole(client *Client, targetCN uint32, rol role.ID) {

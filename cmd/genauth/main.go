@@ -6,21 +6,23 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sauerbraten/waiter/pkg/auth"
+	"github.com/sauerbraten/maitred/pkg/auth"
+
+	sauth "github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
 )
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Println("Usage: genauth <domain> <role> <name>")
+		fmt.Println("Usage: genauth <name> <domain> <role>")
 		os.Exit(1)
 		return
 	}
 
-	domain, rol, name := os.Args[1], role.Parse(os.Args[2]), os.Args[3]
+	name, domain, rol := os.Args[1], os.Args[2], role.Parse(os.Args[3])
 
 	if rol != role.Master && rol != role.Admin {
-		fmt.Println("privilege must be 'master' or 'admin'")
+		fmt.Println("role must be 'master' or 'admin'")
 		os.Exit(2)
 		return
 	}
@@ -32,11 +34,8 @@ func main() {
 		return
 	}
 
-	u := &auth.User{
-		UserIdentifier: auth.UserIdentifier{
-			Name:   name,
-			Domain: domain,
-		},
+	u := &sauth.User{
+		Name:      name,
 		PublicKey: pub,
 		Role:      rol,
 	}

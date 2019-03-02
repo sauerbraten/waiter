@@ -7,13 +7,13 @@ import (
 	"io"
 	"log"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/sauerbraten/chef/pkg/ips"
 
 	"github.com/sauerbraten/waiter/pkg/bans"
+	"github.com/sauerbraten/waiter/pkg/definitions/role"
 )
 
 // master server protocol constants
@@ -39,50 +39,41 @@ type MasterServer struct {
 	listenPort int
 	bans       *bans.BanManager
 
-	conn             *net.TCPConn
-	lastRegistration time.Time
+	conn       *net.TCPConn
+	inc        chan<- string
+	pingFailed bool
 
-	requestChallengeCallbacks map[uint32]func(challenge string)
-	confirmAnswerCallbacks    map[uint32]func(sucess bool)
+	*RemoteAuthProvider
+	authInc chan<- string
+	authOut <-chan string
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func New(addr string, listenPort int, bans *bans.BanManager) (*MasterServer, <-chan string, error) {
+func New(addr string, listenPort int, bans *bans.BanManager, authRole role.ID) (*MasterServer, <-chan string, error) {
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)
 	}
+
+	inc := make(chan string)
+	authInc, authOut := make(chan string), make(chan string)
 
 	ms := &MasterServer{
 		raddr:      raddr,
 		listenPort: listenPort,
 		bans:       bans,
 
-		lastRegistration: time.Now().Add(-2 * time.Hour),
+		inc: inc,
 
-		requestChallengeCallbacks: map[uint32]func(string){},
-		confirmAnswerCallbacks:    map[uint32]func(sucess bool){},
+		RemoteAuthProvider: NewRemoteAuthProvider(authInc, authOut, authRole),
+		authInc:            authInc,
+		authOut:            authOut,
 	}
 
 	err = ms.connect()
 	if err != nil {
 		return nil, nil, err
 	}
-
-	sc := bufio.NewScanner(ms.conn)
-	inc := make(chan string)
-
-	go func() {
-		for sc.Scan() {
-			inc <- sc.Text()
-		}
-		if err := sc.Err(); err != nil {
-			log.Println(err)
-		} else {
-			log.Println("EOF from master server")
-			ms.reconnect(io.EOF)
-		}
-	}()
 
 	return ms, inc, nil
 }
@@ -94,7 +85,34 @@ func (ms *MasterServer) connect() error {
 	}
 
 	ms.conn = conn
+
+	sc := bufio.NewScanner(ms.conn)
+
+	go func() {
+		for sc.Scan() {
+			ms.inc <- sc.Text()
+		}
+		if err := sc.Err(); err != nil {
+			log.Println(err)
+		} else {
+			log.Println("EOF from master server", ms.raddr)
+			ms.reconnect(io.EOF)
+		}
+	}()
+
+	go ms.RemoteAuthProvider.run()
+
+	go func() {
+		for msg := range ms.authOut {
+			err := ms.Send(msg)
+			if err != nil {
+				log.Printf("remote auth (%s): %v", ms.raddr, err)
+			}
+		}
+	}()
+
 	ms.Register()
+
 	return nil
 }
 
@@ -118,32 +136,18 @@ func (ms *MasterServer) reconnect(err error) {
 }
 
 func (ms *MasterServer) Register() {
+	if ms.pingFailed {
+		return
+	}
 	log.Println("registering at master server")
-	err := ms.Request("%s %d", registerServer, ms.listenPort)
+	err := ms.Send("%s %d", registerServer, ms.listenPort)
 	if err != nil {
 		log.Println("registering at master server failed:", err)
 		return
 	}
-	ms.lastRegistration = time.Now()
 }
 
-func (ms *MasterServer) RequestAuthChallenge(requestID uint32, name string, callback func(challenge string)) error {
-	err := ms.Request("%s %d %s", requestAuthChallenge, requestID, name)
-	if err == nil {
-		ms.requestChallengeCallbacks[requestID] = callback
-	}
-	return err
-}
-
-func (ms *MasterServer) ConfirmAuthAnswer(requestID uint32, answer string, callback func(bool)) error {
-	err := ms.Request("%s %d %s", confirmAuthAnswer, requestID, answer)
-	if err == nil {
-		ms.confirmAnswerCallbacks[requestID] = callback
-	}
-	return err
-}
-
-func (ms *MasterServer) Request(format string, args ...interface{}) error {
+func (ms *MasterServer) Send(format string, args ...interface{}) error {
 	if ms.conn == nil {
 		return errors.New("not connected to master server")
 	}
@@ -156,16 +160,19 @@ func (ms *MasterServer) Request(format string, args ...interface{}) error {
 }
 
 func (ms *MasterServer) Handle(msg string) {
-	msgParts := strings.Split(msg, " ")
-	cmd := msgParts[0]
-	args := msgParts[1:]
+	cmd := strings.Split(msg, " ")[0]
+	args := strings.TrimSpace(msg[len(cmd):])
 
 	switch cmd {
 	case registrationSuccessful:
 		log.Println("master server registration succeeded")
 
 	case registrationFailed:
-		log.Println("master server registration failed:", strings.Join(args, " "))
+		log.Println("master server registration failed:", args)
+		if args == "failed pinging server" {
+			log.Println("disabling reconnecting")
+			ms.pingFailed = true // stop trying
+		}
 
 	case clearBans:
 		ms.bans.ClearGlobalBans()
@@ -173,70 +180,23 @@ func (ms *MasterServer) Handle(msg string) {
 	case addBan:
 		ms.handleAddGlobalBan(args)
 
-	case authChallenge:
-		ms.handleAuthChallenge(args)
-
-	case authFailed:
-		ms.handleAuthResult(false, authFailed, args)
-
-	case authSuccesful:
-		ms.handleAuthResult(true, authSuccesful, msgParts[1:])
+	case authChallenge, authFailed, authSuccesful:
+		ms.authInc <- msg
 
 	default:
 		log.Println("received from master:", msg)
 	}
 }
 
-func (ms *MasterServer) handleAddGlobalBan(args []string) {
-	if len(args) != 1 {
-		log.Printf("malformed '%s' message from master server: '%s'\n", addBan, strings.Join(args, " "))
+func (ms *MasterServer) handleAddGlobalBan(args string) {
+	var ip string
+	_, err := fmt.Sscanf(args, "%s", &ip)
+	if err != nil {
+		log.Printf("malformed %s message from game server: '%s': %v", addBan, args, err)
 		return
 	}
 
-	ipString := args[0]
-	network := ips.GetSubnet(ipString)
+	network := ips.GetSubnet(ip)
 
 	ms.bans.AddBan(network, "banned by master server", time.Time{}, true)
-}
-
-func (ms *MasterServer) handleAuthChallenge(args []string) {
-	if len(args) != 2 {
-		log.Printf("malformed '%s' message from master server: '%s'\n", authChallenge, strings.Join(args, " "))
-		return
-	}
-
-	_requestID, err := strconv.ParseUint(args[0], 10, 32)
-	if err != nil {
-		log.Printf("malformed request ID '%s' in '%s' message from master server: '%s'\n", args[0], authChallenge, strings.Join(args, " "))
-		return
-	}
-	requestID := uint32(_requestID)
-
-	challenge := args[1]
-
-	if callback, ok := ms.requestChallengeCallbacks[requestID]; ok {
-		callback(challenge)
-	} else {
-		log.Println("unsolicited auth challenge from master server")
-	}
-}
-
-func (ms *MasterServer) handleAuthResult(sucess bool, cmd string, args []string) {
-	if len(args) != 1 {
-		log.Printf("malformed '%s' message from master server: '%s'\n", cmd, strings.Join(args, " "))
-		return
-	}
-
-	_requestID, err := strconv.ParseUint(args[0], 10, 32)
-	if err != nil {
-		log.Printf("malformed request ID '%s' in '%s' message from master server: '%s'\n", args[0], cmd, strings.Join(args, " "))
-		return
-	}
-	requestID := uint32(_requestID)
-
-	if callback, ok := ms.confirmAnswerCallbacks[requestID]; ok {
-		callback(sucess)
-	} else {
-		log.Println("unsolicited auth confirmation from master server")
-	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/geom"
@@ -25,13 +26,14 @@ type Server struct {
 	*State
 	relay            *Relay
 	Clients          *ClientManager
-	Auth             *auth.Manager
+	AuthManager      *auth.Manager
 	MapRotation      *MapRotation
 	PendingMapChange *time.Timer
 
 	// non-standard stuff
 	KeepTeams       bool
 	CompetitiveMode bool
+	ReportStats     bool
 }
 
 func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
@@ -71,8 +73,11 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 		s.setAuthRole(c, rol, authDomain, authName)
 	}
 
-	onAutoAuthFailure := func() {
-		log.Println("unsuccessful auth try at connect by", c, "as", authName, "["+authDomain+"]")
+	onAutoAuthFailure := func(err error) {
+		if err != nil {
+			log.Println(err)
+		}
+		log.Printf("unsuccessful auth try at connect by %s as '%s' [%s]: %v", c, authName, authDomain)
 	}
 
 	c.AuthRequiredBecause = s.AuthRequiredBecause(c)
@@ -93,8 +98,8 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 				s.Join(c)
 				onAutoAuthSuccess(rol)
 			},
-			func() {
-				onAutoAuthFailure()
+			func(err error) {
+				onAutoAuthFailure(err)
 				s.Disconnect(c, c.AuthRequiredBecause)
 			},
 		)
@@ -193,12 +198,13 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 func (s *Server) Unsupervised() {
 	s.GameMode.Resume(nil)
 	s.MasterMode = mastermode.Open
+	s.KeepTeams = false
+	s.CompetitiveMode = false
+	s.ReportStats = true
 }
 
 func (s *Server) Empty() {
 	s.MapRotation.queue = s.MapRotation.queue[:0]
-	s.KeepTeams = false
-	s.CompetitiveMode = false
 	if s.GameMode.ID() != s.FallbackGameMode {
 		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(NewGame(s.FallbackGameMode), s.Map))
 	}
@@ -215,9 +221,25 @@ func (s *Server) Intermission() {
 	})
 
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
+
+	if s.ReportStats {
+		go s.ReportEndgameStats()
+	}
 }
 
-func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
+func (s *Server) ReportEndgameStats() {
+	stats := []string{}
+	s.Clients.ForEach(func(c *Client) {
+		if a, ok := c.Authentications[s.StatsServerAuthDomain]; ok {
+			gs := c.GameState
+			stats = append(stats, fmt.Sprintf("%d %s %d %d %d %d %d", a.reqID, a.name, gs.Frags, gs.Deaths, gs.Damage, gs.ShotDamage, gs.Flags))
+		}
+	})
+
+	statsAuth.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
+}
+
+func (s *Server) ChangeMap(mode gamemode.ID, mapname string) {
 	// cancel pending timers
 	if s.GameMode != nil {
 		s.GameMode.CleanUp()
@@ -228,7 +250,7 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapp string) {
 		s.PendingMapChange.Stop()
 	}
 
-	s.Map = mapp
+	s.Map = mapname
 	s.GameMode = NewGame(mode)
 
 	s.Clients.ForEach(s.GameMode.Join)

@@ -5,12 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 )
 
-type sendFunc func(channel uint8, flags enet.PacketFlag, payload []byte)
+type sendFunc func(channel uint8, payload []byte)
 
 // Relay relays positional data between clients
 type Relay struct {
@@ -50,9 +49,8 @@ func (r *Relay) loop() {
 				// publish positions
 				r.flush(
 					r.positions,
-					func(cn uint32, pkt []byte) []byte { return nil },
+					func(uint32, []byte) []byte { return nil },
 					0,
-					enet.PACKET_FLAG_NONE,
 				)
 
 				// clear positions
@@ -71,7 +69,6 @@ func (r *Relay) loop() {
 						return p
 					},
 					1,
-					enet.PACKET_FLAG_RELIABLE,
 				)
 
 				// clear client packets
@@ -97,10 +94,6 @@ func (r *Relay) loop() {
 	}
 }
 
-// Subscribe returns a new channel on which to receive updates on a certain topic.
-// Subscribe makes sure the topic exists by creating it if neccessary. When a new
-// topic was created, a corresponding publisher is returned, otherwise newPublisher
-// is nil.
 func (r *Relay) AddClient(cn uint32, sf sendFunc) (positions *Publisher, packets *Publisher) {
 	r.μ.Lock()
 	defer r.μ.Unlock()
@@ -147,7 +140,7 @@ func (r *Relay) FlushPositionAndSend(cn uint32, p []byte) {
 			if _cn == cn {
 				continue
 			}
-			send(0, enet.PACKET_FLAG_NONE, pos)
+			send(0, pos)
 		}
 		delete(r.positions, cn)
 	}
@@ -156,7 +149,7 @@ func (r *Relay) FlushPositionAndSend(cn uint32, p []byte) {
 		if _cn == cn {
 			continue
 		}
-		send(0, enet.PACKET_FLAG_NONE, p)
+		send(0, p)
 	}
 }
 
@@ -176,7 +169,7 @@ func (r *Relay) receive(cn uint32, from map[uint32]<-chan []byte, process func(u
 	}
 }
 
-func (r *Relay) flush(packets map[uint32][]byte, prefix func(uint32, []byte) []byte, channel uint8, flags enet.PacketFlag) {
+func (r *Relay) flush(packets map[uint32][]byte, prefix func(uint32, []byte) []byte, channel uint8) {
 	r.μ.Lock()
 	defer r.μ.Unlock()
 
@@ -210,7 +203,7 @@ func (r *Relay) flush(packets map[uint32][]byte, prefix func(uint32, []byte) []b
 		l := lengths[cn]
 		offset += l
 		p := combined[offset : (len(combined)/2)-l+offset]
-		r.send[cn](channel, flags, p)
+		r.send[cn](channel, p)
 	}
 }
 

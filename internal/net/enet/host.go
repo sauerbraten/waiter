@@ -49,22 +49,24 @@ import (
 	"time"
 )
 
-var peers map[*C.ENetPeer]*Peer = map[*C.ENetPeer]*Peer{}
-
 func NewHost(laddr string, lport int) (h *Host, err error) {
 	enetHost := C.initServer(C.CString(laddr), C.int(lport))
 	if enetHost == nil {
-		err = errors.New("an error occured running the C code")
+		err = errors.New("an error occured initializing the ENet host in C")
 		return
 	}
 
-	h = &Host{enetHost: enetHost}
+	h = &Host{
+		enetHost: enetHost,
+		peers:    map[*C.ENetPeer]*Peer{},
+	}
 
 	return
 }
 
 type Host struct {
 	enetHost *C.ENetHost
+	peers    map[*C.ENetPeer]*Peer
 }
 
 func (h *Host) Service() <-chan Event {
@@ -72,7 +74,7 @@ func (h *Host) Service() <-chan Event {
 	go func() {
 		for {
 			cEvent := C.serviceHost(h.enetHost)
-			events <- eventFromCEvent(&cEvent)
+			events <- h.eventFromCEvent(&cEvent)
 			time.Sleep(1 * time.Millisecond) // TODO: not sure why, but without this, the server crashes
 		}
 	}()

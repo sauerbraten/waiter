@@ -22,6 +22,7 @@ import (
 )
 
 type Server struct {
+	ENetHost *enet.Host
 	*Config
 	*State
 	relay            *Relay
@@ -163,6 +164,8 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(client)
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
+	s.ENetHost.Disconnect(client.Peer, disconnectreason.None)
+	client.Reset()
 	if len(s.Clients.PrivilegedUsers()) == 0 {
 		s.Unsupervised()
 	}

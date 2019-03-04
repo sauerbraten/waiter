@@ -37,7 +37,7 @@ var (
 	infoInc <-chan infoRequest
 )
 
-func init() {
+func main() {
 	var conf *Config
 	err := jsonfile.ParseFile("config.json", &conf)
 	if err != nil {
@@ -62,10 +62,16 @@ func init() {
 	}
 	localAuth = auth.NewInMemoryProvider(users)
 
+	host, err := enet.NewHost(conf.ListenAddress, conf.ListenPort)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	cs := &ClientManager{}
 
 	s = &Server{
-		Config: conf,
+		ENetHost: host,
+		Config:   conf,
 		State: &State{
 			UpSince:    time.Now(),
 			NumClients: cs.NumberOfClientsConnected,
@@ -98,19 +104,12 @@ func init() {
 		conf.PrimaryAuthDomain:     localAuth,
 		conf.StatsServerAuthDomain: statsAuth,
 	})
-}
-
-func main() {
-	host, err := enet.NewHost(s.Config.ListenAddress, s.Config.ListenPort)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	log.Println("server running on port", s.Config.ListenPort)
 
 	go s.relay.loop()
 
-	gameInc := host.Service()
+	gameInc := s.ENetHost.Service()
+
+	log.Println("server running on port", s.Config.ListenPort)
 
 	for {
 		select {
@@ -131,17 +130,17 @@ func main() {
 
 func handleEnetEvent(event enet.Event) {
 	switch event.Type {
-	case enet.EVENT_TYPE_CONNECT:
+	case enet.EventTypeConnect:
 		s.Connect(event.Peer)
 
-	case enet.EVENT_TYPE_DISCONNECT:
+	case enet.EventTypeDisconnect:
 		client := s.Clients.GetClientByPeer(event.Peer)
 		if client == nil {
 			return
 		}
 		s.Disconnect(client, disconnectreason.None)
 
-	case enet.EVENT_TYPE_RECEIVE:
+	case enet.EventTypeReceive:
 		client := s.Clients.GetClientByPeer(event.Peer)
 		if client == nil {
 			return

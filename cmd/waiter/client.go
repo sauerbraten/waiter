@@ -94,5 +94,5 @@ func (c *Client) String() string {
 }
 
 func (c *Client) Send(typ nmc.ID, args ...interface{}) {
-	c.Peer.Send(1, enet.PACKET_FLAG_RELIABLE, packet.Encode(typ, packet.Encode(args...)))
+	c.Peer.Send(1, packet.Encode(typ, packet.Encode(args...)))
 }

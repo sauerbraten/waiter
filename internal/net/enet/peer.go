@@ -12,6 +12,7 @@ import (
 	"net"
 	"unsafe"
 
+	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 )
 
@@ -19,18 +20,17 @@ type PeerState uint
 
 type Peer struct {
 	Address *net.UDPAddr
-	Network net.IPNet // for bans
 	State   PeerState
 	cPeer   *C.ENetPeer
 }
 
-func peerFromCPeer(cPeer *C.ENetPeer) *Peer {
+func (h *Host) peerFromCPeer(cPeer *C.ENetPeer) *Peer {
 	if cPeer == nil {
 		return nil
 	}
 
 	// peer exists already
-	if p, ok := peers[cPeer]; ok {
+	if p, ok := h.peers[cPeer]; ok {
 		return p
 	}
 
@@ -42,30 +42,29 @@ func peerFromCPeer(cPeer *C.ENetPeer) *Peer {
 			IP:   ip,
 			Port: int(cPeer.address.port),
 		},
-		Network: net.IPNet{
-			IP:   ip,
-			Mask: ip.DefaultMask(),
-		},
 		State: PeerState(cPeer.state),
 		cPeer: cPeer,
 	}
 
-	peers[cPeer] = p
+	h.peers[cPeer] = p
 
 	return p
 }
 
-func (p *Peer) Disconnect(reason uint32) {
-	delete(peers, p.cPeer)
+func (h *Host) Disconnect(p *Peer, reason disconnectreason.ID) {
 	C.enet_peer_disconnect(p.cPeer, C.enet_uint32(reason))
+	delete(h.peers, p.cPeer)
 }
 
-func (p *Peer) Send(channel uint8, flags PacketFlag, payload []byte) {
+func (p *Peer) Send(channel uint8, payload []byte) {
 	if len(payload) == 0 {
 		return
 	}
 
-	flags = flags & ^PACKET_FLAG_NO_ALLOCATE // always allocate (safer with CGO usage below)
+	flags := ^uint32(PacketFlagNoAllocate) // always allocate (safer with CGO usage below)
+	if channel == 1 {
+		flags = flags & PacketFlagReliabe
+	}
 
 	switch nmc.ID(payload[0]) {
 	case nmc.Position,

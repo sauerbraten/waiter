@@ -9,7 +9,7 @@
 	"master_server_address": "sauerbraten.org:28787",
 
 	// address of a master server that supports stats reporting
-	"stats_server_address": "p1x.pw:28787",
+	"stats_server_address": "stats.p1x.pw:28787",
 	//"stats_server_address": "localhost:28787",
 
 	// stats server auth domain

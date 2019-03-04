@@ -10,15 +10,13 @@ import (
 	"unsafe"
 )
 
-type PacketFlag uint32
-
 const (
-	PACKET_FLAG_NONE                PacketFlag = 0
-	PACKET_FLAG_RELIABLE            PacketFlag = (1 << 0)
-	PACKET_FLAG_UNSEQUENCED         PacketFlag = (1 << 1)
-	PACKET_FLAG_NO_ALLOCATE         PacketFlag = (1 << 2)
-	PACKET_FLAG_UNRELIABLE_FRAGMENT PacketFlag = (1 << 3)
-	PACKET_FLAG_SENT                PacketFlag = (1 << 8)
+	PacketFlagNone               = 0
+	PacketFlagReliabe            = (1 << 0)
+	PacketFlagUnsequenced        = (1 << 1)
+	PacketFlagNoAllocate         = (1 << 2)
+	PacketFlagUnreliableFragment = (1 << 3)
+	PacketFlagSent               = (1 << 8)
 )
 
 type Packet struct {

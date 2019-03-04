@@ -173,10 +173,6 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 		msg = fmt.Sprintf("%s (%s) disconnected", cm.UniqueName(c), c.Peer.Address.IP)
 	}
 	log.Println(cubecode.SanitizeString(msg))
-
-	c.Peer.Disconnect(uint32(reason))
-
-	c.Reset()
 }
 
 // Informs all other clients that a client joined the game.

@@ -9,10 +9,9 @@ import "C"
 type EventType uint
 
 const (
-	EVENT_TYPE_NONE       EventType = C.ENET_EVENT_TYPE_NONE
-	EVENT_TYPE_CONNECT    EventType = C.ENET_EVENT_TYPE_CONNECT
-	EVENT_TYPE_DISCONNECT EventType = C.ENET_EVENT_TYPE_DISCONNECT
-	EVENT_TYPE_RECEIVE    EventType = C.ENET_EVENT_TYPE_RECEIVE
+	EventTypeConnect    = C.ENET_EVENT_TYPE_CONNECT
+	EventTypeDisconnect = C.ENET_EVENT_TYPE_DISCONNECT
+	EventTypeReceive    = C.ENET_EVENT_TYPE_RECEIVE
 )
 
 type Event struct {
@@ -23,15 +22,15 @@ type Event struct {
 	Packet    *Packet
 }
 
-func eventFromCEvent(cEvent *C.ENetEvent) Event {
+func (h *Host) eventFromCEvent(cEvent *C.ENetEvent) Event {
 	e := Event{
 		Type:      EventType(cEvent._type),
-		Peer:      peerFromCPeer(cEvent.peer),
+		Peer:      h.peerFromCPeer(cEvent.peer),
 		ChannelID: uint8(cEvent.channelID),
 		Data:      uint32(cEvent.data),
 	}
 
-	if e.Type == EVENT_TYPE_RECEIVE {
+	if e.Type == EventTypeReceive {
 		e.Packet = packetFromCPacket(cEvent.packet)
 		C.enet_packet_destroy(cEvent.packet)
 	}

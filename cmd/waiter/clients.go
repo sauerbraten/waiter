@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/sauerbraten/waiter/internal/game"
-
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
@@ -187,7 +186,7 @@ func (cm *ClientManager) InformOthersOfJoin(c *Client) {
 
 func (cm *ClientManager) MapChange() {
 	cm.ForEach(func(c *Client) {
-		c.Player.Reset()
+		c.Player.PlayerState.Reset()
 		if c.State == playerstate.Spectator {
 			return
 		}

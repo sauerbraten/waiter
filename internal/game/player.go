@@ -34,7 +34,7 @@ func (p *Player) ApplyDamage(attacker *Player, damage int32, weapon weapon.ID, d
 func (p *Player) Reset() {
 	// keep the CN, so low CNs can be reused
 	p.Name = ""
-	// keep team!
+	p.Team = NoTeam
 	p.Model = -1
 	p.Position = nil
 	p.PlayerState.Reset()

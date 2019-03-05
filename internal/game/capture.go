@@ -1,4 +1,4 @@
-package main
+package game
 
 type CaptureMode interface {
 	TeamMode

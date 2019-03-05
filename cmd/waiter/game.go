@@ -1,134 +1,37 @@
 package main
 
 import (
-	"fmt"
-	"time"
-
+	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
 )
 
-func NewGame(id gamemode.ID) GameMode {
-	mode := func() GameMode {
+func NewGame(id gamemode.ID) game.Mode {
+	mode := func() game.Mode {
 		switch id {
 		case gamemode.Insta:
-			return NewInsta()
+			return game.NewInsta(s)
 		case gamemode.InstaTeam:
-			return NewInstaTeam()
+			return game.NewInstaTeam(s, s.KeepTeams)
 		case gamemode.Effic:
-			return NewEffic()
+			return game.NewEffic(s)
 		case gamemode.EfficTeam:
-			return NewEfficTeam()
+			return game.NewEfficTeam(s, s.KeepTeams)
 		case gamemode.Tactics:
-			return NewTactics()
+			return game.NewTactics(s)
 		case gamemode.TacticsTeam:
-			return NewTacticsTeam()
+			return game.NewTacticsTeam(s, s.KeepTeams)
 		case gamemode.InstaCTF:
-			return NewInstaCTF()
+			return game.NewInstaCTF(s, s.KeepTeams)
 		case gamemode.EfficCTF:
-			return NewEfficCTF()
+			return game.NewEfficCTF(s, s.KeepTeams)
 		default:
 			return nil
 		}
 	}()
 
 	if s.CompetitiveMode {
-		return newCompetitiveMode(mode)
+		return game.NewCompetitive(s, mode)
 	} else {
 		return mode
 	}
-}
-
-type CompetitiveMode struct {
-	GameMode
-	started              bool
-	mapLoadPending       map[*Client]struct{}
-	pendingResumeActions []*time.Timer
-}
-
-func newCompetitiveMode(mode GameMode) *CompetitiveMode {
-	return &CompetitiveMode{
-		GameMode:       mode,
-		mapLoadPending: map[*Client]struct{}{},
-	}
-}
-
-func (g *CompetitiveMode) ToCasual() GameMode {
-	return g.GameMode
-}
-
-func (g *CompetitiveMode) Start() {
-	g.GameMode.Start()
-	s.Clients.ForEach(func(c *Client) {
-		if c.GameState.State != playerstate.Spectator {
-			g.mapLoadPending[c] = struct{}{}
-		}
-	})
-	if len(g.mapLoadPending) > 0 {
-		s.Clients.Broadcast(nmc.ServerMessage, "waiting for all players to load the map")
-		g.Pause(nil)
-	}
-}
-
-func (g *CompetitiveMode) Resume(c *Client) {
-	if len(g.pendingResumeActions) > 0 {
-		for _, action := range g.pendingResumeActions {
-			if action != nil {
-				action.Stop()
-			}
-		}
-		g.pendingResumeActions = nil
-		s.Clients.Broadcast(nmc.ServerMessage, "resuming aborted")
-		return
-	}
-
-	if c != nil {
-		s.Clients.Broadcast(nmc.ServerMessage, fmt.Sprintf("%s wants to resume the game", s.Clients.UniqueName(c)))
-	}
-	s.Clients.Broadcast(nmc.ServerMessage, "resuming game in 3 seconds")
-	g.pendingResumeActions = []*time.Timer{
-		time.AfterFunc(1*time.Second, func() { s.Clients.Broadcast(nmc.ServerMessage, "resuming game in 2 seconds") }),
-		time.AfterFunc(2*time.Second, func() { s.Clients.Broadcast(nmc.ServerMessage, "resuming game in 1 second") }),
-		time.AfterFunc(3*time.Second, func() {
-			g.GameMode.Resume(c)
-			g.pendingResumeActions = nil
-		}),
-	}
-}
-
-func (g *CompetitiveMode) ConfirmSpawn(c *Client) {
-	g.GameMode.ConfirmSpawn(c)
-	if _, ok := g.mapLoadPending[c]; ok {
-		delete(g.mapLoadPending, c)
-		if len(g.mapLoadPending) == 0 {
-			s.Clients.Broadcast(nmc.ServerMessage, "all players spawned, starting game")
-			g.Resume(nil)
-		}
-	}
-}
-
-func (g *CompetitiveMode) Leave(c *Client) {
-	g.GameMode.Leave(c)
-	if c.GameState.State != playerstate.Spectator && !g.GameMode.Ended() {
-		s.Clients.Broadcast(nmc.ServerMessage, "a player left the game")
-		if !g.Paused() {
-			g.Pause(nil)
-		} else if len(g.pendingResumeActions) > 0 {
-			// a resume is pending, cancel it
-			g.Resume(nil)
-		}
-	}
-}
-
-func (g *CompetitiveMode) CleanUp() {
-	if len(g.pendingResumeActions) > 0 {
-		for _, action := range g.pendingResumeActions {
-			if action != nil {
-				action.Stop()
-			}
-		}
-		g.pendingResumeActions = nil
-	}
-	g.GameMode.CleanUp()
 }

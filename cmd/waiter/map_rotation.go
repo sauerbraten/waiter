@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
+	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/internal/utils"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 )
 
 type MapRotation struct {
@@ -13,7 +14,7 @@ type MapRotation struct {
 	queue []string
 }
 
-func (mr *MapRotation) NextMap(mode GameMode, currentMap string) string {
+func (mr *MapRotation) NextMap(mode game.Mode, currentMap string) string {
 	if mode.ID() == s.GameMode.ID() {
 		if len(mr.queue) > 0 {
 			mapp := mr.queue[0]
@@ -43,7 +44,7 @@ func (mr *MapRotation) NextMap(mode GameMode, currentMap string) string {
 	}
 }
 
-func (mr *MapRotation) InPool(mode GameMode, mapp string) bool {
+func (mr *MapRotation) InPool(mode game.Mode, mapp string) bool {
 	inPool := func(pool []string) bool {
 		for _, m := range pool {
 			if m == mapp {

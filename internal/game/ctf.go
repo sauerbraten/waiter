@@ -1,4 +1,4 @@
-package main
+package game
 
 import (
 	"log"
@@ -16,7 +16,7 @@ import (
 type flag struct {
 	index         int32
 	team          int32
-	owner         *Client
+	owner         *Player
 	version       int32
 	dropTime      time.Time
 	dropLocation  *geom.Vector
@@ -29,6 +29,7 @@ type flagMode struct {
 }
 
 type ctfMode struct {
+	s Server
 	timedMode
 	teamMode
 	flagMode
@@ -37,32 +38,33 @@ type ctfMode struct {
 	flagsByIndex map[int32]*flag
 }
 
-func newCTFMode() ctfMode {
+func newCTFMode(s Server, keepTeams bool) ctfMode {
 	return ctfMode{
-		timedMode:    newTimedMode(),
-		teamMode:     newTeamMode(false, "good", "evil"),
+		s:            s,
+		timedMode:    newTimedMode(s),
+		teamMode:     newTeamMode(s, false, keepTeams, "good", "evil"),
 		flagsByIndex: map[int32]*flag{},
 	}
 }
 
-func (ctf *ctfMode) Pause(c *Client) {
+func (ctf *ctfMode) Pause(p *Player) {
 	if ctf.good.pendingReset != nil {
 		ctf.good.pendingReset.Pause()
 	}
 	if ctf.evil.pendingReset != nil {
 		ctf.evil.pendingReset.Pause()
 	}
-	ctf.timedMode.Pause(c)
+	ctf.timedMode.Pause(p)
 }
 
-func (ctf *ctfMode) Resume(c *Client) {
+func (ctf *ctfMode) Resume(p *Player) {
 	if ctf.good.pendingReset != nil {
 		ctf.good.pendingReset.Start()
 	}
 	if ctf.evil.pendingReset != nil {
 		ctf.evil.pendingReset.Start()
 	}
-	ctf.timedMode.Resume(c)
+	ctf.timedMode.Resume(p)
 }
 
 func (ctf *ctfMode) flagByTeamID(team int32) *flag {
@@ -87,26 +89,26 @@ func (ctf *ctfMode) teamByFlag(f *flag) string {
 	}
 }
 
-func (ctf *ctfMode) HandlePacket(client *Client, packetType nmc.ID, p *protocol.Packet) bool {
+func (ctf *ctfMode) HandlePacket(p *Player, packetType nmc.ID, pkt *protocol.Packet) bool {
 	switch packetType {
 	case nmc.InitFlags:
-		ctf.initFlags(p)
+		ctf.initFlags(pkt)
 
 	case nmc.TakeFlag:
-		i, ok := p.GetInt()
+		i, ok := pkt.GetInt()
 		if !ok {
-			log.Println("could not read flag ID from takeflag packet (packet too short):", p)
+			log.Println("could not read flag ID from takeflag packet (packet too short):", pkt)
 			break
 		}
-		version, ok := p.GetInt()
+		version, ok := pkt.GetInt()
 		if !ok {
-			log.Println("could not read flag version from takeflag packet (packet too short):", p)
+			log.Println("could not read flag version from takeflag packet (packet too short):", pkt)
 			break
 		}
-		ctf.touchFlag(client, i, version)
+		ctf.touchFlag(p, i, version)
 
 	case nmc.TryDropFlag:
-		ctf.dropFlag(client)
+		ctf.dropFlag(p)
 
 	default:
 		return false
@@ -155,7 +157,7 @@ func (ctf *ctfMode) initFlags(p *protocol.Packet) (f1, f2 *flag) {
 	return
 }
 
-func (ctf *ctfMode) touchFlag(client *Client, i int32, version int32) {
+func (ctf *ctfMode) touchFlag(p *Player, i int32, version int32) {
 	if !ctf.flagsInitialized {
 		return
 	}
@@ -166,20 +168,20 @@ func (ctf *ctfMode) touchFlag(client *Client, i int32, version int32) {
 		return
 	}
 
-	if flag.owner != nil || flag.version != version || client.GameState.State != playerstate.Alive {
+	if flag.owner != nil || flag.version != version || p.State != playerstate.Alive {
 		return
 	}
 
 	team := ctf.teamByFlag(flag)
 
-	if client.Team.Name != team {
+	if p.Team.Name != team {
 		// player stealing enemy flag
-		ctf.takeFlag(client, flag)
+		ctf.takeFlag(p, flag)
 	} else if !flag.dropTime.IsZero() {
 		// player touches her own, dropped flag
 		ctf.returnFlag(flag)
 		flag.version++
-		s.Clients.Broadcast(nmc.ReturnFlag, client.CN, flag.index, flag.version)
+		ctf.s.Broadcast(nmc.ReturnFlag, p.CN, flag.index, flag.version)
 		return
 	} else {
 		// player touches her own flag at its base
@@ -189,21 +191,21 @@ func (ctf *ctfMode) touchFlag(client *Client, i int32, version int32) {
 			return
 		}
 
-		if enemyFlag.owner == client {
+		if enemyFlag.owner == p {
 			ctf.returnFlag(enemyFlag)
-			client.GameState.Flags++
+			p.Flags++
 			ctf.teams[team].Score++
 			flag.version++
 			enemyFlag.version++
-			s.Clients.Broadcast(nmc.ScoreFlag, client.CN, enemyFlag.index, enemyFlag.version, flag.index, flag.version, 0, flag.team, ctf.teams[team].Score, client.GameState.Flags)
+			ctf.s.Broadcast(nmc.ScoreFlag, p.CN, enemyFlag.index, enemyFlag.version, flag.index, flag.version, 0, flag.team, ctf.teams[team].Score, p.Flags)
 			if ctf.teams[team].Score >= 10 {
-				s.Intermission()
+				ctf.s.Intermission()
 			}
 		}
 	}
 }
 
-func (ctf *ctfMode) takeFlag(client *Client, f *flag) {
+func (ctf *ctfMode) takeFlag(p *Player, f *flag) {
 	// cancel reset
 	if f.pendingReset != nil {
 		f.pendingReset.Stop()
@@ -211,17 +213,17 @@ func (ctf *ctfMode) takeFlag(client *Client, f *flag) {
 	}
 
 	f.version++
-	s.Clients.Broadcast(nmc.TakeFlag, client.CN, f.index, f.version)
-	f.owner = client
+	ctf.s.Broadcast(nmc.TakeFlag, p.CN, f.index, f.version)
+	f.owner = p
 }
 
-func (ctf *ctfMode) dropFlag(client *Client) {
+func (ctf *ctfMode) dropFlag(p *Player) {
 	if !ctf.flagsInitialized {
 		return
 	}
 
 	var f *flag
-	switch client.Team.Name {
+	switch p.Team.Name {
 	case "good":
 		f = &ctf.evil
 	case "evil":
@@ -230,20 +232,20 @@ func (ctf *ctfMode) dropFlag(client *Client) {
 		return
 	}
 
-	if f.owner != client {
+	if f.owner != p {
 		return
 	}
 
-	f.dropLocation = client.CurrentPos
+	f.dropLocation = p.Position
 	f.dropTime = time.Now()
 	f.owner = nil
 	f.version++
 
-	s.Clients.Broadcast(nmc.DropFlag, client.CN, f.index, f.version, f.dropLocation.Mul(geom.DMF))
+	ctf.s.Broadcast(nmc.DropFlag, p.CN, f.index, f.version, f.dropLocation.Mul(geom.DMF))
 	f.pendingReset = timer.AfterFunc(10*time.Second, func() {
 		ctf.returnFlag(f)
 		f.version++
-		s.Clients.Broadcast(nmc.ResetFlag, f.index, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
+		ctf.s.Broadcast(nmc.ResetFlag, f.index, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
 	})
 	f.pendingReset.Start()
 }
@@ -255,7 +257,7 @@ func (ctf *ctfMode) returnFlag(f *flag) {
 
 func (ctf *ctfMode) NeedMapInfo() bool { return !ctf.flagsInitialized }
 
-func (ctf *ctfMode) Init(client *Client) {
+func (ctf *ctfMode) Init(p *Player) {
 	typ, q := nmc.InitFlags, []interface{}{
 		ctf.teams["good"].Score,
 		ctf.teams["evil"].Score,
@@ -286,20 +288,21 @@ func (ctf *ctfMode) Init(client *Client) {
 		q = append(q, 0)
 	}
 
-	client.Send(typ, q...)
+	ctf.s.Send(p, typ, q...)
 }
 
-func (ctf *ctfMode) Leave(client *Client) {
-	ctf.dropFlag(client)
-	ctf.teamMode.Leave(client)
+func (ctf *ctfMode) Leave(p *Player) {
+	ctf.dropFlag(p)
+	ctf.teamMode.Leave(p)
 }
 
-func (ctf *ctfMode) CanSpawn(c *Client) bool {
-	return c.GameState.LastDeath.IsZero() || time.Since(c.GameState.LastDeath) > 5*time.Second
+func (ctf *ctfMode) CanSpawn(p *Player) bool {
+	return p.LastDeath.IsZero() || time.Since(p.LastDeath) > 5*time.Second
 }
 
-func (ctf *ctfMode) HandleDeath(_, victim *Client) {
+func (ctf *ctfMode) HandleFrag(actor, victim *Player) {
 	ctf.dropFlag(victim)
+	ctf.teamMode.HandleFrag(actor, victim)
 }
 
 func (ctf *ctfMode) CleanUp() {
@@ -320,14 +323,14 @@ type EfficCTF struct {
 
 // assert interface implementations at compile time
 var (
-	_ GameMode = &EfficCTF{}
+	_ Mode     = &EfficCTF{}
 	_ TeamMode = &EfficCTF{}
 )
 
-func NewEfficCTF() *EfficCTF {
+func NewEfficCTF(s Server, keepTeams bool) *EfficCTF {
 	var ectf *EfficCTF
 	ectf = &EfficCTF{
-		ctfMode: newCTFMode(),
+		ctfMode: newCTFMode(s, keepTeams),
 	}
 	return ectf
 }
@@ -342,16 +345,29 @@ type InstaCTF struct {
 
 // assert interface implementations at compile time
 var (
-	_ GameMode = &InstaCTF{}
+	_ Mode     = &InstaCTF{}
 	_ TeamMode = &InstaCTF{}
 )
 
-func NewInstaCTF() *InstaCTF {
+func NewInstaCTF(s Server, keepTeams bool) *InstaCTF {
 	var ictf *InstaCTF
 	ictf = &InstaCTF{
-		ctfMode: newCTFMode(),
+		ctfMode: newCTFMode(s, keepTeams),
 	}
 	return ictf
 }
 
 func (*InstaCTF) ID() gamemode.ID { return gamemode.InstaCTF }
+
+func parseVector(p *protocol.Packet) (*geom.Vector, bool) {
+	xyz := [3]float64{}
+	for i := range xyz {
+		coord, ok := p.GetInt()
+		if !ok {
+			log.Printf("could not read %s coordinate from packet: %v", string("xzy"[i]), p)
+			return nil, false
+		}
+		xyz[i] = float64(coord)
+	}
+	return geom.NewVector(xyz[0], xyz[1], xyz[2]), true
+}

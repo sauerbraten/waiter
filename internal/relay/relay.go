@@ -1,4 +1,4 @@
-package main
+package relay
 
 import (
 	"errors"
@@ -26,8 +26,8 @@ type Relay struct {
 	send map[uint32]sendFunc
 }
 
-func NewRelay() *Relay {
-	return &Relay{
+func New() *Relay {
+	r := &Relay{
 		incPositionsNotifs: make(chan uint32),
 		incPositions:       map[uint32]<-chan []byte{},
 		positions:          map[uint32][]byte{},
@@ -38,6 +38,10 @@ func NewRelay() *Relay {
 
 		send: map[uint32]sendFunc{},
 	}
+
+	go r.loop()
+
+	return r
 }
 
 func (r *Relay) loop() {

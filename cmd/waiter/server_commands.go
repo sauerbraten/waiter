@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
 	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
@@ -103,7 +104,7 @@ func toggleCompetitiveMode(c *Client, args []string) {
 		if err != nil || (val != 0 && val != 1) {
 			return
 		}
-		comp, active := s.GameMode.(*CompetitiveMode)
+		comp, active := s.GameMode.(*game.Competitive)
 		changed = s.CompetitiveMode != (val == 1)
 		switch val {
 		case 1:

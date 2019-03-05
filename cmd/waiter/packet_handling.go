@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/utils"
@@ -76,10 +77,10 @@ outer:
 
 		case nmc.Position:
 			// client sending his position and movement in the world
-			if client.GameState.State == playerstate.Alive {
+			if client.State == playerstate.Alive {
 				q := p
-				client.Position.Publish(packet.Encode(nmc.Position, q))
-				client.CurrentPos = parsePosition(&p)
+				client.Positions.Publish(packet.Encode(nmc.Position, q))
+				client.Position = parsePosition(&p)
 			}
 			break outer
 
@@ -94,7 +95,7 @@ outer:
 				log.Println("could not read jump pad ID from jump pad packet (packet too short):", p)
 				return
 			}
-			if client.GameState.State == playerstate.Alive {
+			if client.State == playerstate.Alive {
 				s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.JumpPad, cn, jumppad))
 			}
 
@@ -119,7 +120,7 @@ outer:
 				log.Println("could not read teledest ID from teleport packet (packet too short):", p)
 				return
 			}
-			if client.GameState.State == playerstate.Alive {
+			if client.State == playerstate.Alive {
 				s.relay.FlushPositionAndSend(client.CN, packet.Encode(nmc.Teleport, cn, teleport, teledest))
 			}
 
@@ -315,24 +316,24 @@ outer:
 					return
 				}
 				// unprivileged clients can not unspec themselves in mm>=2
-				if client.GameState.State == playerstate.Spectator && s.MasterMode >= mastermode.Locked {
+				if client.State == playerstate.Spectator && s.MasterMode >= mastermode.Locked {
 					client.Send(nmc.ServerMessage, cubecode.Fail("you can't do that"))
 					return
 				}
 			}
-			if (spectator.GameState.State == playerstate.Spectator) == (toggle != 0) {
+			if (spectator.State == playerstate.Spectator) == (toggle != 0) {
 				// nothing to do
 				return
 			}
 			if toggle != 0 {
-				if client.GameState.State == playerstate.Alive {
-					s.handleDeath(spectator, spectator)
+				if client.State == playerstate.Alive {
+					s.GameMode.HandleFrag(&spectator.Player, &spectator.Player)
 				}
-				s.GameMode.Leave(spectator)
-				spectator.GameState.State = playerstate.Spectator
+				s.GameMode.Leave(&spectator.Player)
+				spectator.State = playerstate.Spectator
 			} else {
-				spectator.GameState.State = playerstate.Dead
-				s.GameMode.Join(spectator)
+				spectator.State = playerstate.Dead
+				s.GameMode.Join(&spectator.Player)
 				// todo: checkmap
 			}
 			s.Clients.Broadcast(nmc.Spectator, spectator.CN, toggle)
@@ -439,12 +440,12 @@ outer:
 				return
 			}
 
-			teamMode, ok := s.GameMode.(TeamMode)
+			teamMode, ok := s.GameMode.(game.TeamMode)
 			if !ok {
 				return
 			}
 
-			teamMode.ChangeTeam(client, teamName, false)
+			teamMode.ChangeTeam(&client.Player, teamName, false)
 
 		case nmc.SetTeam:
 			_victim, ok := p.GetInt()
@@ -464,12 +465,12 @@ outer:
 				return
 			}
 
-			teamMode, ok := s.GameMode.(TeamMode)
+			teamMode, ok := s.GameMode.(game.TeamMode)
 			if !ok {
 				return
 			}
 
-			teamMode.ChangeTeam(victim, teamName, true)
+			teamMode.ChangeTeam(&victim.Player, teamName, true)
 
 		case nmc.MapCRC:
 			// client sends crc hash of his map file
@@ -481,11 +482,11 @@ outer:
 			log.Println("todo: MAPCRC")
 
 		case nmc.TrySpawn:
-			if !client.Joined || client.GameState.State != playerstate.Dead || !client.GameState.LastSpawnAttempt.IsZero() || !s.GameMode.CanSpawn(client) {
+			if !client.Joined || client.State != playerstate.Dead || !client.LastSpawnAttempt.IsZero() || !s.GameMode.CanSpawn(&client.Player) {
 				return
 			}
 			s.Spawn(client)
-			client.Send(nmc.SpawnState, client.CN, client.GameState.ToWire())
+			client.Send(nmc.SpawnState, client.CN, client.ToWire())
 
 		case nmc.ConfirmSpawn:
 			lifeSequence, ok := p.GetInt()
@@ -508,7 +509,7 @@ outer:
 				return
 			}
 			requested := weapon.ID(_requested)
-			selected, ok := client.GameState.SelectWeapon(requested)
+			selected, ok := client.SelectWeapon(requested)
 			if !ok {
 				break
 			}
@@ -529,7 +530,7 @@ outer:
 			s.HandleExplode(client, millis, wpn, id, hits)
 
 		case nmc.Suicide:
-			s.handleDeath(client, client)
+			s.GameMode.HandleFrag(&client.Player, &client.Player)
 
 		case nmc.Sound:
 			sound, ok := p.GetInt()
@@ -551,9 +552,9 @@ outer:
 				}
 			}
 			if pause == 1 {
-				s.GameMode.Pause(client)
+				s.GameMode.Pause(&client.Player)
 			} else {
-				s.GameMode.Resume(client)
+				s.GameMode.Resume(&client.Player)
 			}
 
 		case nmc.ItemList:
@@ -568,7 +569,7 @@ outer:
 			s.HandleCommand(client, cmd)
 
 		default:
-			ok := s.GameMode.HandlePacket(client, packetType, &p)
+			ok := s.GameMode.HandlePacket(&client.Player, packetType, &p)
 			if !ok {
 				log.Println("received", packetType, p, "on channel", channelID)
 				break outer
@@ -634,7 +635,7 @@ func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32
 		return
 	}
 	wpn = weapon.ByID(weapon.ID(weaponID))
-	if time.Now().Before(client.GameState.GunReloadEnd) || client.GameState.Ammo[wpn.ID] <= 0 {
+	if time.Now().Before(client.GunReloadEnd) || client.Ammo[wpn.ID] <= 0 {
 		return
 	}
 	from, ok = parseVector(p)

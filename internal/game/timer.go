@@ -1,4 +1,4 @@
-package main
+package game
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"github.com/sauerbraten/waiter/pkg/pausableticker"
 )
 
-type GameTimer struct {
+type Timer struct {
 	*pausableticker.Ticker
 	TimeLeft             time.Duration
 	duration             time.Duration
@@ -14,24 +14,24 @@ type GameTimer struct {
 	pendingResumeActions []*time.Timer
 }
 
-func StartTimer(duration time.Duration, intermission func()) *GameTimer {
-	gt := &GameTimer{
+func StartTimer(duration time.Duration, intermission func()) *Timer {
+	t := &Timer{
 		Ticker:               pausableticker.New(100 * time.Millisecond),
 		TimeLeft:             duration,
 		duration:             duration,
 		intermission:         intermission,
 		pendingResumeActions: []*time.Timer{},
 	}
-	go gt.run()
-	return gt
+	go t.run()
+	return t
 }
 
-func (gt *GameTimer) run() {
-	for range gt.C {
-		gt.TimeLeft -= 100 * time.Millisecond
-		if gt.TimeLeft <= 0 {
-			gt.TimeLeft = 0
-			gt.intermission()
+func (t *Timer) run() {
+	for range t.C {
+		t.TimeLeft -= 100 * time.Millisecond
+		if t.TimeLeft <= 0 {
+			t.TimeLeft = 0
+			t.intermission()
 			return
 		}
 	}

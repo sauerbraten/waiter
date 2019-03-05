@@ -18,6 +18,6 @@ type Config struct {
 	MaxClients              int           `json:"max_clients"`
 	SendClientIPsViaExtinfo bool          `json:"send_client_ips_via_extinfo"`
 	MessageOfTheDay         string        `json:"message_of_the_day"`
-	GameDuration            time.Duration `json:"game_duration_in_minutes"`
+	GameDurationInMinutes   time.Duration `json:"game_duration_in_minutes"`
 	PrimaryAuthDomain       string        `json:"primary_auth_domain"`
 }

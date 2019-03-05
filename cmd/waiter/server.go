@@ -6,6 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sauerbraten/waiter/internal/relay"
+
+	"github.com/sauerbraten/waiter/internal/game"
+
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/utils"
@@ -25,7 +29,7 @@ type Server struct {
 	ENetHost *enet.Host
 	*Config
 	*State
-	relay            *Relay
+	relay            *relay.Relay
 	Clients          *ClientManager
 	AuthManager      *auth.Manager
 	MapRotation      *MapRotation
@@ -36,6 +40,8 @@ type Server struct {
 	CompetitiveMode bool
 	ReportStats     bool
 }
+
+func (s *Server) GameDuration() time.Duration { return s.GameDurationInMinutes }
 
 func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
 	if s.NumClients() >= s.MaxClients {
@@ -53,7 +59,7 @@ func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
 
 func (s *Server) Connect(peer *enet.Peer) {
 	client := s.Clients.Add(peer)
-	client.Position, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
+	client.Positions, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
 	client.Send(
 		nmc.ServerInfo,
 		client.CN,
@@ -68,7 +74,7 @@ func (s *Server) Connect(peer *enet.Peer) {
 // checks the server state and decides wether the client has to authenticate to join the game.
 func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, authName string) {
 	c.Name = name
-	c.PlayerModel = playerModel
+	c.Model = playerModel
 
 	onAutoAuthSuccess := func(rol role.ID) {
 		s.setAuthRole(c, rol, authDomain, authName)
@@ -114,15 +120,15 @@ func (s *Server) Join(c *Client) {
 	c.Joined = true
 
 	if s.MasterMode == mastermode.Locked {
-		c.GameState.State = playerstate.Spectator
+		c.State = playerstate.Spectator
 	} else {
-		c.GameState.State = playerstate.Dead
+		c.State = playerstate.Dead
 		s.Spawn(c)
 	}
 
-	s.GameMode.Join(c)       // may set client's team
-	s.Clients.SendWelcome(c) // tells client about her team
-	s.GameMode.Init(c)       // may send additional welcome info like flags
+	s.GameMode.Join(&c.Player) // may set client's team
+	s.Clients.SendWelcome(c)   // tells client about her team
+	s.GameMode.Init(&c.Player) // may send additional welcome info like flags
 	s.Clients.InformOthersOfJoin(c)
 
 	go func() {
@@ -140,28 +146,40 @@ func (s *Server) Join(c *Client) {
 	go c.Send(nmc.RequestAuth, s.StatsServerAuthDomain)
 }
 
+func (s *Server) Broadcast(typ nmc.ID, args ...interface{}) {
+	s.Clients.Broadcast(typ, args...)
+}
+
+func (s *Server) Send(p *game.Player, typ nmc.ID, args ...interface{}) {
+	s.Clients.GetClientByCN(p.CN).Send(typ, args...)
+}
+
+func (s *Server) UniqueName(p *game.Player) string {
+	return s.Clients.UniqueName(s.Clients.GetClientByCN(p.CN))
+}
+
 func (s *Server) Spawn(client *Client) {
-	client.GameState.Spawn()
-	s.GameMode.Spawn(client.GameState)
+	client.Spawn()
+	s.GameMode.Spawn(&client.Player)
 }
 
 func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
-	if client.GameState.State != playerstate.Dead || lifeSequence != client.GameState.LifeSequence || client.GameState.LastSpawnAttempt.IsZero() {
+	if client.State != playerstate.Dead || lifeSequence != client.LifeSequence || client.LastSpawnAttempt.IsZero() {
 		// client may not spawn
 		return
 	}
 
-	client.GameState.State = playerstate.Alive
-	client.GameState.SelectedWeapon = weapon.ByID(weapon.ID(_weapon))
-	client.GameState.LastSpawnAttempt = time.Time{}
+	client.State = playerstate.Alive
+	client.SelectedWeapon = weapon.ByID(weapon.ID(_weapon))
+	client.LastSpawnAttempt = time.Time{}
 
-	client.Packets.Publish(nmc.ConfirmSpawn, client.GameState.ToWire())
+	client.Packets.Publish(nmc.ConfirmSpawn, client.ToWire())
 
-	s.GameMode.ConfirmSpawn(client)
+	s.GameMode.ConfirmSpawn(&client.Player)
 }
 
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
-	s.GameMode.Leave(client)
+	s.GameMode.Leave(&client.Player)
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
 	s.ENetHost.Disconnect(client.Peer, disconnectreason.None)
@@ -236,8 +254,7 @@ func (s *Server) ReportEndgameStats() {
 	stats := []string{}
 	s.Clients.ForEach(func(c *Client) {
 		if a, ok := c.Authentications[s.StatsServerAuthDomain]; ok {
-			gs := c.GameState
-			stats = append(stats, fmt.Sprintf("%d %s %d %d %d %d %d", a.reqID, a.name, gs.Frags, gs.Deaths, gs.Damage, gs.ShotDamage, gs.Flags))
+			stats = append(stats, fmt.Sprintf("%d %s %d %d %d %d %d", a.reqID, a.name, c.Frags, c.Deaths, c.Damage, c.DamagePotential, c.Flags))
 		}
 	})
 
@@ -274,7 +291,7 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapname string) {
 	s.Map = mapname
 	s.GameMode = NewGame(mode)
 
-	s.Clients.ForEach(s.GameMode.Join)
+	s.ForEach(s.GameMode.Join)
 	s.Clients.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
 	s.GameMode.Start()
 	s.Clients.MapChange()
@@ -320,8 +337,8 @@ func (s *Server) HandleShoot(client *Client, wpn weapon.Weapon, id int32, from, 
 		to.Y(),
 		to.Z(),
 	)
-	client.GameState.LastShot = time.Now()
-	client.GameState.ShotDamage += wpn.Damage * wpn.Rays // TODO: quad damage
+	client.LastShot = time.Now()
+	client.DamagePotential += wpn.Damage * wpn.Rays // TODO: quad damage
 	switch wpn.ID {
 	case weapon.GrenadeLauncher, weapon.RocketLauncher:
 		// TODO: save somewhere
@@ -331,8 +348,8 @@ func (s *Server) HandleShoot(client *Client, wpn weapon.Weapon, id int32, from, 
 		for _, h := range hits {
 			target := s.Clients.GetClientByCN(h.target)
 			if target == nil ||
-				target.GameState.State != playerstate.Alive ||
-				target.GameState.LifeSequence != h.lifeSequence ||
+				target.State != playerstate.Alive ||
+				target.LifeSequence != h.lifeSequence ||
 				h.rays < 1 ||
 				h.distance > wpn.Range+1.0 {
 				continue
@@ -367,8 +384,8 @@ hits:
 	for i, h := range hits {
 		target := s.Clients.GetClientByCN(h.target)
 		if target == nil ||
-			target.GameState.State != playerstate.Alive ||
-			target.GameState.LifeSequence != h.lifeSequence ||
+			target.State != playerstate.Alive ||
+			target.LifeSequence != h.lifeSequence ||
 			h.distance < 0 ||
 			h.distance > wpn.ExplosionRadius {
 			continue
@@ -393,28 +410,25 @@ hits:
 }
 
 func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapon.ID, dir *geom.Vector) {
-	victim.applyDamage(attacker, damage, wpnID, dir)
-	s.Clients.Broadcast(nmc.Damage, victim.CN, attacker.CN, damage, victim.GameState.Armour, victim.GameState.Health)
+	victim.ApplyDamage(&attacker.Player, damage, wpnID, dir)
+	s.Clients.Broadcast(nmc.Damage, victim.CN, attacker.CN, damage, victim.Armour, victim.Health)
 	// TODO: setpushed ???
 	if !dir.IsZero() {
 		dir = dir.Scale(geom.DNF)
 		typ, p := nmc.HitPush, []interface{}{victim.CN, wpnID, damage, dir.X(), dir.Y(), dir.Z()}
-		if victim.GameState.Health <= 0 {
+		if victim.Health <= 0 {
 			s.Clients.Broadcast(typ, p...)
 		} else {
 			victim.Send(typ, p...)
 		}
 	}
-	if victim.GameState.Health <= 0 {
-		s.handleDeath(attacker, victim)
+	if victim.Health <= 0 {
+		s.GameMode.HandleFrag(&attacker.Player, &victim.Player)
 	}
 }
 
-func (s *Server) handleDeath(fragger, victim *Client) {
-	victim.Die()
-	fragger.GameState.Frags += s.GameMode.FragValue(fragger, victim)
-	// TODO: effectiveness
-	s.GameMode.HandleDeath(fragger, victim)
-	s.Clients.Broadcast(nmc.Died, victim.CN, fragger.CN, fragger.GameState.Frags, fragger.Team.Frags)
-	// TODO teamkills
+func (s *Server) ForEach(f func(p *game.Player)) {
+	s.Clients.ForEach(func(c *Client) {
+		f(&c.Player)
+	})
 }

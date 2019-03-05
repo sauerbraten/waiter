@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sauerbraten/waiter/internal/game"
+
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
@@ -117,9 +119,9 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 		p = append(p, nmc.PauseGame, 1, -1)
 	}
 
-	if teamMode, ok := s.GameMode.(TeamMode); ok {
+	if teamMode, ok := s.GameMode.(game.TeamMode); ok {
 		p = append(p, nmc.TeamInfo)
-		teamMode.ForEach(func(t *Team) {
+		teamMode.ForEach(func(t *game.Team) {
 			if t.Frags > 0 {
 				p = append(p, t.Name, t.Frags)
 			}
@@ -131,18 +133,18 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	p = append(p, nmc.SetTeam, c.CN, c.Team.Name, -1)
 
 	// tell the client how to spawn (what health, what armour, what weapons, what ammo, etc.)
-	if c.GameState.State == playerstate.Spectator {
+	if c.State == playerstate.Spectator {
 		p = append(p, nmc.Spectator, c.CN, 1)
 	} else {
 		// TODO: handle spawn delay (e.g. in ctf modes)
-		p = append(p, nmc.SpawnState, c.CN, c.GameState.ToWire())
+		p = append(p, nmc.SpawnState, c.CN, c.ToWire())
 	}
 
 	// send other players' state (frags, flags, etc.)
 	p = append(p, nmc.Resume)
 	for _, client := range cm.cs {
 		if client != c && client.InUse {
-			p = append(p, client.CN, client.GameState.State, client.GameState.Frags, client.GameState.Flags, client.GameState.QuadTimeLeft, client.GameState.ToWire())
+			p = append(p, client.CN, client.State, client.Frags, client.Flags, client.QuadTimeLeft, client.ToWire())
 		}
 	}
 	p = append(p, -1)
@@ -150,7 +152,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	// send other client's state (name, team, playermodel)
 	for _, client := range cm.cs {
 		if client != c && client.InUse {
-			p = append(p, nmc.InitializeClient, client.CN, client.Name, client.Team.Name, client.PlayerModel)
+			p = append(p, nmc.InitializeClient, client.CN, client.Name, client.Team.Name, client.Model)
 		}
 	}
 
@@ -177,20 +179,20 @@ func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
 
 // Informs all other clients that a client joined the game.
 func (cm *ClientManager) InformOthersOfJoin(c *Client) {
-	cm.Relay(c, nmc.InitializeClient, c.CN, c.Name, c.Team.Name, c.PlayerModel)
-	if c.GameState.State == playerstate.Spectator {
+	cm.Relay(c, nmc.InitializeClient, c.CN, c.Name, c.Team.Name, c.Model)
+	if c.State == playerstate.Spectator {
 		cm.Relay(c, nmc.Spectator, c.CN, 1)
 	}
 }
 
 func (cm *ClientManager) MapChange() {
 	cm.ForEach(func(c *Client) {
-		c.GameState.Reset()
-		if c.GameState.State == playerstate.Spectator {
+		c.Player.Reset()
+		if c.State == playerstate.Spectator {
 			return
 		}
 		s.Spawn(c)
-		c.Send(nmc.SpawnState, c.CN, c.GameState.ToWire())
+		c.Send(nmc.SpawnState, c.CN, c.ToWire())
 	})
 }
 

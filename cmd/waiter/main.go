@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/sauerbraten/waiter/internal/relay"
+
 	"github.com/sauerbraten/jsonfile"
 
 	"github.com/sauerbraten/waiter/internal/masterserver"
@@ -76,11 +78,11 @@ func main() {
 			UpSince:    time.Now(),
 			NumClients: cs.NumberOfClientsConnected,
 		},
-		relay:       NewRelay(),
+		relay:       relay.New(),
 		Clients:     cs,
 		MapRotation: &mr,
 	}
-	s.GameDuration = s.GameDuration * time.Minute // duration is parsed without unit from config file
+	s.GameDurationInMinutes = s.GameDurationInMinutes * time.Minute // duration is parsed without unit from config file
 	s.GameMode = NewGame(conf.FallbackGameMode)
 	s.Map = s.MapRotation.NextMap(s.GameMode, "")
 	s.GameMode.Start()
@@ -104,8 +106,6 @@ func main() {
 		conf.PrimaryAuthDomain:     localAuth,
 		conf.StatsServerAuthDomain: statsAuth,
 	})
-
-	go s.relay.loop()
 
 	gameInc := s.ENetHost.Service()
 

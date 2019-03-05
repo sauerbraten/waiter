@@ -70,9 +70,11 @@ func (p *inMemoryProvider) ConfirmAnswer(reqID uint32, answ string, callback fun
 	req, ok := p.pendingRequests[reqID]
 	if !ok {
 		callback(role.None, errors.New("auth: request not found"))
+		return
 	}
 	if answ != req.solution {
 		callback(role.None, errors.New("auth: wrong answer"))
+		return
 	}
 	callback(req.user.Role, nil)
 }

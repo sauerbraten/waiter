@@ -274,6 +274,15 @@ func (s *Server) HandleFailStats(reqID uint32, reason string) {
 	})
 }
 
+func (s *Server) ReAuth(domain string) {
+	s.Clients.ForEach(func(c *Client) {
+		if _, ok := c.Authentications[domain]; ok {
+			delete(c.Authentications, domain)
+			c.Send(nmc.RequestAuth, domain)
+		}
+	})
+}
+
 func (s *Server) ChangeMap(mode gamemode.ID, mapname string) {
 	// cancel pending timers
 	if s.GameMode != nil {

@@ -46,10 +46,12 @@ type MasterServer struct {
 	*auth.RemoteProvider
 	authInc chan<- string
 	authOut <-chan string
+
+	onReconnect func() // executed when the game server reconnects to the remote master server
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func NewMaster(addr string, listenPort int, bans *bans.BanManager, authRole role.ID) (*MasterServer, <-chan string, error) {
+func NewMaster(addr string, listenPort int, bans *bans.BanManager, authRole role.ID, onReconnect func()) (*MasterServer, <-chan string, error) {
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("master (%s): error resolving server address (%s): %v", raddr, addr, err)
@@ -68,6 +70,8 @@ func NewMaster(addr string, listenPort int, bans *bans.BanManager, authRole role
 		RemoteProvider: auth.NewRemoteProvider(authInc, authOut, authRole),
 		authInc:        authInc,
 		authOut:        authOut,
+
+		onReconnect: onReconnect,
 	}
 
 	err = ms.connect()
@@ -121,7 +125,7 @@ func (ms *MasterServer) reconnect(err error) {
 
 	try, maxTries := 1, 10
 	for err != nil && try <= maxTries {
-		time.Sleep(time.Duration(try) * time.Minute)
+		time.Sleep(time.Duration(try) * 30 * time.Second)
 		log.Printf("master (%s): trying to reconnect (attempt %d)", ms.raddr, try)
 
 		err = ms.connect()
@@ -130,6 +134,7 @@ func (ms *MasterServer) reconnect(err error) {
 
 	if err == nil {
 		log.Printf("master (%s): reconnected successfully", ms.raddr)
+		ms.onReconnect()
 	} else {
 		log.Printf("master (%s): could not reconnect: %v", ms.raddr, err)
 	}

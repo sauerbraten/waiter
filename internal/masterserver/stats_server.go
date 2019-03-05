@@ -11,19 +11,19 @@ import (
 )
 
 type StatsServer struct {
-	MasterServer
+	*MasterServer
 	onSuccess func(reqID uint32)
 	onFailure func(reqID uint32, reason string)
 }
 
-func NewStatsMaster(addr string, listenPort int, onSuccess func(uint32), onFailure func(uint32, string)) (*StatsServer, <-chan string, error) {
-	ms, inc, err := NewMaster(addr, listenPort, nil, role.None)
+func NewStatsMaster(addr string, listenPort int, onSuccess func(uint32), onFailure func(uint32, string), onReconnect func()) (*StatsServer, <-chan string, error) {
+	ms, inc, err := NewMaster(addr, listenPort, nil, role.None, onReconnect)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return &StatsServer{
-		MasterServer: *ms,
+		MasterServer: ms,
 		onSuccess:    onSuccess,
 		onFailure:    onFailure,
 	}, inc, nil
@@ -46,13 +46,16 @@ func (s *StatsServer) Handle(msg string) {
 }
 
 func (s *StatsServer) handleFailStats(args string) {
+	r := strings.NewReader(strings.TrimSpace(args))
+
 	var reqID uint32
-	var reason string
-	_, err := fmt.Sscanf(args, "%d %s", &reqID, &reason)
+	_, err := fmt.Fscanf(r, "%d", &reqID)
 	if err != nil {
 		log.Printf("malformed %s message from stats server: '%s': %v", protocol.FailStats, args, err)
 		return
 	}
+	reason := args[len(args)-r.Len():] // unread portion of args
+	reason = strings.TrimSpace(reason)
 	s.onFailure(reqID, reason)
 }
 

@@ -91,12 +91,12 @@ func main() {
 
 	is, infoInc = s.StartListeningForInfoRequests()
 
-	ms, masterInc, err = masterserver.NewMaster(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth)
+	ms, masterInc, err = masterserver.NewMaster(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
 
-	statsAuth, statsAuthInc, err = masterserver.NewStatsMaster(conf.StatsServerAddress, conf.ListenPort, s.HandleSuccStats, s.HandleFailStats)
+	statsAuth, statsAuthInc, err = masterserver.NewStatsMaster(conf.StatsServerAddress, conf.ListenPort, s.HandleSuccStats, s.HandleFailStats, func() { s.ReAuth(s.StatsServerAuthDomain) })
 	if err != nil {
 		log.Println("could not connect to statsauth server:", err)
 	}

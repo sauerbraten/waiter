@@ -238,8 +238,8 @@ func (s *Server) Intermission() {
 
 	nextMap := s.MapRotation.NextMap(s.GameMode, s.Map)
 
-	// start 5 second timer
-	s.PendingMapChange = time.AfterFunc(5*time.Second, func() {
+	// start 10 second timer
+	s.PendingMapChange = time.AfterFunc(10*time.Second, func() {
 		s.ChangeMap(s.GameMode.ID(), nextMap)
 	})
 

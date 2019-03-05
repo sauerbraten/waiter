@@ -2,7 +2,6 @@ package masterserver
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -53,7 +52,7 @@ type MasterServer struct {
 func NewMaster(addr string, listenPort int, bans *bans.BanManager, authRole role.ID) (*MasterServer, <-chan string, error) {
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error resolving master server address (%s): %v", addr, err)
+		return nil, nil, fmt.Errorf("master (%s): error resolving server address (%s): %v", raddr, addr, err)
 	}
 
 	inc := make(chan string)
@@ -82,7 +81,7 @@ func NewMaster(addr string, listenPort int, bans *bans.BanManager, authRole role
 func (ms *MasterServer) connect() error {
 	conn, err := net.DialTCP("tcp", nil, ms.raddr)
 	if err != nil {
-		return fmt.Errorf("error connecting to master server: %v", err)
+		return fmt.Errorf("master (%s): error connecting to master server: %v", ms.raddr, err)
 	}
 
 	ms.conn = conn
@@ -96,7 +95,10 @@ func (ms *MasterServer) connect() error {
 		if err := sc.Err(); err != nil {
 			log.Println(err)
 		} else {
-			log.Println("EOF from master server", ms.raddr)
+			log.Printf("master (%s): EOF while scanning input", ms.raddr)
+			if ms.pingFailed {
+				return
+			}
 			ms.reconnect(io.EOF)
 		}
 	}()
@@ -105,7 +107,7 @@ func (ms *MasterServer) connect() error {
 		for msg := range ms.authOut {
 			err := ms.Send(msg)
 			if err != nil {
-				log.Printf("remote auth (%s): %v", ms.raddr, err)
+				log.Printf("master (%s): remote auth: %v", ms.raddr, err)
 			}
 		}
 	}()
@@ -121,16 +123,16 @@ func (ms *MasterServer) reconnect(err error) {
 	try, maxTries := 1, 10
 	for err != nil && try <= maxTries {
 		time.Sleep(time.Duration(try) * time.Minute)
-		log.Printf("trying to reconnect (attempt %d)", try)
+		log.Printf("master (%s): trying to reconnect (attempt %d)", ms.raddr, try)
 
 		err = ms.connect()
 		try++
 	}
 
 	if err == nil {
-		log.Println("reconnected to master server")
+		log.Printf("master (%s): reconnected successfully", ms.raddr)
 	} else {
-		log.Println("could not reconnect to master server:", err)
+		log.Printf("master (%s): could not reconnect: %v", ms.raddr, err)
 	}
 }
 
@@ -138,22 +140,22 @@ func (ms *MasterServer) Register() {
 	if ms.pingFailed {
 		return
 	}
-	log.Println("registering at master server")
+	log.Printf("master (%s): registering", ms.raddr)
 	err := ms.Send("%s %d", registerServer, ms.listenPort)
 	if err != nil {
-		log.Println("registering at master server failed:", err)
+		log.Printf("master (%s): registration failed: %v", ms.raddr, err)
 		return
 	}
 }
 
 func (ms *MasterServer) Send(format string, args ...interface{}) error {
 	if ms.conn == nil {
-		return errors.New("not connected to master server")
+		return fmt.Errorf("master (%s): not connected", ms.raddr)
 	}
 
 	_, err := ms.conn.Write([]byte(fmt.Sprintf(format+"\n", args...)))
 	if err != nil {
-		log.Println("write to master failed:", err)
+		log.Printf("master (%s): write failed: %v", ms.raddr, err)
 	}
 	return err
 }
@@ -164,12 +166,12 @@ func (ms *MasterServer) Handle(msg string) {
 
 	switch cmd {
 	case registrationSuccessful:
-		log.Println("master server registration succeeded")
+		log.Printf("master (%s): registration succeeded", ms.raddr)
 
 	case registrationFailed:
-		log.Println("master server registration failed:", args)
+		log.Printf("master (%s): registration failed: %v", ms.raddr, args)
 		if args == "failed pinging server" {
-			log.Println("disabling reconnecting")
+			log.Printf("master (%s): disabling reconnecting", ms.raddr)
 			ms.pingFailed = true // stop trying
 		}
 
@@ -183,7 +185,7 @@ func (ms *MasterServer) Handle(msg string) {
 		ms.authInc <- msg
 
 	default:
-		log.Println("received from master:", msg)
+		log.Printf("master (%s): received and not handled: %v", ms.raddr, msg)
 	}
 }
 
@@ -191,11 +193,11 @@ func (ms *MasterServer) handleAddGlobalBan(args string) {
 	var ip string
 	_, err := fmt.Sscanf(args, "%s", &ip)
 	if err != nil {
-		log.Printf("malformed %s message from game server: '%s': %v", addBan, args, err)
+		log.Printf("master (%s): malformed %s message from game server: '%s': %v", ms.raddr, addBan, args, err)
 		return
 	}
 
 	network := ips.GetSubnet(ip)
 
-	ms.bans.AddBan(network, "banned by master server", time.Time{}, true)
+	ms.bans.AddBan(network, fmt.Sprintf("banned by master server (%s)", ms.raddr), time.Time{}, true)
 }

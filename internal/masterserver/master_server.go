@@ -96,10 +96,9 @@ func (ms *MasterServer) connect() error {
 			log.Println(err)
 		} else {
 			log.Printf("master (%s): EOF while scanning input", ms.raddr)
-			if ms.pingFailed {
-				return
+			if !ms.pingFailed {
+				ms.reconnect(io.EOF)
 			}
-			ms.reconnect(io.EOF)
 		}
 	}()
 
@@ -153,8 +152,12 @@ func (ms *MasterServer) Send(format string, args ...interface{}) error {
 		return fmt.Errorf("master (%s): not connected", ms.raddr)
 	}
 
-	ms.conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-	_, err := ms.conn.Write([]byte(fmt.Sprintf(format+"\n", args...)))
+	err := ms.conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
+	if err != nil {
+		log.Printf("master (%s): write failed: %v", ms.raddr, err)
+		return err
+	}
+	_, err = ms.conn.Write([]byte(fmt.Sprintf(format+"\n", args...)))
 	if err != nil {
 		log.Printf("master (%s): write failed: %v", ms.raddr, err)
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/sauerbraten/chef/pkg/ips"
 
+	"github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
 )
@@ -43,7 +44,7 @@ type MasterServer struct {
 	inc        chan<- string
 	pingFailed bool
 
-	*RemoteAuthProvider
+	*auth.RemoteProvider
 	authInc chan<- string
 	authOut <-chan string
 }
@@ -65,9 +66,9 @@ func NewMaster(addr string, listenPort int, bans *bans.BanManager, authRole role
 
 		inc: inc,
 
-		RemoteAuthProvider: NewRemoteAuthProvider(authInc, authOut, authRole),
-		authInc:            authInc,
-		authOut:            authOut,
+		RemoteProvider: auth.NewRemoteProvider(authInc, authOut, authRole),
+		authInc:        authInc,
+		authOut:        authOut,
 	}
 
 	err = ms.connect()
@@ -99,8 +100,6 @@ func (ms *MasterServer) connect() error {
 			ms.reconnect(io.EOF)
 		}
 	}()
-
-	go ms.RemoteAuthProvider.run()
 
 	go func() {
 		for msg := range ms.authOut {

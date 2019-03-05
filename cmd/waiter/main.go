@@ -102,7 +102,7 @@ func main() {
 	}
 
 	s.AuthManager = auth.NewManager(map[string]auth.Provider{
-		"":                         ms.RemoteAuthProvider,
+		"":                         ms.RemoteProvider,
 		conf.PrimaryAuthDomain:     localAuth,
 		conf.StatsServerAuthDomain: statsAuth,
 	})

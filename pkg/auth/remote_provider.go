@@ -1,4 +1,4 @@
-package masterserver
+package auth
 
 import (
 	"errors"
@@ -8,36 +8,37 @@ import (
 	"time"
 
 	"github.com/sauerbraten/maitred/pkg/protocol"
-	"github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
 )
 
-type RemoteAuthProvider struct {
+type RemoteProvider struct {
 	// for communication with master
 	inc <-chan string
 	out chan<- string
 
 	rol role.ID // all successful auths will get this role in the ConfirmAnswer callback
-	*auth.IDCycle
+	*IDCycle
 	lastActivity              map[uint32]time.Time
 	requestChallengeCallbacks map[uint32]func(uint32, string, error)
 	confirmAnswerCallbacks    map[uint32]func(role.ID, error)
 }
 
-func NewRemoteAuthProvider(inc <-chan string, out chan<- string, rol role.ID) *RemoteAuthProvider {
-	return &RemoteAuthProvider{
+func NewRemoteProvider(inc <-chan string, out chan<- string, rol role.ID) *RemoteProvider {
+	rp := &RemoteProvider{
 		inc: inc,
 		out: out,
 
 		rol:                       rol,
-		IDCycle:                   new(auth.IDCycle),
+		IDCycle:                   new(IDCycle),
 		lastActivity:              map[uint32]time.Time{},
 		requestChallengeCallbacks: map[uint32]func(uint32, string, error){},
 		confirmAnswerCallbacks:    map[uint32]func(role.ID, error){},
 	}
+	go rp.run()
+	return rp
 }
 
-func (p *RemoteAuthProvider) run() {
+func (p *RemoteProvider) run() {
 	for {
 		select {
 		case msg := <-p.inc:
@@ -64,7 +65,7 @@ func (p *RemoteAuthProvider) run() {
 	}
 }
 
-func (p *RemoteAuthProvider) handle(msg string) {
+func (p *RemoteProvider) handle(msg string) {
 	cmd := strings.Split(msg, " ")[0]
 	args := msg[len(cmd):]
 
@@ -83,20 +84,20 @@ func (p *RemoteAuthProvider) handle(msg string) {
 	}
 }
 
-func (p *RemoteAuthProvider) GenerateChallenge(name string, callback func(reqID uint32, chal string, err error)) {
+func (p *RemoteProvider) GenerateChallenge(name string, callback func(reqID uint32, chal string, err error)) {
 	reqID := p.NextID()
 	p.out <- fmt.Sprintf("%s %d %s", protocol.ReqAuth, reqID, name)
 	p.requestChallengeCallbacks[reqID] = callback
 	p.lastActivity[reqID] = time.Now()
 }
 
-func (p *RemoteAuthProvider) ConfirmAnswer(reqID uint32, answ string, callback func(role.ID, error)) {
+func (p *RemoteProvider) ConfirmAnswer(reqID uint32, answ string, callback func(role.ID, error)) {
 	p.out <- fmt.Sprintf("%s %d %s", protocol.ConfAuth, reqID, answ)
 	p.confirmAnswerCallbacks[reqID] = callback
 	p.lastActivity[reqID] = time.Now()
 }
 
-func (p *RemoteAuthProvider) handleChalAuth(args string) {
+func (p *RemoteProvider) handleChalAuth(args string) {
 	var reqID uint32
 	var chal string
 	_, err := fmt.Sscanf(args, "%d %s", &reqID, &chal)
@@ -114,7 +115,7 @@ func (p *RemoteAuthProvider) handleChalAuth(args string) {
 	}
 }
 
-func (p *RemoteAuthProvider) handleSuccAuth(args string) {
+func (p *RemoteProvider) handleSuccAuth(args string) {
 	var reqID uint32
 	_, err := fmt.Sscanf(args, "%d", &reqID)
 	if err != nil {
@@ -131,7 +132,7 @@ func (p *RemoteAuthProvider) handleSuccAuth(args string) {
 	}
 }
 
-func (p *RemoteAuthProvider) handleFailAuth(args string) {
+func (p *RemoteProvider) handleFailAuth(args string) {
 	var reqID uint32
 	_, err := fmt.Sscanf(args, "%d", &reqID)
 	if err != nil {

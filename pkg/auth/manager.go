@@ -51,6 +51,8 @@ func (m *Manager) TryAuthentication(domain, name string, onChal func(reqID uint3
 }
 
 func (m *Manager) CheckAnswer(reqID uint32, domain string, answ string) (err error) {
+	defer delete(m.callbacksByRequest, reqID)
+
 	p, ok := m.providersByDomain[domain]
 	if !ok {
 		err = fmt.Errorf("auth: no provider for domain '%s'", domain)
@@ -66,6 +68,7 @@ func (m *Manager) CheckAnswer(reqID uint32, domain string, answ string) (err err
 	p.ConfirmAnswer(reqID, answ, func(rol role.ID, err error) {
 		if err != nil {
 			callbacks.onFailure(err)
+			return
 		}
 		callbacks.onSuccess(rol)
 	})

@@ -248,18 +248,14 @@ func (s *Server) Intermission() {
 }
 
 func (s *Server) ReportEndgameStats() {
-	log.Println("in reportendgamestats")
 	stats := []string{}
 	s.Clients.ForEach(func(c *Client) {
-		log.Println("processing client", c)
 		if a, ok := c.Authentications[s.StatsServerAuthDomain]; ok {
-			log.Println("reporting stats of", c)
 			stats = append(stats, fmt.Sprintf("%d %s %d %d %d %d %d", a.reqID, a.name, c.Frags, c.Deaths, c.Damage, c.DamagePotential, c.Flags))
 		}
 	})
 
-	err := statsAuth.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
-	log.Println("stats reported:", err)
+	statsAuth.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
 }
 
 func (s *Server) HandleSuccStats(reqID uint32) {

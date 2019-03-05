@@ -13,5 +13,4 @@ type Server interface {
 	Intermission()
 	ForEach(func(*Player))
 	UniqueName(*Player) string
-	HandleDeath(*Player)
 }

@@ -81,10 +81,7 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 	}
 
 	onAutoAuthFailure := func(err error) {
-		if err != nil {
-			log.Println(err)
-		}
-		log.Printf("unsuccessful auth try at connect by %s as '%s' [%s]: %v", c, authName, authDomain)
+		log.Printf("unsuccessful auth try at connect by %s as '%s' [%s]: %v", c, authName, authDomain, err)
 	}
 
 	c.AuthRequiredBecause = s.AuthRequiredBecause(c)

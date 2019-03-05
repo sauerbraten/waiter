@@ -38,5 +38,10 @@
                 "name": "Murrr",
                 "public_key": "-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f",
                 "role": "master"
+        },
+        {
+                "name": "Redon",
+                "public_key": "-efa043131ca8e8f68ed98cfcc069ee2d8fac00f0a5b523f7",
+                "role": "master"
         }
 ]

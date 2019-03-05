@@ -258,8 +258,8 @@ func (s *Server) ReportEndgameStats() {
 		}
 	})
 
-	statsAuth.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
-	log.Println("stats reported")
+	err := statsAuth.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
+	log.Println("stats reported:", err)
 }
 
 func (s *Server) HandleSuccStats(reqID uint32) {

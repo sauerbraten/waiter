@@ -95,6 +95,7 @@ func (p *Peer) Send(channel uint8, payload []byte) {
 		nmc.ScoreFlag,
 		nmc.ResetFlag,
 		nmc.Spectator,
+		nmc.TeamChatMessage,
 		nmc.Client:
 	// do nothing
 	default:

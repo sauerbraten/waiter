@@ -24,10 +24,14 @@ _testmain.go
 *.exe
 
 waiter
+!cmd/waiter/
 cmd/waiter/waiter
 genauth
+!cmd/genauth/
 cmd/genauth/genauth
 cenc
+!cmd/cenc/
 cmd/cenc/cenc
 cdec
+!cmd/cdec/
 cmd/cdec/cdec

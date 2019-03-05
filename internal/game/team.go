@@ -20,7 +20,7 @@ func NewTeam(name string) *Team {
 	}
 }
 
-// sorts teams ascending by score, then size
+// sorts teams ascending by size, then score
 type BySizeAndScore []*Team
 
 func (teams BySizeAndScore) Len() int {

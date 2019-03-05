@@ -30,7 +30,7 @@
 
 	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things do not work!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
 
-	"game_duration_in_minutes": 1,
+	"game_duration_in_minutes": 10,
 
 	"primary_auth_domain": "p1x.pw"
 }

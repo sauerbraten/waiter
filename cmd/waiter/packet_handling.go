@@ -56,7 +56,6 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 		return
 	}
 
-outer:
 	for len(p) > 0 {
 		_nmc, ok := p.GetInt()
 		if !ok {
@@ -166,21 +165,37 @@ outer:
 				log.Println("could not read name from auth try packet:", p)
 				return
 			}
+			sessionID := client.SessionID
 			go s.AuthManager.TryAuthentication(
 				domain,
 				name,
 				func(reqID uint32, chal string) {
-					client.Authentications[domain] = &Authentication{reqID: reqID}
-					client.Send(nmc.AuthChallenge, domain, reqID, chal)
+					callbacks <- func() {
+						if client.SessionID != sessionID {
+							return
+						}
+						client.Authentications[domain] = &Authentication{reqID: reqID}
+						client.Send(nmc.AuthChallenge, domain, reqID, chal)
+					}
 				},
 				func(rol role.ID) {
-					utils.LogAuthTry(client.String(), domain, name, nil)
-					s.setAuthRole(client, rol, domain, name)
-					client.Authentications[domain].name = name
+					callbacks <- func() {
+						if client.SessionID != sessionID {
+							return
+						}
+						utils.LogAuthTry(client.String(), domain, name, nil)
+						s.setAuthRole(client, rol, domain, name)
+						client.Authentications[domain].name = name
+					}
 				},
 				func(err error) {
-					delete(client.Authentications, domain)
-					utils.LogAuthTry(client.String(), domain, name, err)
+					callbacks <- func() {
+						if client.SessionID != sessionID {
+							return
+						}
+						delete(client.Authentications, domain)
+						utils.LogAuthTry(client.String(), domain, name, err)
+					}
 				},
 			)
 
@@ -210,15 +225,42 @@ outer:
 			if victim == nil {
 				return
 			}
+			sessionID := client.SessionID
 			if domain == "" {
 				go s.handleAuthRequest(client, domain, name,
-					func(role.ID) { s.AuthKick(client, role.Auth, domain, name, victim, reason) },
-					func(error) { log.Println("unsuccessful gauth kick try by", client, "as", name, "vs", victim) })
+					func(role.ID) {
+						callbacks <- func() {
+							if client.SessionID != sessionID {
+								return
+							}
+							s.AuthKick(client, role.Auth, domain, name, victim, reason)
+						}
+					},
+					func(error) {
+						callbacks <- func() {
+							if client.SessionID != sessionID {
+								return
+							}
+							log.Println("unsuccessful gauth kick try by", client, "as", name, "vs", victim)
+						}
+					})
 			} else {
 				go s.handleAuthRequest(client, domain, name,
-					func(rol role.ID) { s.AuthKick(client, rol, domain, name, victim, reason) },
+					func(rol role.ID) {
+						callbacks <- func() {
+							if client.SessionID != sessionID {
+								return
+							}
+							s.AuthKick(client, rol, domain, name, victim, reason)
+						}
+					},
 					func(error) {
-						log.Println("unsuccessful auth kick try by", client, "as", name, "["+domain+"]", "vs", victim)
+						callbacks <- func() {
+							if client.SessionID != sessionID {
+								return
+							}
+							log.Println("unsuccessful auth kick try by", client, "as", name, "["+domain+"]", "vs", victim)
+						}
 					},
 				)
 			}
@@ -572,7 +614,7 @@ outer:
 			ok := s.GameMode.HandlePacket(&client.Player, packetType, &p)
 			if !ok {
 				log.Println("received", packetType, p, "on channel", channelID)
-				break outer
+				return
 			}
 		}
 	}

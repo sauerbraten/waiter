@@ -76,6 +76,8 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 	c.Name = name
 	c.Model = playerModel
 
+	sessionID := c.SessionID
+
 	onAutoAuthSuccess := func(rol role.ID) {
 		s.setAuthRole(c, rol, authDomain, authName)
 	}
@@ -89,22 +91,47 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 	if c.AuthRequiredBecause == disconnectreason.None {
 		s.Join(c)
 		if authDomain == s.PrimaryAuthDomain && authName != "" {
-			go s.handleAuthRequest(c, authDomain, authName, onAutoAuthSuccess, onAutoAuthFailure)
+			go s.handleAuthRequest(c, authDomain, authName,
+				func(rol role.ID) {
+					callbacks <- func() {
+						if c.SessionID != sessionID {
+							return
+						}
+						onAutoAuthSuccess(rol)
+					}
+				}, func(err error) {
+					callbacks <- func() {
+						if c.SessionID != sessionID {
+							return
+						}
+						onAutoAuthFailure(err)
+					}
+				})
 		}
 	} else if authDomain == s.PrimaryAuthDomain && authName != "" {
 		// not in a new goroutine, so client does not get confused and sends nmc.ClientPing before the player joined
 		s.handleAuthRequest(c, authDomain, authName,
 			func(rol role.ID) {
-				if rol == role.None {
-					return
+				callbacks <- func() {
+					if c.SessionID != sessionID {
+						return
+					}
+					if rol == role.None {
+						return
+					}
+					c.AuthRequiredBecause = disconnectreason.None
+					s.Join(c)
+					onAutoAuthSuccess(rol)
 				}
-				c.AuthRequiredBecause = disconnectreason.None
-				s.Join(c)
-				onAutoAuthSuccess(rol)
 			},
 			func(err error) {
-				onAutoAuthFailure(err)
-				s.Disconnect(c, c.AuthRequiredBecause)
+				callbacks <- func() {
+					if c.SessionID != sessionID {
+						return
+					}
+					onAutoAuthFailure(err)
+					s.Disconnect(c, c.AuthRequiredBecause)
+				}
 			},
 		)
 	} else {
@@ -128,12 +155,16 @@ func (s *Server) Join(c *Client) {
 	s.GameMode.Init(&c.Player) // may send additional welcome info like flags
 	s.Clients.InformOthersOfJoin(c)
 
+	sessionID := c.SessionID
 	go func() {
 		uniqueName := s.Clients.UniqueName(c)
 		log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", uniqueName, c.Peer.Address.IP)))
 
 		country := utils.CountryByIP(c.Peer.Address.IP) // slow!
 		callbacks <- func() {
+			if c.SessionID != sessionID {
+				return
+			}
 			if country != "" {
 				s.Clients.Relay(c, nmc.ServerMessage, fmt.Sprintf("%s connected from %s", uniqueName, country))
 			}
@@ -244,7 +275,7 @@ func (s *Server) Intermission() {
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
 
 	if s.ReportStats {
-		go s.ReportEndgameStats()
+		s.ReportEndgameStats()
 	}
 }
 

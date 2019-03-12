@@ -27,7 +27,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 		}
 
 	case "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue":
-		go queueMap(c, parts[1:])
+		queueMap(c, parts[1:])
 
 	case "keepteams", "persist", "persistteams":
 		toggleKeepTeams(c, parts[1:])
@@ -39,7 +39,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 		toggleReportStats(c, parts[1:])
 
 	case "ip", "ips":
-		go lookupIPs(c, parts[1:])
+		lookupIPs(c, parts[1:])
 
 	default:
 		c.Send(nmc.ServerMessage, cubecode.Fail("unknown command"))

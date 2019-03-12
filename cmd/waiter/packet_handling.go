@@ -81,7 +81,7 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 				client.Positions.Publish(packet.Encode(nmc.Position, q))
 				client.Position = parsePosition(&p)
 			}
-			break outer
+			return
 
 		case nmc.JumpPad:
 			cn, ok := p.GetInt()

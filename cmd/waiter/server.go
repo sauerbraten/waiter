@@ -130,17 +130,18 @@ func (s *Server) Join(c *Client) {
 
 	go func() {
 		uniqueName := s.Clients.UniqueName(c)
-		country := utils.CountryByIP(c.Peer.Address.IP)
-		if country != "" {
-			s.Clients.Relay(c, nmc.ServerMessage, fmt.Sprintf("%s connected from %s", uniqueName, country))
-		}
-
-		c.Send(nmc.ServerMessage, s.MessageOfTheDay)
-
 		log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", uniqueName, c.Peer.Address.IP)))
+
+		country := utils.CountryByIP(c.Peer.Address.IP) // slow!
+		callbacks <- func() {
+			if country != "" {
+				s.Clients.Relay(c, nmc.ServerMessage, fmt.Sprintf("%s connected from %s", uniqueName, country))
+			}
+		}
 	}()
 
-	go c.Send(nmc.RequestAuth, s.StatsServerAuthDomain)
+	c.Send(nmc.ServerMessage, s.MessageOfTheDay)
+	c.Send(nmc.RequestAuth, s.StatsServerAuthDomain)
 }
 
 func (s *Server) Broadcast(typ nmc.ID, args ...interface{}) {

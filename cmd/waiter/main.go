@@ -37,6 +37,9 @@ var (
 	// info server
 	is      *infoServer
 	infoInc <-chan infoRequest
+
+	// callbacks (e.g. IP geolocation queries)
+	callbacks = make(chan func())
 )
 
 func main() {
@@ -124,6 +127,8 @@ func main() {
 		case <-time.Tick(1 * time.Hour):
 			go ms.Register()
 			go statsAuth.Register()
+		case f := <-callbacks:
+			f()
 		}
 	}
 }

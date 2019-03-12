@@ -67,10 +67,10 @@ func (m *Manager) CheckAnswer(reqID uint32, domain string, answ string) (err err
 
 	p.ConfirmAnswer(reqID, answ, func(rol role.ID, err error) {
 		if err != nil {
-			callbacks.onFailure(err)
+			go callbacks.onFailure(err)
 			return
 		}
-		callbacks.onSuccess(rol)
+		go callbacks.onSuccess(rol)
 	})
 
 	return

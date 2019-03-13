@@ -105,7 +105,11 @@ func (cm *ClientManager) Relay(from *Client, typ nmc.ID, args ...interface{}) {
 func (cm *ClientManager) SendWelcome(c *Client) {
 	typ, p := nmc.Welcome, []interface{}{
 		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo(), // currently played mode & map
-		nmc.TimeLeft, s.GameMode.TimeLeft(), // time left in this round
+	}
+
+	timedMode, timed := s.GameMode.(game.TimedMode)
+	if timed {
+		p = append(p, nmc.TimeLeft, timedMode.TimeLeft()) // time left in this round
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level
@@ -114,7 +118,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 		p = append(p, pupTyp, pup)
 	}
 
-	if s.GameMode.Paused() {
+	if timed && timedMode.Paused() {
 		p = append(p, nmc.PauseGame, 1, -1)
 	}
 

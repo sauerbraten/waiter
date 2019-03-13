@@ -593,10 +593,14 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 					return
 				}
 			}
+			timedMode, isTimedMode := s.GameMode.(game.TimedMode)
+			if !isTimedMode {
+				return
+			}
 			if pause == 1 {
-				s.GameMode.Pause(&client.Player)
+				timedMode.Pause(&client.Player)
 			} else {
-				s.GameMode.Resume(&client.Player)
+				timedMode.Resume(&client.Player)
 			}
 
 		case nmc.ItemList:

@@ -29,8 +29,8 @@ func NewGame(id gamemode.ID) game.Mode {
 		}
 	}()
 
-	if s.CompetitiveMode {
-		return game.NewCompetitive(s, mode)
+	if timed, ok := mode.(game.TimedMode); ok && s.CompetitiveMode {
+		return game.NewCompetitive(s, timed)
 	} else {
 		return mode
 	}

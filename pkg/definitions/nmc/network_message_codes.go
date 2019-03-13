@@ -2,6 +2,8 @@ package nmc
 
 type ID int32 // network message code
 
+const None ID = -1
+
 const (
 	TryJoin ID = iota // = CONNECT
 	ServerInfo

@@ -150,9 +150,12 @@ func (s *Server) Join(c *Client) {
 		s.Spawn(c)
 	}
 
-	s.GameMode.Join(&c.Player) // may set client's team
-	s.Clients.SendWelcome(c)   // tells client about her team
-	s.GameMode.Init(&c.Player) // may send additional welcome info like flags
+	s.GameMode.Join(&c.Player)                  // may set client's team
+	s.Clients.SendWelcome(c)                    // tells client about her team
+	typ, initData := s.GameMode.Init(&c.Player) // may send additional welcome info like flags
+	if typ != nmc.None {
+		c.Send(typ, initData...)
+	}
 	s.Clients.InformOthersOfJoin(c)
 
 	sessionID := c.SessionID
@@ -177,10 +180,6 @@ func (s *Server) Join(c *Client) {
 
 func (s *Server) Broadcast(typ nmc.ID, args ...interface{}) {
 	s.Clients.Broadcast(typ, args...)
-}
-
-func (s *Server) Send(p *game.Player, typ nmc.ID, args ...interface{}) {
-	s.Clients.GetClientByCN(p.CN).Send(typ, args...)
 }
 
 func (s *Server) UniqueName(p *game.Player) string {
@@ -248,7 +247,10 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 }
 
 func (s *Server) Unsupervised() {
-	s.GameMode.Resume(nil)
+	timedMode, isTimedMode := s.GameMode.(game.TimedMode)
+	if isTimedMode {
+		timedMode.Resume(nil)
+	}
 	s.MasterMode = mastermode.Open
 	s.KeepTeams = false
 	s.CompetitiveMode = false
@@ -267,7 +269,6 @@ func (s *Server) Intermission() {
 
 	nextMap := s.MapRotation.NextMap(s.GameMode, s.Map)
 
-	// start 10 second timer
 	s.PendingMapChange = time.AfterFunc(10*time.Second, func() {
 		s.ChangeMap(s.GameMode.ID(), nextMap)
 	})

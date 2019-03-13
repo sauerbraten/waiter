@@ -143,7 +143,12 @@ func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
 		s.NumClients(),
 	}
 
-	paused := s.GameMode.Paused()
+	timedMode, isTimedMode := s.GameMode.(game.TimedMode)
+	timeLeft, paused := 0*time.Second, false
+	if isTimedMode {
+		timeLeft = timedMode.TimeLeft()
+		paused = timedMode.Paused()
+	}
 
 	if paused {
 		q = append(q, 7)
@@ -154,7 +159,7 @@ func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
 	q = append(q,
 		protocol.Version,
 		s.GameMode.ID(),
-		s.GameMode.TimeLeft(),
+		timeLeft,
 		s.MaxClients,
 		s.MasterMode,
 	)
@@ -269,7 +274,13 @@ func (s *Server) teamScores(respHeader []byte) protocol.Packet {
 		q = append(q, ExtInfoError)
 	}
 
-	q = append(q, s.GameMode.ID(), s.GameMode.TimeLeft())
+	timedMode, isTimedMode := s.GameMode.(game.TimedMode)
+	timeLeft := 0 * time.Second
+	if isTimedMode {
+		timeLeft = timedMode.TimeLeft()
+	}
+
+	q = append(q, s.GameMode.ID(), timeLeft)
 
 	if !isTeamMode {
 		return packet.Encode(q...)

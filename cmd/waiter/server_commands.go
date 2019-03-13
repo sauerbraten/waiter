@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
@@ -19,11 +20,20 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 
 	switch cmd {
 	case "help", "commands":
+		masterCommands := []string{
+			cubecode.Green("keepteams") + " 1|0",
+			cubecode.Green("queuemap") + " <map>...",
+			cubecode.Green("competitive") + " 0|1",
+		}
+		adminCommands := []string{
+			cubecode.Green("ip") + " <name|cn>...",
+			cubecode.Green("timeleft") + " [Xm]Ys",
+		}
 		switch c.Role {
 		case role.Master, role.Auth:
-			c.Send(nmc.ServerMessage, "available commands: keepteams 1|0 (=persist), queuemap <map>..., competitive 0|1")
+			c.Send(nmc.ServerMessage, "available commands: "+strings.Join(masterCommands, ", "))
 		case role.Admin:
-			c.Send(nmc.ServerMessage, "available commands: keepteams 1|0 (=persist), queuemap <map>..., competitive 0|1, ip <name|cn>")
+			c.Send(nmc.ServerMessage, "available commands: "+strings.Join(append(masterCommands, adminCommands...), ", "))
 		}
 
 	case "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue":
@@ -32,14 +42,17 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	case "keepteams", "persist", "persistteams":
 		toggleKeepTeams(c, parts[1:])
 
-	case "competitive", "compet":
+	case "competitive", "comp":
 		toggleCompetitiveMode(c, parts[1:])
 
-	case "reportstats":
+	case "reportstats", "repstats":
 		toggleReportStats(c, parts[1:])
 
 	case "ip", "ips":
 		lookupIPs(c, parts[1:])
+
+	case "timeleft", "time":
+		setTimeLeft(c, parts[1:])
 
 	default:
 		c.Send(nmc.ServerMessage, cubecode.Fail("unknown command"))
@@ -184,4 +197,31 @@ func lookupIPs(c *Client, args []string) {
 			c.Send(nmc.ServerMessage, fmt.Sprintf("could not find a client matching '%s'", query))
 		}
 	}
+}
+
+func setTimeLeft(c *Client, args []string) {
+	if c.Role < role.Admin || len(args) < 1 {
+		return
+	}
+
+	timedMode, isTimedMode := s.GameMode.(game.TimedMode)
+	if !isTimedMode {
+		c.Send(nmc.ServerMessage, cubecode.Fail("not running a timed mode"))
+		return
+	}
+
+	d, err := time.ParseDuration(args[0])
+	if err != nil {
+		c.Send(nmc.ServerMessage, cubecode.Error("could not parse duration: "+err.Error()))
+		return
+	}
+
+	if d == 0 {
+		d = 1 * time.Second // 0 forces intermission without updating the client's game timer
+		s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s forced intermission", s.Clients.UniqueName(c))))
+	} else {
+		s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s set the remaining time to %s", s.Clients.UniqueName(c), d)))
+	}
+
+	timedMode.SetTimeLeft(d)
 }

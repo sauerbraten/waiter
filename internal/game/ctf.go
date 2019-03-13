@@ -257,7 +257,7 @@ func (ctf *ctfMode) returnFlag(f *flag) {
 
 func (ctf *ctfMode) NeedMapInfo() bool { return !ctf.flagsInitialized }
 
-func (ctf *ctfMode) Init(p *Player) {
+func (ctf *ctfMode) Init(p *Player) (nmc.ID, []interface{}) {
 	typ, q := nmc.InitFlags, []interface{}{
 		ctf.teams["good"].Score,
 		ctf.teams["evil"].Score,
@@ -288,7 +288,7 @@ func (ctf *ctfMode) Init(p *Player) {
 		q = append(q, 0)
 	}
 
-	ctf.s.Send(p, typ, q...)
+	return typ, q
 }
 
 func (ctf *ctfMode) Leave(p *Player) {
@@ -323,8 +323,9 @@ type EfficCTF struct {
 
 // assert interface implementations at compile time
 var (
-	_ Mode     = &EfficCTF{}
-	_ TeamMode = &EfficCTF{}
+	_ Mode      = &EfficCTF{}
+	_ TeamMode  = &EfficCTF{}
+	_ TimedMode = &EfficCTF{}
 )
 
 func NewEfficCTF(s Server, keepTeams bool) *EfficCTF {
@@ -345,8 +346,9 @@ type InstaCTF struct {
 
 // assert interface implementations at compile time
 var (
-	_ Mode     = &InstaCTF{}
-	_ TeamMode = &InstaCTF{}
+	_ Mode      = &InstaCTF{}
+	_ TeamMode  = &InstaCTF{}
+	_ TimedMode = &InstaCTF{}
 )
 
 func NewInstaCTF(s Server, keepTeams bool) *InstaCTF {

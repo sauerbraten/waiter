@@ -378,9 +378,12 @@ func (s *Server) HandleShoot(client *Client, wpn weapon.Weapon, id int32, from, 
 	)
 	client.LastShot = time.Now()
 	client.DamagePotential += wpn.Damage * wpn.Rays // TODO: quad damage
+	if wpn.ID != weapon.Saw {
+		client.Ammo[wpn.ID]--
+	}
 	switch wpn.ID {
 	case weapon.GrenadeLauncher, weapon.RocketLauncher:
-		// TODO: save somewhere
+		// wait for nmc.Explode pkg
 	default:
 		// apply damage
 		rays := int32(0)

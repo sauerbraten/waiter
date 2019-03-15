@@ -698,6 +698,7 @@ func parseShoot(client *Client, p *protocol.Packet) (wpn weapon.Weapon, id int32
 	to = to.Mul(1 / geom.DMF)
 	if dist := geom.Distance(from, to); dist > wpn.Range+1.0 {
 		log.Println("shot distance out of weapon's range: distane =", dist, "range =", wpn.Range+1)
+		return
 	}
 	numHits, ok := p.GetInt()
 	if !ok {

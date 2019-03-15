@@ -67,6 +67,7 @@ func randomID() ID {
 
 func SpawnAmmoInsta() (map[ID]int32, Weapon) {
 	return map[ID]int32{
+		Saw:   1,
 		Rifle: 100,
 	}, byID[Rifle]
 }
@@ -74,6 +75,7 @@ func SpawnAmmoInsta() (map[ID]int32, Weapon) {
 func SpawnAmmoEffic() (map[ID]int32, Weapon) {
 	// two of each weapons ammo pick up size, except just one for minigun
 	return map[ID]int32{
+		Saw:             1,
 		Shotgun:         20,
 		Minigun:         20,
 		RocketLauncher:  10,
@@ -89,6 +91,7 @@ func SpawnAmmoTactics() (map[ID]int32, Weapon) {
 		spawnWeapon2 = randomID()
 	}
 	return map[ID]int32{
+		Saw:          1,
 		spawnWeapon1: byID[spawnWeapon1].AmmoPickUpSize * 2,
 		spawnWeapon2: byID[spawnWeapon2].AmmoPickUpSize * 2,
 	}, byID[spawnWeapon1]
@@ -105,6 +108,7 @@ func SpawnAmmoCapture() (map[ID]int32, Weapon) {
 
 func SpawnAmmoFFA() (map[ID]int32, Weapon) {
 	return map[ID]int32{
+		Saw:             1,
 		Shotgun:         0,
 		Minigun:         0,
 		RocketLauncher:  0,

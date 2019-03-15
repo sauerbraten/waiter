@@ -275,7 +275,7 @@ func (s *Server) Intermission() {
 
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
 
-	if s.ReportStats {
+	if s.ReportStats && s.NumClients() > 0 {
 		s.ReportEndgameStats()
 	}
 }

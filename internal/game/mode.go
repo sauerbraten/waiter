@@ -70,7 +70,8 @@ func (tlm *teamlessMode) HandleFrag(actor, victim *Player) {
 	victim.Die()
 	if actor == victim {
 		actor.Frags--
+	} else {
+		actor.Frags++
 	}
-	actor.Frags++
 	tlm.s.Broadcast(nmc.Died, victim.CN, actor.CN, actor.Frags, actor.Team.Frags)
 }

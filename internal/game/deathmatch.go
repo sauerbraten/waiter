@@ -55,6 +55,7 @@ func NewEffic(s Server) *Effic {
 	var effic *Effic
 	effic = &Effic{
 		deathmatchMode: newDeathmatchMode(s),
+		teamlessMode:   newTeamlessMode(s),
 	}
 	return effic
 }
@@ -113,6 +114,7 @@ func NewInsta(s Server) *Insta {
 	var insta *Insta
 	insta = &Insta{
 		deathmatchMode: newDeathmatchMode(s),
+		teamlessMode:   newTeamlessMode(s),
 	}
 	return insta
 }
@@ -171,6 +173,7 @@ func NewTactics(s Server) *Tactics {
 	var tactics *Tactics
 	tactics = &Tactics{
 		deathmatchMode: newDeathmatchMode(s),
+		teamlessMode:   newTeamlessMode(s),
 	}
 	return tactics
 }

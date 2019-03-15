@@ -179,8 +179,8 @@ func (ctf *ctfMode) touchFlag(p *Player, i int32, version int32) {
 		ctf.takeFlag(p, flag)
 	} else if !flag.dropTime.IsZero() {
 		// player touches her own, dropped flag
+		flag.pendingReset.Stop()
 		ctf.returnFlag(flag)
-		flag.version++
 		ctf.s.Broadcast(nmc.ReturnFlag, p.CN, flag.index, flag.version)
 		return
 	} else {
@@ -196,7 +196,6 @@ func (ctf *ctfMode) touchFlag(p *Player, i int32, version int32) {
 			p.Flags++
 			ctf.teams[team].Score++
 			flag.version++
-			enemyFlag.version++
 			ctf.s.Broadcast(nmc.ScoreFlag, p.CN, enemyFlag.index, enemyFlag.version, flag.index, flag.version, 0, flag.team, ctf.teams[team].Score, p.Flags)
 			if ctf.teams[team].Score >= 10 {
 				ctf.s.Intermission()
@@ -244,7 +243,6 @@ func (ctf *ctfMode) dropFlag(p *Player) {
 	ctf.s.Broadcast(nmc.DropFlag, p.CN, f.index, f.version, f.dropLocation.Mul(geom.DMF))
 	f.pendingReset = timer.AfterFunc(10*time.Second, func() {
 		ctf.returnFlag(f)
-		f.version++
 		ctf.s.Broadcast(nmc.ResetFlag, f.index, f.version, 0, f.team, ctf.teams[ctf.teamByFlag(f)].Score)
 	})
 	f.pendingReset.Start()
@@ -253,6 +251,7 @@ func (ctf *ctfMode) dropFlag(p *Player) {
 func (ctf *ctfMode) returnFlag(f *flag) {
 	f.dropTime = time.Time{}
 	f.owner = nil
+	f.version++
 }
 
 func (ctf *ctfMode) NeedMapInfo() bool { return !ctf.flagsInitialized }

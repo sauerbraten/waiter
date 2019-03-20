@@ -36,7 +36,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 			c.Send(nmc.ServerMessage, "available commands: "+strings.Join(append(masterCommands, adminCommands...), ", "))
 		}
 
-	case "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue":
+	case "queue", "queued", "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue":
 		queueMap(c, parts[1:])
 
 	case "keepteams", "persist", "persistteams":

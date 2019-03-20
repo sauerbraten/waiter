@@ -32,5 +32,5 @@
 
 	"game_duration_in_minutes": 10,
 
-	"primary_auth_domain": "p1x.pw"
+	"server_auth_domain": "p1x.pw"
 }

@@ -19,5 +19,5 @@ type Config struct {
 	SendClientIPsViaExtinfo bool          `json:"send_client_ips_via_extinfo"`
 	MessageOfTheDay         string        `json:"message_of_the_day"`
 	GameDurationInMinutes   time.Duration `json:"game_duration_in_minutes"`
-	PrimaryAuthDomain       string        `json:"primary_auth_domain"`
+	ServerAuthDomain        string        `json:"server_auth_domain"`
 }

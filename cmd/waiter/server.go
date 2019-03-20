@@ -67,7 +67,7 @@ func (s *Server) Connect(peer *enet.Peer) {
 		client.SessionID,
 		false, // password protection is not used by this implementation
 		s.ServerDescription,
-		s.PrimaryAuthDomain,
+		s.ServerAuthDomain,
 	)
 }
 
@@ -90,7 +90,7 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 
 	if c.AuthRequiredBecause == disconnectreason.None {
 		s.Join(c)
-		if authDomain == s.PrimaryAuthDomain && authName != "" {
+		if authDomain == s.ServerAuthDomain && authName != "" {
 			go s.handleAuthRequest(c, authDomain, authName,
 				func(rol role.ID) {
 					callbacks <- func() {
@@ -108,7 +108,7 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 					}
 				})
 		}
-	} else if authDomain == s.PrimaryAuthDomain && authName != "" {
+	} else if authDomain == s.ServerAuthDomain && authName != "" {
 		// not in a new goroutine, so client does not get confused and sends nmc.ClientPing before the player joined
 		s.handleAuthRequest(c, authDomain, authName,
 			func(rol role.ID) {

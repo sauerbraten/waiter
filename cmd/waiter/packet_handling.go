@@ -247,6 +247,9 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 			switch toggle {
 			case 0:
 				s.setRole(client, cn, role.None)
+				for domain := range client.Authentications {
+					delete(client.Authentications, domain)
+				}
 			default:
 				s.setRole(client, cn, role.Master)
 			}

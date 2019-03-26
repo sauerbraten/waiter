@@ -6,11 +6,11 @@ import (
 
 	"github.com/ivahaev/timer"
 
-	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
+	"github.com/sauerbraten/waiter/pkg/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
 )
 
 type flag struct {

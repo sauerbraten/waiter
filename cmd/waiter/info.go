@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/internal/net/packet"
-	"github.com/sauerbraten/waiter/internal/utils"
+	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 )
 
@@ -230,6 +229,13 @@ func (s *Server) clientInfo(cn int32, respHeader []byte) (packets []protocol.Pac
 	return
 }
 
+func max(i, j int32) int32 {
+	if i > j {
+		return i
+	}
+	return j
+}
+
 func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 	q := header
 
@@ -243,7 +249,7 @@ func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 		c.Flags,
 		c.Deaths,
 		c.Teamkills,
-		c.Damage*100/utils.Max(c.DamagePotential, 1),
+		c.Damage*100/max(c.DamagePotential, 1),
 		c.Health,
 		c.Armour,
 		c.SelectedWeapon.ID,

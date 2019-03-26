@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/net/packet"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 )
 
 type sendFunc func(channel uint8, payload []byte)

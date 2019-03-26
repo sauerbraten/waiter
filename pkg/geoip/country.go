@@ -1,30 +1,12 @@
-package utils
+package geoip
 
 import (
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"strings"
-	"time"
 )
-
-var RNG = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-func Min(i, j int) int {
-	if i < j {
-		return i
-	}
-	return j
-}
-
-func Max(i, j int32) int32 {
-	if i > j {
-		return i
-	}
-	return j
-}
 
 var countryByISO2 = map[string]string{
 	"AD": "Andorra",
@@ -279,7 +261,7 @@ var countryByISO2 = map[string]string{
 	"ZW": "Zimbabwe",
 }
 
-func CountryByIP(ip net.IP) string {
+func Country(ip net.IP) string {
 	resp, err := http.Get("https://ipinfo.io/" + ip.String() + "/country")
 	if err != nil {
 		log.Println("error looking up country of", ip, "at ipinfo.io:", err)
@@ -294,20 +276,4 @@ func CountryByIP(ip net.IP) string {
 	}
 
 	return countryByISO2[strings.TrimSpace(string(content))]
-}
-
-func LogAuthTry(player, domain, name string, err error) {
-	if err == nil {
-		if domain == "" {
-			log.Printf("successful gauth by %s as '%s'", player, name)
-		} else {
-			log.Printf("successful auth by %s as '%s' [%s]", player, name, domain)
-		}
-	} else {
-		if domain == "" {
-			log.Printf("unsuccessful gauth try by %s as '%s': %v", player, name, err)
-		} else {
-			log.Printf("unsuccessful auth try by %s as '%s' [%s]: %v", player, name, domain, err)
-		}
-	}
 }

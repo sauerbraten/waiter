@@ -9,7 +9,7 @@ import (
 	"github.com/sauerbraten/maitred/pkg/auth"
 
 	sauth "github.com/sauerbraten/waiter/pkg/auth"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 func main() {

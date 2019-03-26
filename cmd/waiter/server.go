@@ -8,20 +8,20 @@ import (
 
 	"github.com/sauerbraten/maitred/pkg/auth"
 
-	"github.com/sauerbraten/waiter/internal/game"
-	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/relay"
-	"github.com/sauerbraten/waiter/internal/utils"
-	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
-	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
-	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
+	"github.com/sauerbraten/waiter/pkg/game"
+	"github.com/sauerbraten/waiter/pkg/geoip"
+	"github.com/sauerbraten/waiter/pkg/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
+	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/weapon"
 )
 
 type Server struct {
@@ -135,7 +135,7 @@ func (s *Server) Join(c *Client) {
 		uniqueName := s.Clients.UniqueName(c)
 		log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", uniqueName, c.Peer.Address.IP)))
 
-		country := utils.CountryByIP(c.Peer.Address.IP) // slow!
+		country := geoip.Country(c.Peer.Address.IP) // slow!
 		callbacks <- func() {
 			if c.SessionID != sessionID {
 				return

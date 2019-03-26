@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/sauerbraten/waiter/internal/game"
-	"github.com/sauerbraten/waiter/internal/utils"
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
+	"github.com/sauerbraten/waiter/internal/rng"
+	"github.com/sauerbraten/waiter/pkg/game"
+	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 )
 
 type MapRotation struct {
@@ -32,7 +32,7 @@ func (mr *MapRotation) NextMap(mode game.Mode, currentMap string) string {
 		}
 
 		// current map wasn't found in map rotation, return random map in rotation
-		return pool[utils.RNG.Intn(len(pool))]
+		return pool[rng.RNG.Intn(len(pool))]
 	}
 
 	if gamemode.IsCTF(mode.ID()) {

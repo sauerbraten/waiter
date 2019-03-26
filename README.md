@@ -74,14 +74,12 @@ You can then start the server with `./waiter`.
 
 ## Project Structure
 
-Most functionality is organized into internal packages. [`/cmd/waiter/`](/cmd/waiter/) contains the actual command to start a server, i.e. configuration file parsing, initialization of all components, and handling of incoming packets. Protocol definitions like network message codes can be found in [`internal/definitions`](/internal/definitions/).
+Most functionality is organized into internal packages. [`/cmd/waiter/`](/cmd/waiter/) contains the actual command to start a server, i.e. configuration file parsing, initialization of all components, and handling of incoming packets. Protocol definitions like network message codes can be found in [`pkg/protocol`](/pkg/protocol/).
 
 Other interesting packages:
 
-- [`pkg/protocol`](pkg/protocol) & [`pkg/protocol/cubecode`](pkg/protocol/cubecode)
-- [`internal/auth`](internal/auth)
+- [`pkg/protocol/cubecode`](pkg/protocol/cubecode)
 - [`internal/net/enet`](internal/net/enet)
-- [`internal/masterserver`](internal/masterserver)
 
 In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for users. While you can use auth keys generated with Sauerbraten's `/genauthkey` command, `genauth` provides better output (`auth.cfg` line for the player, JSON object for this server's `users.json` file).
 

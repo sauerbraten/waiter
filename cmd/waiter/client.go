@@ -3,15 +3,14 @@ package main
 import (
 	"fmt"
 
-	"github.com/sauerbraten/waiter/internal/relay"
-
-	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
-	"github.com/sauerbraten/waiter/internal/utils"
-	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/internal/relay"
+	"github.com/sauerbraten/waiter/internal/rng"
+	"github.com/sauerbraten/waiter/pkg/game"
+	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type Authentication struct {
@@ -39,7 +38,7 @@ func NewClient(cn uint32, peer *enet.Peer) *Client {
 		Player:          game.NewPlayer(cn),
 		InUse:           true,
 		Peer:            peer,
-		SessionID:       utils.RNG.Int31(),
+		SessionID:       rng.RNG.Int31(),
 		Authentications: map[string]*Authentication{},
 	}
 }
@@ -52,7 +51,7 @@ func (c *Client) Reset() {
 	c.AuthRequiredBecause = disconnectreason.None
 	c.InUse = false
 	c.Peer = nil
-	c.SessionID = utils.RNG.Int31()
+	c.SessionID = rng.RNG.Int31()
 	c.Ping = 0
 	if c.Positions != nil {
 		c.Positions.Close()

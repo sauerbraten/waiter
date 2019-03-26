@@ -1,8 +1,8 @@
 package game
 
 import (
-	"github.com/sauerbraten/waiter/internal/geom"
-	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
+	"github.com/sauerbraten/waiter/pkg/geom"
+	"github.com/sauerbraten/waiter/pkg/protocol/weapon"
 )
 
 type Player struct {

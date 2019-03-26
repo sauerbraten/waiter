@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/internal/net/packet"
-	"github.com/sauerbraten/waiter/pkg/definitions/armour"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
-	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
+	"github.com/sauerbraten/waiter/pkg/protocol/armour"
+	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
+	"github.com/sauerbraten/waiter/pkg/protocol/weapon"
 )
 
 type PlayerState struct {

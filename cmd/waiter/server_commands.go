@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/game"
-	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 func (s *Server) HandleCommand(c *Client, msg string) {

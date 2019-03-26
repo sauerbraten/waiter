@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
 )
 
 type Competitive struct {

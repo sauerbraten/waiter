@@ -6,15 +6,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
-	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type ClientManager struct {

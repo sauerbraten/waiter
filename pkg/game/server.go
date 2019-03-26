@@ -3,7 +3,7 @@ package game
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 )
 
 type Server interface {

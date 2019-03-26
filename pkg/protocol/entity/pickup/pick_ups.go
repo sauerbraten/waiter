@@ -1,8 +1,8 @@
 package pickup
 
 import (
-	"github.com/sauerbraten/waiter/pkg/definitions/entity"
-	"github.com/sauerbraten/waiter/pkg/definitions/sound"
+	"github.com/sauerbraten/waiter/pkg/protocol/entity"
+	"github.com/sauerbraten/waiter/pkg/protocol/sound"
 )
 
 type PickUp struct {

@@ -11,9 +11,9 @@ import (
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/relay"
 	"github.com/sauerbraten/waiter/pkg/bans"
-	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 var (

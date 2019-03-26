@@ -3,9 +3,9 @@ package main
 import (
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/game"
+	"github.com/sauerbraten/waiter/pkg/game"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
+	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
 )
 
 type State struct {

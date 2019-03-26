@@ -1,9 +1,9 @@
 package game
 
 import (
-	"github.com/sauerbraten/waiter/pkg/definitions/armour"
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
-	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
+	"github.com/sauerbraten/waiter/pkg/protocol/armour"
+	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
+	"github.com/sauerbraten/waiter/pkg/protocol/weapon"
 )
 
 // prints intermission stats based on frags

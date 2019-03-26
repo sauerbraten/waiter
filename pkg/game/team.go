@@ -3,9 +3,9 @@ package game
 import (
 	"sort"
 
-	"github.com/sauerbraten/waiter/internal/utils"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
+	"github.com/sauerbraten/waiter/internal/rng"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
 )
 
 var NoTeam = &Team{Name: "none"}
@@ -45,7 +45,7 @@ func (teams BySizeAndScore) Less(i, j int) bool {
 	if teams[i].Frags != teams[j].Frags {
 		return teams[i].Frags < teams[j].Frags
 	}
-	return utils.RNG.Intn(2) == 0
+	return rng.RNG.Intn(2) == 0
 }
 
 func (t *Team) Add(p *Player) {

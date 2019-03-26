@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/sauerbraten/waiter/internal/game"
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
+	"github.com/sauerbraten/waiter/pkg/game"
+	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 )
 
 func NewGame(id gamemode.ID) game.Mode {
@@ -31,7 +31,6 @@ func NewGame(id gamemode.ID) game.Mode {
 
 	if timed, ok := mode.(game.TimedMode); ok && s.CompetitiveMode {
 		return game.NewCompetitive(s, timed)
-	} else {
-		return mode
 	}
+	return mode
 }

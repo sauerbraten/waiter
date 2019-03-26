@@ -28,5 +28,6 @@ func Magenta(s string) string { return wrap(s, magenta) }
 func Orange(s string) string  { return wrap(s, orange) }
 func White(s string) string   { return wrap(s, white) }
 
-func Fail(s string) string  { return Orange(s) }
-func Error(s string) string { return Red(s) }
+func Success(s string) string { return Green(s) }
+func Fail(s string) string    { return Orange(s) }
+func Error(s string) string   { return Red(s) }

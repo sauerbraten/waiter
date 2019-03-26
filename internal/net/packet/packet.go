@@ -5,17 +5,17 @@ import (
 	"net"
 	"time"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/armour"
-	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
-	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/playerstate"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
-	"github.com/sauerbraten/waiter/pkg/definitions/sound"
-	"github.com/sauerbraten/waiter/pkg/definitions/weapon"
-	"github.com/sauerbraten/waiter/internal/geom"
+	"github.com/sauerbraten/waiter/pkg/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/protocol/armour"
+	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
+	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/sound"
+	"github.com/sauerbraten/waiter/pkg/protocol/weapon"
 )
 
 func Encode(args ...interface{}) protocol.Packet {

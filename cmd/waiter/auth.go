@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sauerbraten/waiter/internal/utils"
-	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess func(role.ID), onFailure func(error)) {
@@ -18,7 +17,11 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string, o
 			if client.SessionID != sessionID {
 				return
 			}
-			utils.LogAuthTry(client.String(), domain, name, nil)
+			if domain == "" {
+				log.Printf("successful gauth by %s as '%s'", client.String(), name)
+			} else {
+				log.Printf("successful auth by %s as '%s' [%s]", client.String(), name, domain)
+			}
 			client.Authentications[domain].name = name
 			onSuccess(rol)
 		}
@@ -29,8 +32,12 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string, o
 			if client.SessionID != sessionID {
 				return
 			}
+			if domain == "" {
+				log.Printf("unsuccessful gauth try by %s as '%s': %v", client.String(), name, err)
+			} else {
+				log.Printf("unsuccessful auth try by %s as '%s' [%s]: %v", client.String(), name, domain, err)
+			}
 			delete(client.Authentications, domain)
-			utils.LogAuthTry(client.String(), domain, name, err)
 			onFailure(err)
 		}
 	}

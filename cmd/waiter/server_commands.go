@@ -235,30 +235,35 @@ func register(c *Client, args []string) {
 		return
 	}
 
-	gauth, ok := c.Authentications[""]
-	if !ok {
-		c.Send(nmc.ServerMessage, cubecode.Fail("at the moment, you have to be authenticated with a global auth key to use this command: /auth"))
+	if len(args) < 1 {
+		c.Send(nmc.ServerMessage, cubecode.Fail("you have to include a public key: /servcmd register [name] <pubkey>"))
 		return
 	}
 
-	if len(args) != 1 {
-		c.Send(nmc.ServerMessage, cubecode.Fail("you have to include your global auth public key: /servcmd register (getpubkey \"\")"))
-		return
+	name, pubkey := "", ""
+	if len(args) < 2 {
+		gauth, ok := c.Authentications[""]
+		if !ok {
+			c.Send(nmc.ServerMessage, cubecode.Fail("you have to claim gauth (to use your gauth name) or provide a name: /servcmd register [name] <pubkey>"))
+			return
+		}
+		name, pubkey = gauth.name, args[0]
+	} else {
+		name, pubkey = args[0], args[1]
 	}
 
-	pubkey := args[0]
 	if pubkey == "" {
-		c.Send(nmc.ServerMessage, cubecode.Fail("you have to include your global auth public key: /servcmd register (getpubkey \"\")"))
+		c.Send(nmc.ServerMessage, cubecode.Fail("you have to provide your public key: /servcmd register [name] <pubkey>"))
 		return
 	}
 
-	statsAuth.AddAuth(gauth.name, pubkey,
+	statsAuth.AddAuth(name, pubkey,
 		func(err string) {
 			if err != "" {
 				c.Send(nmc.ServerMessage, cubecode.Error("creating your account failed: "+err))
 				return
 			}
-			c.Send(nmc.ServerMessage, cubecode.Green("you successfully registered as "+gauth.name))
+			c.Send(nmc.ServerMessage, cubecode.Green("you successfully registered as "+name))
 			c.Send(nmc.ServerMessage, cubecode.Fail("this is alpha functionality, the account will be lost at stats server restart!"))
 			c.Send(nmc.ServerMessage, "type '/autoauth 1', then '/reconnect' to try out your new key")
 		},

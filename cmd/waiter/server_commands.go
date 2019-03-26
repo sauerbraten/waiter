@@ -259,6 +259,7 @@ func register(c *Client, args []string) {
 				return
 			}
 			c.Send(nmc.ServerMessage, cubecode.Green("you successfully registered as "+gauth.name))
+			c.Send(nmc.ServerMessage, cubecode.Fail("this is alpha functionality, the account will be lost at stats server restart!"))
 			c.Send(nmc.ServerMessage, "type '/autoauth 1', then '/reconnect' to try out your new key")
 		},
 	)

@@ -21,7 +21,7 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	switch cmd {
 	case "help", "commands":
 		masterCommands := []string{
-			cubecode.Green("keepteams") + " 1|0",
+			cubecode.Green("keepteams") + " 0|1",
 			cubecode.Green("queuemap") + " <map>...",
 			cubecode.Green("competitive") + " 0|1",
 		}
@@ -51,8 +51,11 @@ func (s *Server) HandleCommand(c *Client, msg string) {
 	case "ip", "ips":
 		lookupIPs(c, parts[1:])
 
-	case "timeleft", "time":
+	case "settime", "settimeleft", "settimeremaining", "timeleft", "time", "timeremaining":
 		setTimeLeft(c, parts[1:])
+
+	case "register":
+		register(c, parts[1:])
 
 	default:
 		c.Send(nmc.ServerMessage, cubecode.Fail("unknown command"))
@@ -220,8 +223,43 @@ func setTimeLeft(c *Client, args []string) {
 		d = 1 * time.Second // 0 forces intermission without updating the client's game timer
 		s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s forced intermission", s.Clients.UniqueName(c))))
 	} else {
-		s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s set the remaining time to %s", s.Clients.UniqueName(c), d)))
+		s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s set the time remaining to %s", s.Clients.UniqueName(c), d)))
 	}
 
 	timedMode.SetTimeLeft(d)
+}
+
+func register(c *Client, args []string) {
+	if statsAuth, ok := c.Authentications[s.StatsServerAuthDomain]; ok {
+		c.Send(nmc.ServerMessage, cubecode.Fail("you're already authenticated with "+s.StatsServerAuthDomain+" as "+statsAuth.name))
+		return
+	}
+
+	gauth, ok := c.Authentications[""]
+	if !ok {
+		c.Send(nmc.ServerMessage, cubecode.Fail("at the moment, you have to be authenticated with a global auth key to use this command: /auth"))
+		return
+	}
+
+	if len(args) != 1 {
+		c.Send(nmc.ServerMessage, cubecode.Fail("you have to include your global auth public key: /servcmd register (getpubkey \"\")"))
+		return
+	}
+
+	pubkey := args[0]
+	if pubkey == "" {
+		c.Send(nmc.ServerMessage, cubecode.Fail("you have to include your global auth public key: /servcmd register (getpubkey \"\")"))
+		return
+	}
+
+	statsAuth.AddAuth(gauth.name, pubkey,
+		func(err string) {
+			if err != "" {
+				c.Send(nmc.ServerMessage, cubecode.Error("creating your account failed: "+err))
+				return
+			}
+			c.Send(nmc.ServerMessage, cubecode.Green("you successfully registered as "+gauth.name))
+			c.Send(nmc.ServerMessage, "type '/autoauth 1', then '/reconnect' to try out your new key")
+		},
+	)
 }

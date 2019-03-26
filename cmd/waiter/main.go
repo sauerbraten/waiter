@@ -4,13 +4,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/relay"
-
 	"github.com/sauerbraten/jsonfile"
+	"github.com/sauerbraten/maitred/pkg/auth"
+	mserver "github.com/sauerbraten/maitred/pkg/client"
 
-	"github.com/sauerbraten/waiter/internal/masterserver"
 	"github.com/sauerbraten/waiter/internal/net/enet"
-	"github.com/sauerbraten/waiter/pkg/auth"
+	"github.com/sauerbraten/waiter/internal/relay"
 	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
@@ -27,11 +26,11 @@ var (
 	localAuth auth.Provider
 
 	// master server
-	ms        *masterserver.MasterServer
+	ms        *mserver.VanillaClient
 	masterInc <-chan string
 
 	// stats server
-	statsAuth    *masterserver.StatsServer
+	statsAuth    *mserver.AdminClient
 	statsAuthInc <-chan string
 
 	// info server
@@ -94,15 +93,23 @@ func main() {
 
 	is, infoInc = s.StartListeningForInfoRequests()
 
-	ms, masterInc, err = masterserver.NewMaster(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
+	ms, masterInc, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
 
-	statsAuth, statsAuthInc, err = masterserver.NewStatsMaster(conf.StatsServerAddress, conf.ListenPort, s.HandleSuccStats, s.HandleFailStats, func() { s.ReAuth(s.StatsServerAuthDomain) })
+	var _statsAuth *mserver.StatsClient
+	_statsAuth, statsAuthInc, err = mserver.NewStats(
+		conf.StatsServerAddress,
+		conf.ListenPort,
+		s.HandleSuccStats,
+		s.HandleFailStats,
+		func() { s.ReAuth(s.StatsServerAuthDomain) },
+	)
 	if err != nil {
 		log.Println("could not connect to statsauth server:", err)
 	}
+	statsAuth = mserver.NewAdmin(_statsAuth)
 
 	s.AuthManager = auth.NewManager(map[string]auth.Provider{
 		"":                         ms.RemoteProvider,

@@ -6,14 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/waiter/internal/relay"
+	"github.com/sauerbraten/maitred/pkg/auth"
 
 	"github.com/sauerbraten/waiter/internal/game"
-
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/enet"
+	"github.com/sauerbraten/waiter/internal/relay"
 	"github.com/sauerbraten/waiter/internal/utils"
-	"github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
@@ -76,8 +75,6 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 	c.Name = name
 	c.Model = playerModel
 
-	sessionID := c.SessionID
-
 	onAutoAuthSuccess := func(rol role.ID) {
 		s.setAuthRole(c, rol, authDomain, authName)
 	}
@@ -91,47 +88,22 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 	if c.AuthRequiredBecause == disconnectreason.None {
 		s.Join(c)
 		if authDomain == s.ServerAuthDomain && authName != "" {
-			go s.handleAuthRequest(c, authDomain, authName,
-				func(rol role.ID) {
-					callbacks <- func() {
-						if c.SessionID != sessionID {
-							return
-						}
-						onAutoAuthSuccess(rol)
-					}
-				}, func(err error) {
-					callbacks <- func() {
-						if c.SessionID != sessionID {
-							return
-						}
-						onAutoAuthFailure(err)
-					}
-				})
+			go s.handleAuthRequest(c, authDomain, authName, onAutoAuthSuccess, onAutoAuthFailure)
 		}
 	} else if authDomain == s.ServerAuthDomain && authName != "" {
 		// not in a new goroutine, so client does not get confused and sends nmc.ClientPing before the player joined
 		s.handleAuthRequest(c, authDomain, authName,
 			func(rol role.ID) {
-				callbacks <- func() {
-					if c.SessionID != sessionID {
-						return
-					}
-					if rol == role.None {
-						return
-					}
-					c.AuthRequiredBecause = disconnectreason.None
-					s.Join(c)
-					onAutoAuthSuccess(rol)
+				if rol == role.None {
+					return
 				}
+				c.AuthRequiredBecause = disconnectreason.None
+				s.Join(c)
+				onAutoAuthSuccess(rol)
 			},
 			func(err error) {
-				callbacks <- func() {
-					if c.SessionID != sessionID {
-						return
-					}
-					onAutoAuthFailure(err)
-					s.Disconnect(c, c.AuthRequiredBecause)
-				}
+				onAutoAuthFailure(err)
+				s.Disconnect(c, c.AuthRequiredBecause)
 			},
 		)
 	} else {

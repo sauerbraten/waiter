@@ -9,7 +9,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/game"
 	"github.com/sauerbraten/waiter/internal/geom"
 	"github.com/sauerbraten/waiter/internal/net/packet"
-	"github.com/sauerbraten/waiter/internal/utils"
 	"github.com/sauerbraten/waiter/pkg/definitions/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 	"github.com/sauerbraten/waiter/pkg/definitions/mastermode"
@@ -165,38 +164,9 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 				log.Println("could not read name from auth try packet:", p)
 				return
 			}
-			sessionID := client.SessionID
-			go s.AuthManager.TryAuthentication(
-				domain,
-				name,
-				func(reqID uint32, chal string) {
-					callbacks <- func() {
-						if client.SessionID != sessionID {
-							return
-						}
-						client.Authentications[domain] = &Authentication{reqID: reqID}
-						client.Send(nmc.AuthChallenge, domain, reqID, chal)
-					}
-				},
-				func(rol role.ID) {
-					callbacks <- func() {
-						if client.SessionID != sessionID {
-							return
-						}
-						utils.LogAuthTry(client.String(), domain, name, nil)
-						s.setAuthRole(client, rol, domain, name)
-						client.Authentications[domain].name = name
-					}
-				},
-				func(err error) {
-					callbacks <- func() {
-						if client.SessionID != sessionID {
-							return
-						}
-						delete(client.Authentications, domain)
-						utils.LogAuthTry(client.String(), domain, name, err)
-					}
-				},
+			go s.handleAuthRequest(client, domain, name,
+				func(rol role.ID) { s.setAuthRole(client, rol, domain, name) },
+				func(err error) {},
 			)
 
 		case nmc.AuthKick:
@@ -225,45 +195,18 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 			if victim == nil {
 				return
 			}
-			sessionID := client.SessionID
-			if domain == "" {
-				go s.handleAuthRequest(client, domain, name,
-					func(role.ID) {
-						callbacks <- func() {
-							if client.SessionID != sessionID {
-								return
-							}
-							s.AuthKick(client, role.Auth, domain, name, victim, reason)
-						}
-					},
-					func(error) {
-						callbacks <- func() {
-							if client.SessionID != sessionID {
-								return
-							}
-							log.Println("unsuccessful gauth kick try by", client, "as", name, "vs", victim)
-						}
-					})
-			} else {
-				go s.handleAuthRequest(client, domain, name,
-					func(rol role.ID) {
-						callbacks <- func() {
-							if client.SessionID != sessionID {
-								return
-							}
-							s.AuthKick(client, rol, domain, name, victim, reason)
-						}
-					},
-					func(error) {
-						callbacks <- func() {
-							if client.SessionID != sessionID {
-								return
-							}
-							log.Println("unsuccessful auth kick try by", client, "as", name, "["+domain+"]", "vs", victim)
-						}
-					},
-				)
+			onAuthFail := func(error) {
+				log.Println("unsuccessful gauth kick try by", client, "as", name, "vs", victim)
 			}
+			if domain != "" {
+				onAuthFail = func(error) {
+					log.Println("unsuccessful auth kick try by", client, "as", name, "["+domain+"]", "vs", victim)
+				}
+			}
+			go s.handleAuthRequest(client, domain, name,
+				func(role.ID) { s.AuthKick(client, role.Auth, domain, name, victim, reason) },
+				onAuthFail,
+			)
 
 		case nmc.AuthAnswer:
 			// client sends answer to auth challenge

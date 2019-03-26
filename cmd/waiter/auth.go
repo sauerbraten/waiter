@@ -4,20 +4,51 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/sauerbraten/waiter/internal/utils"
 	"github.com/sauerbraten/waiter/pkg/definitions/nmc"
 	"github.com/sauerbraten/waiter/pkg/definitions/role"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
-func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess func(rol role.ID), onFailure func(error)) {
+func (s *Server) handleAuthRequest(client *Client, domain string, name string, onSuccess func(role.ID), onFailure func(error)) {
+	sessionID := client.SessionID
+
+	_onSuccess := func(rol role.ID) {
+		callbacks <- func() {
+			if client.SessionID != sessionID {
+				return
+			}
+			utils.LogAuthTry(client.String(), domain, name, nil)
+			client.Authentications[domain].name = name
+			onSuccess(rol)
+		}
+	}
+
+	_onFailure := func(err error) {
+		callbacks <- func() {
+			if client.SessionID != sessionID {
+				return
+			}
+			delete(client.Authentications, domain)
+			utils.LogAuthTry(client.String(), domain, name, err)
+			onFailure(err)
+		}
+	}
+
 	s.AuthManager.TryAuthentication(
 		domain,
 		name,
 		func(reqID uint32, chal string) {
-			client.Send(nmc.AuthChallenge, domain, reqID, chal)
+			callbacks <- func() {
+				if client.SessionID != sessionID {
+					return
+				}
+				client.Authentications[domain] = &Authentication{reqID: reqID}
+				client.Send(nmc.AuthChallenge, domain, reqID, chal)
+			}
 		},
-		onSuccess,
-		onFailure,
+		_onSuccess,
+		_onFailure,
 	)
 }
 

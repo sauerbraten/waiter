@@ -1,25 +1,25 @@
 {
+	// the address of the master server to report to (also the one used for global auth)
+	"master_server_address": "sauerbraten.org:28787",
+
+	// address of a master server that supports stats reporting
+	"stats_server_address": "stats.p1x.pw:28787",
+
+	// stats server auth domain
+	"stats_server_auth_domain": "stats.p1x.pw",
+
+
 	// listen address
 	"listen_address": "0.0.0.0",
 
 	// listen port
 	"listen_port": 28785,
 
-	// the address of the master server to report to (also the one used for global auth)
-	"master_server_address": "sauerbraten.org:28787",
-
-	// address of a master server that supports stats reporting
-	"stats_server_address": "stats.p1x.pw:28787",
-	//"stats_server_address": "localhost:28787",
-
-	// stats server auth domain
-	"stats_server_auth_domain": "stats.p1x.pw",
+	// server description
+	"server_description": "p1x.pw @ <filled in by CI service>",
 
 	// default game mode (3 = insta, 5 = effic)
 	"fallback_game_mode": 17,
-
-	// server description
-	"server_description": "p1x.pw @ <filled in by CI service>",
 
 	// maximum number of clients
 	"max_clients": 18,
@@ -28,9 +28,62 @@
 	// otherwise, "0.0.0.0" will be sent for every client.
 	"send_client_ips_via_extinfo": false,
 
-	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things do not work!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
+	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things are buggy!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
 
 	"game_duration_in_minutes": 10,
 
-	"server_auth_domain": "p1x.pw"
+	"server_auth_domain": "p1x.pw",
+
+	"maps": {
+		"deathmatch": [
+			"academy",
+			"collusion",
+			"complex",
+			"duel7",
+			"duel8",
+			"elegy",
+			"fury",
+			"hashi",
+			"industry",
+			"kffa",
+			"legazzo",
+			"mbt2",
+			"memento",
+			"metl2",
+			"metl3",
+			"orion",
+			"ot",
+			"outpost",
+			"park",
+			"renegade",
+			"rm5",
+			"simplicity",
+			"skrdm1",
+			"tartech",
+			"teahupoo",
+			"tumwalk",
+			"turbine"
+		],
+		"ctf": [
+			"abbey",
+			"catch22",
+			"dust2",
+			"forge",
+			"forgotten",
+			"haste",
+			"mercury",
+			"redemption",
+			"reissen",
+			"tempest",
+			"turbulence",
+			"twinforts"
+		],
+		"capture": [
+			"nevil_c",
+			"nmp4",
+			"nmp8",
+			"nmp9",
+			"serenity"
+		]
+	}
 }

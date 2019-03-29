@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/sauerbraten/waiter/pkg/maprot"
+
 	"github.com/sauerbraten/jsonfile"
 	"github.com/sauerbraten/maitred/pkg/auth"
 	mserver "github.com/sauerbraten/maitred/pkg/client"
@@ -48,12 +50,6 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var mr MapRotation
-	err = jsonfile.ParseFile("maps.json", &mr)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	bm, err = bans.FromFile("bans.json")
 	if err != nil {
 		log.Fatalln(err)
@@ -82,11 +78,12 @@ func main() {
 		},
 		relay:       relay.New(),
 		Clients:     cs,
-		MapRotation: &mr,
+		MapRotation: maprot.NewRotation(conf.MapPools),
+		Commands:    NewServerCommands(queueMap, toggleKeepTeams, toggleCompetitiveMode, toggleReportStats, lookupIPs, setTimeLeft, registerPubkey),
 	}
 	s.GameDurationInMinutes = s.GameDurationInMinutes * time.Minute // duration is parsed without unit from config file
 	s.GameMode = NewGame(conf.FallbackGameMode)
-	s.Map = s.MapRotation.NextMap(s.GameMode, "")
+	s.Map = s.MapRotation.NextMap(conf.FallbackGameMode, conf.FallbackGameMode, "")
 	s.GameMode.Start()
 	s.Unsupervised()
 	s.Empty()

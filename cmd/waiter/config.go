@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/sauerbraten/waiter/pkg/maprot"
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 )
 
@@ -20,4 +21,5 @@ type Config struct {
 	MessageOfTheDay         string        `json:"message_of_the_day"`
 	GameDurationInMinutes   time.Duration `json:"game_duration_in_minutes"`
 	ServerAuthDomain        string        `json:"server_auth_domain"`
+	MapPools                maprot.Pools  `json:"maps"`
 }

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/sauerbraten/waiter/pkg/game"
-
 	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
 )
 

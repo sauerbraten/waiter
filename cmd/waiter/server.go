@@ -13,6 +13,7 @@ import (
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/geoip"
 	"github.com/sauerbraten/waiter/pkg/geom"
+	"github.com/sauerbraten/waiter/pkg/maprot"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
@@ -31,10 +32,11 @@ type Server struct {
 	relay            *relay.Relay
 	Clients          *ClientManager
 	AuthManager      *auth.Manager
-	MapRotation      *MapRotation
+	MapRotation      *maprot.Rotation
 	PendingMapChange *time.Timer
 
 	// non-standard stuff
+	Commands        *ServerCommands
 	KeepTeams       bool
 	CompetitiveMode bool
 	ReportStats     bool
@@ -230,16 +232,16 @@ func (s *Server) Unsupervised() {
 }
 
 func (s *Server) Empty() {
-	s.MapRotation.queue = s.MapRotation.queue[:0]
+	s.MapRotation.ClearQueue()
 	if s.GameMode.ID() != s.FallbackGameMode {
-		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(NewGame(s.FallbackGameMode), s.Map))
+		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(s.FallbackGameMode, s.GameMode.ID(), s.Map))
 	}
 }
 
 func (s *Server) Intermission() {
 	s.GameMode.End()
 
-	nextMap := s.MapRotation.NextMap(s.GameMode, s.Map)
+	nextMap := s.MapRotation.NextMap(s.GameMode.ID(), s.GameMode.ID(), s.Map)
 
 	s.PendingMapChange = time.AfterFunc(10*time.Second, func() {
 		s.ChangeMap(s.GameMode.ID(), nextMap)

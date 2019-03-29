@@ -389,7 +389,7 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 				return
 			}
 			if strings.HasPrefix(msg, "#") {
-				s.HandleCommand(client, msg[1:])
+				s.Commands.Handle(client, msg[1:])
 			} else {
 				client.Packets.Publish(nmc.ChatMessage, msg)
 			}
@@ -558,7 +558,7 @@ func (s *Server) handlePacket(client *Client, channelID uint8, p protocol.Packet
 				log.Println("could not read command from server command packet:", p)
 				return
 			}
-			s.HandleCommand(client, cmd)
+			s.Commands.Handle(client, cmd)
 
 		default:
 			ok := s.GameMode.HandlePacket(&client.Player, packetType, &p)

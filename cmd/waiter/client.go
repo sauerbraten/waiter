@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/relay"
+	"github.com/sauerbraten/waiter/pkg/enet"
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"

@@ -5,15 +5,14 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/sauerbraten/waiter/pkg/maprot"
-
 	"github.com/sauerbraten/jsonfile"
 	"github.com/sauerbraten/maitred/pkg/auth"
 	mserver "github.com/sauerbraten/maitred/pkg/client"
 
-	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/relay"
 	"github.com/sauerbraten/waiter/pkg/bans"
+	"github.com/sauerbraten/waiter/pkg/enet"
+	"github.com/sauerbraten/waiter/pkg/maprot"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/protocol/role"

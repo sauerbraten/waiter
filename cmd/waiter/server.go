@@ -8,8 +8,8 @@ import (
 
 	"github.com/sauerbraten/maitred/pkg/auth"
 
-	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/relay"
+	"github.com/sauerbraten/waiter/pkg/enet"
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/geoip"
 	"github.com/sauerbraten/waiter/pkg/geom"

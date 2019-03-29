@@ -6,7 +6,6 @@ import (
 	"github.com/sauerbraten/waiter/internal/net/enet"
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/relay"
-	"github.com/sauerbraten/waiter/internal/rng"
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
@@ -38,7 +37,7 @@ func NewClient(cn uint32, peer *enet.Peer) *Client {
 		Player:          game.NewPlayer(cn),
 		InUse:           true,
 		Peer:            peer,
-		SessionID:       rng.RNG.Int31(),
+		SessionID:       rng.Int31(),
 		Authentications: map[string]*Authentication{},
 	}
 }
@@ -51,7 +50,7 @@ func (c *Client) Reset() {
 	c.AuthRequiredBecause = disconnectreason.None
 	c.InUse = false
 	c.Peer = nil
-	c.SessionID = rng.RNG.Int31()
+	c.SessionID = rng.Int31()
 	c.Ping = 0
 	if c.Positions != nil {
 		c.Positions.Close()

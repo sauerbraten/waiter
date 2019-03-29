@@ -1,14 +1,15 @@
 package game
 
 import (
+	"math/rand"
 	"sort"
+	"time"
 
-	"github.com/sauerbraten/waiter/internal/rng"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
 )
 
-var NoTeam = &Team{Name: "none"}
+var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type Team struct {
 	Name    string
@@ -23,6 +24,8 @@ func NewTeam(name string) *Team {
 		Players: map[*Player]struct{}{},
 	}
 }
+
+var NoTeam = &Team{Name: "none"}
 
 // sorts teams ascending by size, then score
 type BySizeAndScore []*Team
@@ -45,7 +48,7 @@ func (teams BySizeAndScore) Less(i, j int) bool {
 	if teams[i].Frags != teams[j].Frags {
 		return teams[i].Frags < teams[j].Frags
 	}
-	return rng.RNG.Intn(2) == 0
+	return rng.Intn(2) == 0
 }
 
 func (t *Team) Add(p *Player) {

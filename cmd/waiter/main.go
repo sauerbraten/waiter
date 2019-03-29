@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/sauerbraten/waiter/pkg/maprot"
@@ -17,6 +18,8 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
+
+var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 var (
 	// global server state

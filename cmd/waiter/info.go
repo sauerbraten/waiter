@@ -9,6 +9,7 @@ import (
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol"
+	"github.com/sauerbraten/waiter/pkg/server"
 )
 
 // Protocol constants
@@ -41,11 +42,11 @@ type infoRequest struct {
 }
 
 type infoServer struct {
-	s    *Server
+	s    *server.Server
 	conn *net.UDPConn
 }
 
-func (s *Server) StartListeningForInfoRequests() (*infoServer, <-chan infoRequest) {
+func StartListeningForInfoRequests(s *server.Server) (*infoServer, <-chan infoRequest) {
 	laddr, err := net.ResolveUDPAddr("udp", s.ListenAddress+":"+strconv.Itoa(s.ListenPort+1))
 	if err != nil {
 		log.Println(err)
@@ -105,21 +106,21 @@ func (i *infoServer) Handle(req infoRequest) {
 		}
 		switch extReqType {
 		case ExtInfoTypeUptime:
-			i.send(req.raddr, i.s.uptime(respHeader))
+			i.send(req.raddr, i.uptime(respHeader))
 		case ExtInfoTypeClientInfo:
 			cn, ok := p.GetInt()
 			if !ok {
 				log.Println("malformed info request: could not read CN from client info request:", p)
 				return
 			}
-			i.send(req.raddr, s.clientInfo(cn, respHeader)...)
+			i.send(req.raddr, i.clientInfo(cn, respHeader)...)
 		case ExtInfoTypeTeamScores:
-			i.send(req.raddr, s.teamScores(respHeader))
+			i.send(req.raddr, i.teamScores(respHeader))
 		default:
 			log.Println("erroneous extinfo type queried:", reqType)
 		}
 	default:
-		i.send(req.raddr, s.basicInfo(respHeader))
+		i.send(req.raddr, i.basicInfo(respHeader))
 	}
 }
 
@@ -136,7 +137,7 @@ func (i *infoServer) send(raddr *net.UDPAddr, packets ...protocol.Packet) {
 	}
 }
 
-func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
+func (i *infoServer) basicInfo(respHeader []byte) protocol.Packet {
 	q := []interface{}{
 		respHeader,
 		s.NumClients(),
@@ -175,7 +176,7 @@ func (s *Server) basicInfo(respHeader []byte) protocol.Packet {
 	return packet.Encode(q...)
 }
 
-func (s *Server) uptime(respHeader []byte) protocol.Packet {
+func (i *infoServer) uptime(respHeader []byte) protocol.Packet {
 	q := []interface{}{
 		respHeader,
 		ExtInfoACK,
@@ -190,7 +191,7 @@ func (s *Server) uptime(respHeader []byte) protocol.Packet {
 	return packet.Encode(q...)
 }
 
-func (s *Server) clientInfo(cn int32, respHeader []byte) (packets []protocol.Packet) {
+func (i *infoServer) clientInfo(cn int32, respHeader []byte) (packets []protocol.Packet) {
 	q := []interface{}{
 		respHeader,
 		ExtInfoACK,
@@ -210,7 +211,7 @@ func (s *Server) clientInfo(cn int32, respHeader []byte) (packets []protocol.Pac
 	q = append(q, ClientInfoResponseTypeCNs)
 
 	if cn == -1 {
-		s.Clients.ForEach(func(c *Client) { q = append(q, c.CN) })
+		s.Clients.ForEach(func(c *server.Client) { q = append(q, c.CN) })
 	} else {
 		q = append(q, cn)
 	}
@@ -218,12 +219,12 @@ func (s *Server) clientInfo(cn int32, respHeader []byte) (packets []protocol.Pac
 	packets = append(packets, packet.Encode(q...))
 
 	if cn == -1 {
-		s.Clients.ForEach(func(c *Client) {
-			packets = append(packets, s.clientPacket(c, header))
+		s.Clients.ForEach(func(c *server.Client) {
+			packets = append(packets, i.clientPacket(c, header))
 		})
 	} else {
 		c := s.Clients.GetClientByCN(uint32(cn))
-		packets = append(packets, s.clientPacket(c, header))
+		packets = append(packets, i.clientPacket(c, header))
 	}
 
 	return
@@ -236,7 +237,7 @@ func max(i, j int32) int32 {
 	return j
 }
 
-func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
+func (i *infoServer) clientPacket(c *server.Client, header []interface{}) protocol.Packet {
 	q := header
 
 	q = append(q,
@@ -266,7 +267,7 @@ func (s *Server) clientPacket(c *Client, header []interface{}) protocol.Packet {
 	return packet.Encode(q...)
 }
 
-func (s *Server) teamScores(respHeader []byte) protocol.Packet {
+func (i *infoServer) teamScores(respHeader []byte) protocol.Packet {
 	q := []interface{}{
 		respHeader,
 		ExtInfoACK,

@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -102,7 +102,7 @@ func (cm *ClientManager) Relay(from *Client, typ nmc.ID, args ...interface{}) {
 }
 
 // Sends 'welcome' information to a newly joined client like map, mode, time left, other players, etc.
-func (cm *ClientManager) SendWelcome(c *Client) {
+func (s *Server) SendWelcome(c *Client) {
 	typ, p := nmc.Welcome, []interface{}{
 		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo(), // currently played mode & map
 	}
@@ -113,7 +113,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level
-	pupTyp, pup, empty := cm.PrivilegedUsersPacket()
+	pupTyp, pup, empty := s.PrivilegedUsersPacket()
 	if !empty {
 		p = append(p, pupTyp, pup)
 	}
@@ -145,7 +145,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 
 	// send other players' state (frags, flags, etc.)
 	p = append(p, nmc.Resume)
-	for _, client := range cm.cs {
+	for _, client := range s.Clients.cs {
 		if client != c && client.InUse {
 			p = append(p, client.CN, client.State, client.Frags, client.Flags, client.QuadTimeLeft, client.ToWire())
 		}
@@ -153,7 +153,7 @@ func (cm *ClientManager) SendWelcome(c *Client) {
 	p = append(p, -1)
 
 	// send other client's state (name, team, playermodel)
-	for _, client := range cm.cs {
+	for _, client := range s.Clients.cs {
 		if client != c && client.InUse {
 			p = append(p, nmc.InitializeClient, client.CN, client.Name, client.Team.Name, client.Model)
 		}
@@ -188,8 +188,8 @@ func (cm *ClientManager) InformOthersOfJoin(c *Client) {
 	}
 }
 
-func (cm *ClientManager) MapChange() {
-	cm.ForEach(func(c *Client) {
+func (s *Server) MapChange() {
+	s.Clients.ForEach(func(c *Client) {
 		c.Player.PlayerState.Reset()
 		if c.State == playerstate.Spectator {
 			return
@@ -208,10 +208,10 @@ func (cm *ClientManager) PrivilegedUsers() (privileged []*Client) {
 	return
 }
 
-func (cm *ClientManager) PrivilegedUsersPacket() (typ nmc.ID, p protocol.Packet, noPrivilegedUsers bool) {
+func (s *Server) PrivilegedUsersPacket() (typ nmc.ID, p protocol.Packet, noPrivilegedUsers bool) {
 	q := []interface{}{s.MasterMode}
 
-	cm.ForEach(func(c *Client) {
+	s.Clients.ForEach(func(c *Client) {
 		if c.Role > role.None {
 			q = append(q, c.CN, c.Role)
 		}

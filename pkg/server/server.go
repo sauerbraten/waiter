@@ -1,14 +1,17 @@
-package main
+package server
 
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/sauerbraten/maitred/pkg/auth"
+	mserver "github.com/sauerbraten/maitred/pkg/client"
 
 	"github.com/sauerbraten/waiter/internal/relay"
+	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/enet"
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/geoip"
@@ -26,20 +29,47 @@ import (
 )
 
 type Server struct {
-	ENetHost *enet.Host
+	host *enet.Host
 	*Config
 	*State
 	relay            *relay.Relay
 	Clients          *ClientManager
 	AuthManager      *auth.Manager
+	BanManager       *bans.BanManager
+	statsServer      *mserver.AdminClient
 	MapRotation      *maprot.Rotation
 	PendingMapChange *time.Timer
+	callbacks        chan<- func()
+	rng              *rand.Rand
 
 	// non-standard stuff
 	Commands        *ServerCommands
 	KeepTeams       bool
 	CompetitiveMode bool
 	ReportStats     bool
+}
+
+func New(host *enet.Host, conf *Config, clients *ClientManager, authManager *auth.Manager, banManager *bans.BanManager, statsServer *mserver.AdminClient, commands *ServerCommands) (*Server, <-chan func()) {
+	callbacks := make(chan func())
+
+	return &Server{
+		host:   host,
+		Config: conf,
+		State: &State{
+			UpSince:    time.Now(),
+			NumClients: clients.NumberOfClientsConnected,
+		},
+		relay:       relay.New(),
+		Clients:     clients,
+		AuthManager: authManager,
+		BanManager:  banManager,
+		statsServer: statsServer,
+		MapRotation: maprot.NewRotation(conf.MapPools),
+		callbacks:   callbacks,
+		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
+
+		Commands: commands,
+	}, callbacks
 }
 
 func (s *Server) GameDuration() time.Duration { return s.Config.GameDuration }
@@ -51,7 +81,7 @@ func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
 	if s.MasterMode >= mastermode.Private {
 		return disconnectreason.PrivateMode
 	}
-	if ban, ok := bm.GetBan(c.Peer.Address.IP); ok {
+	if ban, ok := s.BanManager.GetBan(c.Peer.Address.IP); ok {
 		log.Println("connecting client", c, "is banned:", ban)
 		return disconnectreason.IPBanned
 	}
@@ -125,7 +155,7 @@ func (s *Server) Join(c *Client) {
 	}
 
 	s.GameMode.Join(&c.Player)                  // may set client's team
-	s.Clients.SendWelcome(c)                    // tells client about her team
+	s.SendWelcome(c)                            // tells client about her team
 	typ, initData := s.GameMode.Init(&c.Player) // may send additional welcome info like flags
 	if typ != nmc.None {
 		c.Send(typ, initData...)
@@ -138,7 +168,7 @@ func (s *Server) Join(c *Client) {
 		log.Println(cubecode.SanitizeString(fmt.Sprintf("%s (%s) connected", uniqueName, c.Peer.Address.IP)))
 
 		country := geoip.Country(c.Peer.Address.IP) // slow!
-		callbacks <- func() {
+		s.callbacks <- func() {
 			if c.SessionID != sessionID {
 				return
 			}
@@ -184,7 +214,7 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(&client.Player)
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
-	s.ENetHost.Disconnect(client.Peer, disconnectreason.None)
+	s.host.Disconnect(client.Peer, disconnectreason.None)
 	client.Reset()
 	if len(s.Clients.PrivilegedUsers()) == 0 {
 		s.Unsupervised()
@@ -262,7 +292,7 @@ func (s *Server) ReportEndgameStats() {
 		}
 	})
 
-	statsAuth.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
+	s.statsServer.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
 }
 
 func (s *Server) HandleSuccStats(reqID uint32) {
@@ -302,12 +332,12 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapname string) {
 	}
 
 	s.Map = mapname
-	s.GameMode = NewGame(mode)
+	s.GameMode = s.StartMode(mode)
 
 	s.ForEach(s.GameMode.Join)
 	s.Clients.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
 	s.GameMode.Start()
-	s.Clients.MapChange()
+	s.MapChange()
 
 	s.Clients.Broadcast(nmc.ServerMessage, s.MessageOfTheDay)
 }

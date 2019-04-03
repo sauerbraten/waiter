@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string, o
 	sessionID := client.SessionID
 
 	_onSuccess := func(rol role.ID) {
-		callbacks <- func() {
+		s.callbacks <- func() {
 			if client.SessionID != sessionID {
 				return
 			}
@@ -28,7 +28,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string, o
 	}
 
 	_onFailure := func(err error) {
-		callbacks <- func() {
+		s.callbacks <- func() {
 			if client.SessionID != sessionID {
 				return
 			}
@@ -46,7 +46,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string, o
 		domain,
 		name,
 		func(reqID uint32, chal string) {
-			callbacks <- func() {
+			s.callbacks <- func() {
 				if client.SessionID != sessionID {
 					return
 				}
@@ -113,6 +113,6 @@ func (s *Server) setRole(client *Client, targetCN uint32, rol role.ID) {
 
 func (s *Server) _setRole(client *Client, rol role.ID) {
 	client.Role = rol
-	typ, pup, _ := s.Clients.PrivilegedUsersPacket()
+	typ, pup, _ := s.PrivilegedUsersPacket()
 	s.Clients.Broadcast(typ, pup)
 }

@@ -1,11 +1,11 @@
-package main
+package server
 
 import (
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 )
 
-func NewGame(id gamemode.ID) game.Mode {
+func (s *Server) StartMode(id gamemode.ID) game.Mode {
 	mode := func() game.Mode {
 		switch id {
 		case gamemode.Insta:

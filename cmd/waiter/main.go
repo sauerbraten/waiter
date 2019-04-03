@@ -9,20 +9,19 @@ import (
 	"github.com/sauerbraten/maitred/pkg/auth"
 	mserver "github.com/sauerbraten/maitred/pkg/client"
 
-	"github.com/sauerbraten/waiter/internal/relay"
 	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/enet"
-	"github.com/sauerbraten/waiter/pkg/maprot"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
+	"github.com/sauerbraten/waiter/pkg/server"
 )
 
 var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 var (
 	// global server state
-	s *Server
+	s *server.Server
 
 	// ban manager
 	bm *bans.BanManager
@@ -42,14 +41,15 @@ var (
 	infoInc <-chan infoRequest
 
 	// callbacks (e.g. IP geolocation queries)
-	callbacks = make(chan func())
+	callbacks <-chan func()
 
-	// auth providers
-	providers = map[string]auth.Provider{}
+	// auth manager
+	providers   = map[string]auth.Provider{}
+	authManager *auth.Manager
 )
 
 func main() {
-	var conf *Config
+	var conf *server.Config
 	err := jsonfile.ParseFile("config.json", &conf)
 	if err != nil {
 		log.Fatalln(err)
@@ -72,27 +72,27 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	cs := &ClientManager{}
+	cs := &server.ClientManager{}
 
-	s = &Server{
-		ENetHost: host,
-		Config:   conf,
-		State: &State{
-			UpSince:    time.Now(),
-			NumClients: cs.NumberOfClientsConnected,
-		},
-		relay:       relay.New(),
-		Clients:     cs,
-		MapRotation: maprot.NewRotation(conf.MapPools),
-		Commands:    NewServerCommands(queueMap, toggleKeepTeams, toggleCompetitiveMode, toggleReportStats, lookupIPs, setTimeLeft, registerPubkey),
-	}
-	s.GameMode = NewGame(conf.FallbackGameMode)
+	s, callbacks = server.New(host, conf, cs, authManager, bm, statsAuth,
+		server.NewCommands(s,
+			server.QueueMap,
+			server.ToggleKeepTeams,
+			server.ToggleCompetitiveMode,
+			server.ToggleReportStats,
+			server.LookupIPs,
+			server.SetTimeLeft,
+			server.RegisterPubkey,
+		),
+	)
+
+	s.GameMode = s.StartMode(conf.FallbackGameMode)
 	s.Map = s.MapRotation.NextMap(conf.FallbackGameMode, conf.FallbackGameMode, "")
 	s.GameMode.Start()
 	s.Unsupervised()
 	s.Empty()
 
-	is, infoInc = s.StartListeningForInfoRequests()
+	is, infoInc = StartListeningForInfoRequests(s)
 
 	ms, masterInc, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
 	if err != nil {
@@ -124,7 +124,7 @@ func main() {
 
 	}
 
-	gameInc := s.ENetHost.Service()
+	gameInc := host.Service()
 
 	log.Println("server running on port", s.Config.ListenPort)
 
@@ -164,6 +164,6 @@ func handleEnetEvent(event enet.Event) {
 		if client == nil {
 			return
 		}
-		s.handlePacket(client, event.ChannelID, protocol.Packet(event.Packet.Data))
+		s.HandlePacket(client, event.ChannelID, protocol.Packet(event.Packet.Data))
 	}
 }

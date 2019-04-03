@@ -1,7 +1,9 @@
-package main
+package server
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/internal/relay"
@@ -11,6 +13,8 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
+
+var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type Authentication struct {
 	reqID uint32

@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type ServerCommand struct {
 	aliases    []string
 	argsFormat string
 	minRole    role.ID
-	f          func(caller *Client, args []string)
+	f          func(s *Server, c *Client, args []string)
 }
 
 func (cmd *ServerCommand) String() string {
@@ -26,12 +26,14 @@ func (cmd *ServerCommand) String() string {
 }
 
 type ServerCommands struct {
+	s       *Server
 	byAlias map[string]*ServerCommand
 	cmds    []*ServerCommand
 }
 
-func NewServerCommands(cmds ...*ServerCommand) *ServerCommands {
+func NewCommands(s *Server, cmds ...*ServerCommand) *ServerCommands {
 	sc := &ServerCommands{
+		s:       s,
 		byAlias: map[string]*ServerCommand{},
 	}
 	for _, cmd := range cmds {
@@ -77,16 +79,16 @@ func (sc *ServerCommands) Handle(c *Client, msg string) {
 			return
 		}
 
-		cmd.f(c, args)
+		cmd.f(sc.s, c, args)
 	}
 }
 
-var queueMap = &ServerCommand{
+var QueueMap = &ServerCommand{
 	name:       "queue",
 	aliases:    []string{"queued", "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue"},
 	argsFormat: "[map...]",
 	minRole:    role.Master,
-	f: func(c *Client, args []string) {
+	f: func(s *Server, c *Client, args []string) {
 		for _, mapp := range args {
 			err := s.MapRotation.QueueMap(s.GameMode.ID(), mapp)
 			if err != "" {
@@ -105,12 +107,12 @@ var queueMap = &ServerCommand{
 	},
 }
 
-var toggleKeepTeams = &ServerCommand{
+var ToggleKeepTeams = &ServerCommand{
 	name:       "keepteams",
 	aliases:    []string{"persist", "persistteams"},
 	argsFormat: "0|1",
 	minRole:    role.Master,
-	f: func(c *Client, args []string) {
+	f: func(s *Server, c *Client, args []string) {
 		changed := false
 		if len(args) >= 1 {
 			val, err := strconv.Atoi(args[0])
@@ -136,12 +138,12 @@ var toggleKeepTeams = &ServerCommand{
 	},
 }
 
-var toggleCompetitiveMode = &ServerCommand{
+var ToggleCompetitiveMode = &ServerCommand{
 	name:       "comp",
 	aliases:    []string{"competitive"},
 	argsFormat: "0|1",
 	minRole:    role.Master,
-	f: func(c *Client, args []string) {
+	f: func(s *Server, c *Client, args []string) {
 		changed := false
 		if len(args) >= 1 {
 			val, err := strconv.Atoi(args[0])
@@ -180,12 +182,12 @@ var toggleCompetitiveMode = &ServerCommand{
 	},
 }
 
-var toggleReportStats = &ServerCommand{
+var ToggleReportStats = &ServerCommand{
 	name:       "repstats",
 	aliases:    []string{"reportstats"},
 	argsFormat: "0|1",
 	minRole:    role.Admin,
-	f: func(c *Client, args []string) {
+	f: func(s *Server, c *Client, args []string) {
 		changed := false
 		if len(args) >= 1 {
 			val, err := strconv.Atoi(args[0])
@@ -211,12 +213,12 @@ var toggleReportStats = &ServerCommand{
 	},
 }
 
-var lookupIPs = &ServerCommand{
+var LookupIPs = &ServerCommand{
 	name:       "ip",
 	aliases:    []string{"ips"},
 	argsFormat: "<name|cn>...",
 	minRole:    role.Admin,
-	f: func(c *Client, args []string) {
+	f: func(s *Server, c *Client, args []string) {
 		if len(args) < 1 {
 			return
 		}
@@ -240,12 +242,12 @@ var lookupIPs = &ServerCommand{
 	},
 }
 
-var setTimeLeft = &ServerCommand{
+var SetTimeLeft = &ServerCommand{
 	name:       "time",
 	aliases:    []string{"settime", "settimeleft", "settimeremaining", "timeleft", "timeremaining"},
 	argsFormat: "[Xm]Ys",
 	minRole:    role.Admin,
-	f: func(c *Client, args []string) {
+	f: func(s *Server, c *Client, args []string) {
 		if len(args) < 1 {
 			return
 		}
@@ -273,12 +275,12 @@ var setTimeLeft = &ServerCommand{
 	},
 }
 
-var registerPubkey = &ServerCommand{
+var RegisterPubkey = &ServerCommand{
 	name:       "register",
 	aliases:    []string{},
 	argsFormat: "[name] <pubkey>",
 	minRole:    role.None,
-	f: func(c *Client, args []string) {
+	f: func(s *Server, c *Client, args []string) {
 		if statsAuth, ok := c.Authentications[s.StatsServerAuthDomain]; ok {
 			c.Send(nmc.ServerMessage, cubecode.Fail("you're already authenticated with "+s.StatsServerAuthDomain+" as "+statsAuth.name))
 			return
@@ -306,7 +308,7 @@ var registerPubkey = &ServerCommand{
 			return
 		}
 
-		statsAuth.AddAuth(name, pubkey,
+		s.statsServer.AddAuth(name, pubkey,
 			func(err string) {
 				if err != "" {
 					c.Send(nmc.ServerMessage, cubecode.Error("creating your account failed: "+err))

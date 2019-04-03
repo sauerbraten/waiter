@@ -49,8 +49,9 @@ type Server struct {
 	ReportStats     bool
 }
 
-func New(host *enet.Host, conf *Config, clients *ClientManager, authManager *auth.Manager, banManager *bans.BanManager, statsServer *mserver.AdminClient, commands ...*ServerCommand) (*Server, <-chan func()) {
+func New(host *enet.Host, conf *Config, authManager *auth.Manager, banManager *bans.BanManager, statsServer *mserver.AdminClient, commands ...*ServerCommand) (*Server, <-chan func()) {
 	callbacks := make(chan func())
+	clients := &ClientManager{}
 
 	s := &Server{
 		host:   host,

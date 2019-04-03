@@ -67,14 +67,36 @@ func main() {
 	}
 	providers[conf.AuthDomain] = auth.NewInMemoryProvider(users)
 
+	ms, masterInc, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
+	if err != nil {
+		log.Println("could not connect to master server:", err)
+	}
+	if ms != nil && ms.RemoteProvider != nil {
+		providers[""] = ms.RemoteProvider
+	}
+
+	var _statsAuth *mserver.StatsClient
+	_statsAuth, statsAuthInc, err = mserver.NewStats(
+		conf.StatsServerAddress,
+		conf.ListenPort,
+		func(reqID uint32) { s.HandleSuccStats(reqID) },
+		func(reqID uint32, reason string) { s.HandleFailStats(reqID, reason) },
+		func() { s.ReAuth(s.StatsServerAuthDomain) },
+	)
+	if err != nil {
+		log.Println("could not connect to statsauth server:", err)
+	}
+	if _statsAuth != nil {
+		statsAuth = mserver.NewAdmin(_statsAuth)
+		providers[conf.StatsServerAuthDomain] = statsAuth
+	}
+
 	host, err := enet.NewHost(conf.ListenAddress, conf.ListenPort)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	cs := &server.ClientManager{}
-
-	s, callbacks = server.New(host, conf, cs, authManager, bm, statsAuth,
+	s, callbacks = server.New(host, conf, auth.NewManager(providers), bm, statsAuth,
 		server.QueueMap,
 		server.ToggleKeepTeams,
 		server.ToggleCompetitiveMode,
@@ -91,36 +113,6 @@ func main() {
 	s.Empty()
 
 	is, infoInc = StartListeningForInfoRequests(s)
-
-	ms, masterInc, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
-	if err != nil {
-		log.Println("could not connect to master server:", err)
-	}
-	if ms != nil && ms.RemoteProvider != nil {
-		providers[""] = ms.RemoteProvider
-	}
-
-	var _statsAuth *mserver.StatsClient
-	_statsAuth, statsAuthInc, err = mserver.NewStats(
-		conf.StatsServerAddress,
-		conf.ListenPort,
-		s.HandleSuccStats,
-		s.HandleFailStats,
-		func() { s.ReAuth(s.StatsServerAuthDomain) },
-	)
-	if err != nil {
-		log.Println("could not connect to statsauth server:", err)
-	}
-	if _statsAuth != nil {
-		statsAuth = mserver.NewAdmin(_statsAuth)
-		providers[conf.StatsServerAuthDomain] = statsAuth
-	}
-
-	s.AuthManager = auth.NewManager(providers)
-
-	if ms != nil && ms.RemoteProvider != nil {
-
-	}
 
 	gameInc := host.Service()
 

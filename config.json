@@ -30,9 +30,9 @@
 
 	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things are buggy!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
 
-	"game_duration_in_minutes": 10,
+	"game_duration": "10m",
 
-	"server_auth_domain": "p1x.pw",
+	"auth_domain": "p1x.pw",
 
 	"maps": {
 		"deathmatch": [

@@ -43,6 +43,9 @@ var (
 
 	// callbacks (e.g. IP geolocation queries)
 	callbacks = make(chan func())
+
+	// auth providers
+	providers = map[string]auth.Provider{}
 )
 
 func main() {
@@ -62,7 +65,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	localAuth = auth.NewInMemoryProvider(users)
+	providers[conf.AuthDomain] = auth.NewInMemoryProvider(users)
 
 	host, err := enet.NewHost(conf.ListenAddress, conf.ListenPort)
 	if err != nil {
@@ -83,7 +86,6 @@ func main() {
 		MapRotation: maprot.NewRotation(conf.MapPools),
 		Commands:    NewServerCommands(queueMap, toggleKeepTeams, toggleCompetitiveMode, toggleReportStats, lookupIPs, setTimeLeft, registerPubkey),
 	}
-	s.GameDurationInMinutes = s.GameDurationInMinutes * time.Minute // duration is parsed without unit from config file
 	s.GameMode = NewGame(conf.FallbackGameMode)
 	s.Map = s.MapRotation.NextMap(conf.FallbackGameMode, conf.FallbackGameMode, "")
 	s.GameMode.Start()
@@ -95,6 +97,9 @@ func main() {
 	ms, masterInc, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
 	if err != nil {
 		log.Println("could not connect to master server:", err)
+	}
+	if ms != nil && ms.RemoteProvider != nil {
+		providers[""] = ms.RemoteProvider
 	}
 
 	var _statsAuth *mserver.StatsClient
@@ -108,13 +113,16 @@ func main() {
 	if err != nil {
 		log.Println("could not connect to statsauth server:", err)
 	}
-	statsAuth = mserver.NewAdmin(_statsAuth)
+	if _statsAuth != nil {
+		statsAuth = mserver.NewAdmin(_statsAuth)
+		providers[conf.StatsServerAuthDomain] = statsAuth
+	}
 
-	s.AuthManager = auth.NewManager(map[string]auth.Provider{
-		"":                         ms.RemoteProvider,
-		conf.ServerAuthDomain:      localAuth,
-		conf.StatsServerAuthDomain: statsAuth,
-	})
+	s.AuthManager = auth.NewManager(providers)
+
+	if ms != nil && ms.RemoteProvider != nil {
+
+	}
 
 	gameInc := s.ENetHost.Service()
 

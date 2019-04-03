@@ -8,7 +8,6 @@ import (
 
 	"github.com/sauerbraten/maitred/pkg/auth"
 
-	sauth "github.com/sauerbraten/waiter/pkg/auth"
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
@@ -34,7 +33,7 @@ func main() {
 		return
 	}
 
-	u := &sauth.User{
+	u := &auth.User{
 		Name:      name,
 		PublicKey: pub,
 		Role:      rol,

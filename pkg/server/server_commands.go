@@ -22,7 +22,11 @@ type ServerCommand struct {
 }
 
 func (cmd *ServerCommand) String() string {
-	return fmt.Sprintf("%s %s (aka %s)", cubecode.Green(cmd.name), cmd.argsFormat, strings.Join(cmd.aliases, ", "))
+	aka := ""
+	if len(cmd.aliases) > 0 {
+		aka = " " + cubecode.Gray(fmt.Sprintf("(aka %s)", strings.Join(cmd.aliases, ", ")))
+	}
+	return fmt.Sprintf("%s %s", cubecode.Green(cmd.name), cmd.argsFormat) + aka
 }
 
 type ServerCommands struct {
@@ -281,6 +285,11 @@ var RegisterPubkey = &ServerCommand{
 	argsFormat: "[name] <pubkey>",
 	minRole:    role.None,
 	f: func(s *Server, c *Client, args []string) {
+		if s.statsServer == nil {
+			c.Send(nmc.ServerMessage, cubecode.Error("not connected to stats server"))
+			return
+		}
+
 		if statsAuth, ok := c.Authentications[s.StatsServerAuthDomain]; ok {
 			c.Send(nmc.ServerMessage, cubecode.Fail("you're already authenticated with "+s.StatsServerAuthDomain+" as "+statsAuth.name))
 			return

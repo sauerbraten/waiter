@@ -49,10 +49,10 @@ type Server struct {
 	ReportStats     bool
 }
 
-func New(host *enet.Host, conf *Config, clients *ClientManager, authManager *auth.Manager, banManager *bans.BanManager, statsServer *mserver.AdminClient, commands *ServerCommands) (*Server, <-chan func()) {
+func New(host *enet.Host, conf *Config, clients *ClientManager, authManager *auth.Manager, banManager *bans.BanManager, statsServer *mserver.AdminClient, commands ...*ServerCommand) (*Server, <-chan func()) {
 	callbacks := make(chan func())
 
-	return &Server{
+	s := &Server{
 		host:   host,
 		Config: conf,
 		State: &State{
@@ -67,9 +67,11 @@ func New(host *enet.Host, conf *Config, clients *ClientManager, authManager *aut
 		MapRotation: maprot.NewRotation(conf.MapPools),
 		callbacks:   callbacks,
 		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
+	}
 
-		Commands: commands,
-	}, callbacks
+	s.Commands = NewCommands(s, commands...)
+
+	return s, callbacks
 }
 
 func (s *Server) GameDuration() time.Duration { return s.Config.GameDuration }
@@ -279,7 +281,7 @@ func (s *Server) Intermission() {
 
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
 
-	if s.ReportStats && s.NumClients() > 0 {
+	if s.statsServer != nil && s.ReportStats && s.NumClients() > 0 {
 		s.ReportEndgameStats()
 	}
 }

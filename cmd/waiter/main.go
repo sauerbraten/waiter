@@ -75,15 +75,13 @@ func main() {
 	cs := &server.ClientManager{}
 
 	s, callbacks = server.New(host, conf, cs, authManager, bm, statsAuth,
-		server.NewCommands(s,
-			server.QueueMap,
-			server.ToggleKeepTeams,
-			server.ToggleCompetitiveMode,
-			server.ToggleReportStats,
-			server.LookupIPs,
-			server.SetTimeLeft,
-			server.RegisterPubkey,
-		),
+		server.QueueMap,
+		server.ToggleKeepTeams,
+		server.ToggleCompetitiveMode,
+		server.ToggleReportStats,
+		server.LookupIPs,
+		server.SetTimeLeft,
+		server.RegisterPubkey,
 	)
 
 	s.GameMode = s.StartMode(conf.FallbackGameMode)

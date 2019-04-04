@@ -27,11 +27,11 @@ func (cmd *ServerCommand) String() string {
 }
 
 func (cmd *ServerCommand) Detailed() string {
-	aka := ""
+	aliases := ""
 	if len(cmd.aliases) > 0 {
-		aka = " " + cubecode.Gray(fmt.Sprintf("(aka %s)", strings.Join(cmd.aliases, ", ")))
+		aliases = cubecode.Gray(fmt.Sprintf("(alias %s)", strings.Join(cmd.aliases, ", ")))
 	}
-	return fmt.Sprintf("%s %s:\n%s", cmd.String(), aka, cmd.description)
+	return fmt.Sprintf("%s: %s\n%s", cmd.String(), aliases, cmd.description)
 }
 
 type ServerCommands struct {
@@ -238,7 +238,7 @@ var LookupIPs = &ServerCommand{
 	name:        "ip",
 	argsFormat:  "name|cn...",
 	aliases:     []string{"ips"},
-	description: "prints the IP of the player(s) identified by their name or CN",
+	description: "prints the IP of the player(s) identified by their name or cn",
 	minRole:     role.Admin,
 	f: func(s *Server, c *Client, args []string) {
 		if len(args) < 1 {

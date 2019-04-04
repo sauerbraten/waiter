@@ -14,19 +14,24 @@ import (
 )
 
 type ServerCommand struct {
-	name       string
-	aliases    []string
-	argsFormat string
-	minRole    role.ID
-	f          func(s *Server, c *Client, args []string)
+	name        string
+	argsFormat  string
+	aliases     []string
+	description string
+	minRole     role.ID
+	f           func(s *Server, c *Client, args []string)
 }
 
 func (cmd *ServerCommand) String() string {
+	return fmt.Sprintf("%s %s", cubecode.Green(cmd.name), cmd.argsFormat)
+}
+
+func (cmd *ServerCommand) Detailed() string {
 	aka := ""
 	if len(cmd.aliases) > 0 {
 		aka = " " + cubecode.Gray(fmt.Sprintf("(aka %s)", strings.Join(cmd.aliases, ", ")))
 	}
-	return fmt.Sprintf("%s %s", cubecode.Green(cmd.name), cmd.argsFormat) + aka
+	return fmt.Sprintf("%s %s:\n%s", cmd.String(), aka, cmd.description)
 }
 
 type ServerCommands struct {
@@ -54,7 +59,7 @@ func (sc *ServerCommands) Register(cmd *ServerCommand) {
 	sc.cmds = append(sc.cmds, cmd)
 }
 
-func (sc *ServerCommands) Help(c *Client) {
+func (sc *ServerCommands) PrintCommands(c *Client) {
 	helpLines := []string{}
 	for _, cmd := range sc.cmds {
 		if c.Role >= cmd.minRole {
@@ -70,12 +75,20 @@ func (sc *ServerCommands) Handle(c *Client, msg string) {
 
 	switch commandName {
 	case "help", "commands":
-		sc.Help(c)
+		if len(args) == 0 {
+			sc.PrintCommands(c)
+			return
+		}
+		if cmd, ok := sc.byAlias[args[0]]; ok {
+			c.Send(nmc.ServerMessage, cmd.Detailed())
+		} else {
+			c.Send(nmc.ServerMessage, cubecode.Fail("unknown command '"+args[0]+"'"))
+		}
 
 	default:
 		cmd, ok := sc.byAlias[commandName]
 		if !ok {
-			c.Send(nmc.ServerMessage, cubecode.Fail("unknown command "+commandName))
+			c.Send(nmc.ServerMessage, cubecode.Fail("unknown command '"+commandName+"'"))
 			return
 		}
 
@@ -88,10 +101,11 @@ func (sc *ServerCommands) Handle(c *Client, msg string) {
 }
 
 var QueueMap = &ServerCommand{
-	name:       "queue",
-	aliases:    []string{"queued", "queuemap", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue"},
-	argsFormat: "[map...]",
-	minRole:    role.Master,
+	name:        "queuemap",
+	argsFormat:  "[map...]",
+	aliases:     []string{"queued", "queue", "queuedmap", "queuemaps", "queuedmaps", "mapqueue", "mapsqueue"},
+	description: "prints the current queue or adds the map(s) to the queue",
+	minRole:     role.Master,
 	f: func(s *Server, c *Client, args []string) {
 		for _, mapp := range args {
 			err := s.MapRotation.QueueMap(s.GameMode.ID(), mapp)
@@ -112,10 +126,11 @@ var QueueMap = &ServerCommand{
 }
 
 var ToggleKeepTeams = &ServerCommand{
-	name:       "keepteams",
-	aliases:    []string{"persist", "persistteams"},
-	argsFormat: "0|1",
-	minRole:    role.Master,
+	name:        "keepteams",
+	argsFormat:  "0|1",
+	aliases:     []string{"persist", "persistteams"},
+	description: "keeps teams the same across map change",
+	minRole:     role.Master,
 	f: func(s *Server, c *Client, args []string) {
 		changed := false
 		if len(args) >= 1 {
@@ -143,10 +158,11 @@ var ToggleKeepTeams = &ServerCommand{
 }
 
 var ToggleCompetitiveMode = &ServerCommand{
-	name:       "comp",
-	aliases:    []string{"competitive"},
-	argsFormat: "0|1",
-	minRole:    role.Master,
+	name:        "competitive",
+	argsFormat:  "0|1",
+	aliases:     []string{"comp"},
+	description: "in competitive mode, the server waits for all clients to load the map and auto-pauses when a player leaves the game",
+	minRole:     role.Master,
 	f: func(s *Server, c *Client, args []string) {
 		changed := false
 		if len(args) >= 1 {
@@ -187,10 +203,11 @@ var ToggleCompetitiveMode = &ServerCommand{
 }
 
 var ToggleReportStats = &ServerCommand{
-	name:       "repstats",
-	aliases:    []string{"reportstats"},
-	argsFormat: "0|1",
-	minRole:    role.Admin,
+	name:        "reportstats",
+	argsFormat:  "0|1",
+	aliases:     []string{"repstats"},
+	description: "when enabled, end-game stats of players will be reported at intermission",
+	minRole:     role.Admin,
 	f: func(s *Server, c *Client, args []string) {
 		changed := false
 		if len(args) >= 1 {
@@ -218,10 +235,11 @@ var ToggleReportStats = &ServerCommand{
 }
 
 var LookupIPs = &ServerCommand{
-	name:       "ip",
-	aliases:    []string{"ips"},
-	argsFormat: "<name|cn>...",
-	minRole:    role.Admin,
+	name:        "ip",
+	argsFormat:  "name|cn...",
+	aliases:     []string{"ips"},
+	description: "prints the IP of the player(s) identified by their name or CN",
+	minRole:     role.Admin,
 	f: func(s *Server, c *Client, args []string) {
 		if len(args) < 1 {
 			return
@@ -247,10 +265,11 @@ var LookupIPs = &ServerCommand{
 }
 
 var SetTimeLeft = &ServerCommand{
-	name:       "time",
-	aliases:    []string{"settime", "settimeleft", "settimeremaining", "timeleft", "timeremaining"},
-	argsFormat: "[Xm]Ys",
-	minRole:    role.Admin,
+	name:        "settime",
+	argsFormat:  "[Xm]Ys",
+	aliases:     []string{"time", "settimeleft", "settimeremaining", "timeleft", "timeremaining"},
+	description: "sets the time remaining to play to X minutes and Y seconds",
+	minRole:     role.Admin,
 	f: func(s *Server, c *Client, args []string) {
 		if len(args) < 1 {
 			return
@@ -280,10 +299,11 @@ var SetTimeLeft = &ServerCommand{
 }
 
 var RegisterPubkey = &ServerCommand{
-	name:       "register",
-	aliases:    []string{},
-	argsFormat: "[name] <pubkey>",
-	minRole:    role.None,
+	name:        "register",
+	argsFormat:  "[name] pubkey",
+	aliases:     []string{},
+	description: "registers an account with the stats server (if you are gauthed you can omit the name and you gauth name will be used)",
+	minRole:     role.None,
 	f: func(s *Server, c *Client, args []string) {
 		if s.StatsServer == nil {
 			c.Send(nmc.ServerMessage, cubecode.Error("not connected to stats server"))

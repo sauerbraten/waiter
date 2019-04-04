@@ -285,7 +285,7 @@ var RegisterPubkey = &ServerCommand{
 	argsFormat: "[name] <pubkey>",
 	minRole:    role.None,
 	f: func(s *Server, c *Client, args []string) {
-		if s.statsServer == nil {
+		if s.StatsServer == nil {
 			c.Send(nmc.ServerMessage, cubecode.Error("not connected to stats server"))
 			return
 		}
@@ -317,7 +317,7 @@ var RegisterPubkey = &ServerCommand{
 			return
 		}
 
-		s.statsServer.AddAuth(name, pubkey,
+		s.StatsServer.AddAuth(name, pubkey,
 			func(err string) {
 				if err != "" {
 					c.Send(nmc.ServerMessage, cubecode.Error("creating your account failed: "+err))

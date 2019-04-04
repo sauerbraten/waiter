@@ -36,7 +36,7 @@ type Server struct {
 	Clients          *ClientManager
 	AuthManager      *auth.Manager
 	BanManager       *bans.BanManager
-	statsServer      *mserver.AdminClient
+	StatsServer      *mserver.AdminClient
 	MapRotation      *maprot.Rotation
 	PendingMapChange *time.Timer
 	callbacks        chan<- func()
@@ -49,7 +49,7 @@ type Server struct {
 	ReportStats     bool
 }
 
-func New(host *enet.Host, conf *Config, authManager *auth.Manager, banManager *bans.BanManager, statsServer *mserver.AdminClient, commands ...*ServerCommand) (*Server, <-chan func()) {
+func New(host *enet.Host, conf *Config, banManager *bans.BanManager, commands ...*ServerCommand) (*Server, <-chan func()) {
 	callbacks := make(chan func())
 	clients := &ClientManager{}
 
@@ -62,9 +62,7 @@ func New(host *enet.Host, conf *Config, authManager *auth.Manager, banManager *b
 		},
 		relay:       relay.New(),
 		Clients:     clients,
-		AuthManager: authManager,
 		BanManager:  banManager,
-		statsServer: statsServer,
 		MapRotation: maprot.NewRotation(conf.MapPools),
 		callbacks:   callbacks,
 		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
@@ -282,7 +280,7 @@ func (s *Server) Intermission() {
 
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
 
-	if s.statsServer != nil && s.ReportStats && s.NumClients() > 0 {
+	if s.StatsServer != nil && s.ReportStats && s.NumClients() > 0 {
 		s.ReportEndgameStats()
 	}
 }
@@ -295,7 +293,7 @@ func (s *Server) ReportEndgameStats() {
 		}
 	})
 
-	s.statsServer.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
+	s.StatsServer.Send("stats %d %s %s", s.GameMode.ID(), s.Map, strings.Join(stats, " "))
 }
 
 func (s *Server) HandleSuccStats(reqID uint32) {

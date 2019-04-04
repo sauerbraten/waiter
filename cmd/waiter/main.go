@@ -33,7 +33,6 @@ var (
 	masterInc <-chan string
 
 	// stats server
-	statsAuth    *mserver.AdminClient
 	statsAuthInc <-chan string
 
 	// info server
@@ -65,6 +64,30 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	host, err := enet.NewHost(conf.ListenAddress, conf.ListenPort)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	s, callbacks = server.New(host, conf, bm,
+		server.QueueMap,
+		server.ToggleKeepTeams,
+		server.ToggleCompetitiveMode,
+		server.ToggleReportStats,
+		server.LookupIPs,
+		server.SetTimeLeft,
+		server.RegisterPubkey,
+	)
+
+	s.GameMode = s.StartMode(conf.FallbackGameMode)
+	s.Map = s.MapRotation.NextMap(conf.FallbackGameMode, conf.FallbackGameMode, "")
+	s.GameMode.Start()
+	s.Unsupervised()
+	s.Empty()
+
+	is, infoInc = StartListeningForInfoRequests(s)
+
 	providers[conf.AuthDomain] = auth.NewInMemoryProvider(users)
 
 	ms, masterInc, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
@@ -87,32 +110,10 @@ func main() {
 		log.Println("could not connect to statsauth server:", err)
 	}
 	if _statsAuth != nil {
-		statsAuth = mserver.NewAdmin(_statsAuth)
-		providers[conf.StatsServerAuthDomain] = statsAuth
+		s.StatsServer = mserver.NewAdmin(_statsAuth)
+		providers[conf.StatsServerAuthDomain] = s.StatsServer
 	}
-
-	host, err := enet.NewHost(conf.ListenAddress, conf.ListenPort)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	s, callbacks = server.New(host, conf, auth.NewManager(providers), bm, statsAuth,
-		server.QueueMap,
-		server.ToggleKeepTeams,
-		server.ToggleCompetitiveMode,
-		server.ToggleReportStats,
-		server.LookupIPs,
-		server.SetTimeLeft,
-		server.RegisterPubkey,
-	)
-
-	s.GameMode = s.StartMode(conf.FallbackGameMode)
-	s.Map = s.MapRotation.NextMap(conf.FallbackGameMode, conf.FallbackGameMode, "")
-	s.GameMode.Start()
-	s.Unsupervised()
-	s.Empty()
-
-	is, infoInc = StartListeningForInfoRequests(s)
+	s.AuthManager = auth.NewManager(providers)
 
 	gameInc := host.Service()
 
@@ -127,10 +128,10 @@ func main() {
 		case msg := <-masterInc:
 			go ms.Handle(msg)
 		case msg := <-statsAuthInc:
-			go statsAuth.Handle(msg)
+			go s.StatsServer.Handle(msg)
 		case <-time.Tick(1 * time.Hour):
 			go ms.Register()
-			go statsAuth.Register()
+			go s.StatsServer.Register()
 		case f := <-callbacks:
 			f()
 		}

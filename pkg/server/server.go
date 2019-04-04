@@ -215,7 +215,7 @@ func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(&client.Player)
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
-	s.host.Disconnect(client.Peer, disconnectreason.None)
+	s.host.Disconnect(client.Peer, reason)
 	client.Reset()
 	if len(s.Clients.PrivilegedUsers()) == 0 {
 		s.Unsupervised()

@@ -428,7 +428,7 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 				return
 			}
 
-			teamMode, ok := s.GameMode.(game.TeamMode)
+			teamMode, ok := s.GameMode.(game.Teamed)
 			if !ok {
 				return
 			}
@@ -453,7 +453,7 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 				return
 			}
 
-			teamMode, ok := s.GameMode.(game.TeamMode)
+			teamMode, ok := s.GameMode.(game.Teamed)
 			if !ok {
 				return
 			}

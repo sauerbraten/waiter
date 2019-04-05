@@ -170,7 +170,6 @@ var ToggleCompetitiveMode = &ServerCommand{
 			if err != nil || (val != 0 && val != 1) {
 				return
 			}
-			comp, active := s.GameMode.(*game.Competitive)
 			changed = s.CompetitiveMode != (val == 1)
 			switch val {
 			case 1:
@@ -179,18 +178,14 @@ var ToggleCompetitiveMode = &ServerCommand{
 				// but lock server now
 				s.SetMasterMode(c, mastermode.Locked)
 			default:
-				if active {
-					// stops immediately
-					s.GameMode = comp.ToCasual()
-					s.CompetitiveMode = false
-				}
+				s.CompetitiveMode = false
 			}
 		}
 		if changed {
 			if s.CompetitiveMode {
 				s.Clients.Broadcast(nmc.ServerMessage, "competitive mode will be enabled with next game")
 			} else {
-				s.Clients.Broadcast(nmc.ServerMessage, "competitive mode disabled")
+				s.Clients.Broadcast(nmc.ServerMessage, "competitive mode will be disabled with next game")
 			}
 		} else {
 			if s.CompetitiveMode {

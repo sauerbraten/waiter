@@ -1,12 +1,12 @@
 package game
 
 type CaptureMode interface {
-	TeamMode
+	Teamed
 	Bases(*Team) []int32
 }
 
 type captureMode struct {
-	teamMode
+	teamed
 	bases map[*Team][]int32
 }
 

@@ -25,9 +25,8 @@ type ClientManager struct {
 func (cm *ClientManager) Add(peer *enet.Peer) *Client {
 	// re-use unused client object with low cn
 	for _, c := range cm.cs {
-		if !c.InUse {
+		if c.Peer == nil {
 			c.Peer = peer
-			c.InUse = true
 			return c
 		}
 	}
@@ -84,7 +83,7 @@ func (cm *ClientManager) Broadcast(typ nmc.ID, args ...interface{}) {
 
 func (cm *ClientManager) broadcast(exclude func(*Client) bool, typ nmc.ID, args ...interface{}) {
 	for _, c := range cm.cs {
-		if !c.InUse || (exclude != nil && exclude(c)) {
+		if c.Peer == nil || (exclude != nil && exclude(c)) {
 			continue
 		}
 		c.Send(typ, args...)
@@ -122,7 +121,7 @@ func (s *Server) SendWelcome(c *Client) {
 		p = append(p, nmc.PauseGame, 1, -1)
 	}
 
-	if teamMode, ok := s.GameMode.(game.TeamMode); ok {
+	if teamMode, ok := s.GameMode.(game.Teamed); ok {
 		p = append(p, nmc.TeamInfo)
 		teamMode.ForEach(func(t *game.Team) {
 			if t.Frags > 0 {
@@ -146,7 +145,7 @@ func (s *Server) SendWelcome(c *Client) {
 	// send other players' state (frags, flags, etc.)
 	p = append(p, nmc.Resume)
 	for _, client := range s.Clients.cs {
-		if client != c && client.InUse {
+		if client != c && client.Peer != nil {
 			p = append(p, client.CN, client.State, client.Frags, client.Flags, client.QuadTimeLeft, client.ToWire())
 		}
 	}
@@ -154,7 +153,7 @@ func (s *Server) SendWelcome(c *Client) {
 
 	// send other client's state (name, team, playermodel)
 	for _, client := range s.Clients.cs {
-		if client != c && client.InUse {
+		if client != c && client.Peer != nil {
 			p = append(p, nmc.InitializeClient, client.CN, client.Name, client.Team.Name, client.Model)
 		}
 	}
@@ -164,7 +163,7 @@ func (s *Server) SendWelcome(c *Client) {
 
 // Tells other clients that the client disconnected, giving a disconnect reason in case it's not a normal leave.
 func (cm *ClientManager) Disconnect(c *Client, reason disconnectreason.ID) {
-	if !c.InUse {
+	if c.Peer == nil {
 		return
 	}
 
@@ -225,7 +224,7 @@ func (s *Server) PrivilegedUsersPacket() (typ nmc.ID, p protocol.Packet, noPrivi
 // Returns the number of connected clients.
 func (cm *ClientManager) NumberOfClientsConnected() (n int) {
 	for _, c := range cm.cs {
-		if !c.InUse {
+		if c.Peer == nil {
 			continue
 		}
 		n++
@@ -235,7 +234,7 @@ func (cm *ClientManager) NumberOfClientsConnected() (n int) {
 
 func (cm *ClientManager) ForEach(do func(c *Client)) {
 	for _, c := range cm.cs {
-		if !c.InUse {
+		if c.Peer == nil {
 			continue
 		}
 		do(c)

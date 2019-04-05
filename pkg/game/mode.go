@@ -8,35 +8,15 @@ import (
 
 type Mode interface {
 	ID() gamemode.ID
-
 	NeedMapInfo() bool
-	Start()
-	End()
-	CleanUp()
-
 	Join(*Player)
 	Init(*Player) (nmc.ID, []interface{}) // may return an init packet to send to the player
-	Leave(*Player)
 	CanSpawn(*Player) bool
 	Spawn(*Player) // sets armour, ammo, and health
-	ConfirmSpawn(*Player)
-
 	HandleFrag(fragger, victim *Player)
 	HandlePacket(*Player, nmc.ID, *protocol.Packet) bool
+	// CleanUp()
 }
-
-// methods that are shadowed by CompetitiveMode so all modes implement GameMode
-type casualMode struct {
-	s Server
-}
-
-func newCasualMode(s Server) casualMode {
-	return casualMode{
-		s: s,
-	}
-}
-
-func (*casualMode) ConfirmSpawn(*Player) {}
 
 // no spawn timeout
 type noSpawnWaitMode struct{}

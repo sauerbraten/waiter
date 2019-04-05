@@ -27,7 +27,6 @@ type Client struct {
 	Role                role.ID
 	Joined              bool                // true if the player is actually in the game
 	AuthRequiredBecause disconnectreason.ID // e.g. server is in private mode
-	InUse               bool                // true if this client's *enet.Peer is in use (i.e. the client object belongs to a connection)
 	Peer                *enet.Peer
 	SessionID           int32
 	Ping                int32
@@ -39,7 +38,6 @@ type Client struct {
 func NewClient(cn uint32, peer *enet.Peer) *Client {
 	return &Client{
 		Player:          game.NewPlayer(cn),
-		InUse:           true,
 		Peer:            peer,
 		SessionID:       rng.Int31(),
 		Authentications: map[string]*Authentication{},
@@ -52,7 +50,6 @@ func (c *Client) Reset() {
 	c.Role = role.None
 	c.Joined = false
 	c.AuthRequiredBecause = disconnectreason.None
-	c.InUse = false
 	c.Peer = nil
 	c.SessionID = rng.Int31()
 	c.Ping = 0

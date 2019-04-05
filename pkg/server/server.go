@@ -90,8 +90,11 @@ func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
 }
 
 func (s *Server) Connect(peer *enet.Peer) {
+	log.Println("connecting:", peer)
 	client := s.Clients.Add(peer)
+	log.Println("added to clients as", client)
 	client.Positions, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
+	log.Println("added to relay")
 	client.Send(
 		nmc.ServerInfo,
 		client.CN,
@@ -101,6 +104,7 @@ func (s *Server) Connect(peer *enet.Peer) {
 		s.ServerDescription,
 		s.AuthDomain,
 	)
+	log.Println("informed about server")
 }
 
 // checks the server state and decides wether the client has to authenticate to join the game.
@@ -213,16 +217,24 @@ func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
 
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(&client.Player)
+	log.Println("client left game mode")
 	s.relay.RemoveClient(client.CN)
+	log.Println("client removed from relay")
 	s.Clients.Disconnect(client, reason)
+	log.Println("client removed from clients")
+	s.Clients.ForEach(func(c *Client) { log.Printf("%#v\n", c) })
 	s.host.Disconnect(client.Peer, reason)
+	log.Println("client's peer disconnected")
 	client.Reset()
+	log.Println("client reset")
+	log.Printf("%#v\n", client)
 	if len(s.Clients.PrivilegedUsers()) == 0 {
 		s.Unsupervised()
 	}
 	if s.Clients.NumberOfClientsConnected() == 0 {
 		s.Empty()
 	}
+	log.Println("server.Disconnect ended")
 }
 
 func (s *Server) Kick(client *Client, victim *Client, reason string) {

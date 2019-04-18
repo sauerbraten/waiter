@@ -29,11 +29,10 @@ var (
 	localAuth auth.Provider
 
 	// master server
-	ms        *mserver.VanillaClient
-	masterInc <-chan string
+	ms *mserver.VanillaClient
 
 	// stats server
-	statsAuthInc <-chan string
+	statsAuth *mserver.StatsClient
 
 	// info server
 	is      *infoServer
@@ -90,16 +89,16 @@ func main() {
 
 	providers[conf.AuthDomain] = auth.NewInMemoryProvider(users)
 
-	ms, masterInc, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
+	ms, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
 	if err != nil {
 		log.Println("could not connect to master server:", err)
 	}
-	if ms != nil && ms.RemoteProvider != nil {
+	if ms != nil {
+		go ms.Start()
 		providers[""] = ms.RemoteProvider
 	}
 
-	var _statsAuth *mserver.StatsClient
-	_statsAuth, statsAuthInc, err = mserver.NewStats(
+	statsAuth, err = mserver.NewStats(
 		conf.StatsServerAddress,
 		conf.ListenPort,
 		func(reqID uint32) { s.HandleSuccStats(reqID) },
@@ -109,8 +108,9 @@ func main() {
 	if err != nil {
 		log.Println("could not connect to statsauth server:", err)
 	}
-	if _statsAuth != nil {
-		s.StatsServer = mserver.NewAdmin(_statsAuth)
+	if statsAuth != nil {
+		go statsAuth.Start()
+		s.StatsServer = mserver.NewAdmin(statsAuth)
 		providers[conf.StatsServerAuthDomain] = s.StatsServer
 	}
 	s.AuthManager = auth.NewManager(providers)
@@ -125,9 +125,9 @@ func main() {
 			handleEnetEvent(event)
 		case req := <-infoInc:
 			is.Handle(req)
-		case msg := <-masterInc:
+		case msg := <-ms.Incoming():
 			go ms.Handle(msg)
-		case msg := <-statsAuthInc:
+		case msg := <-statsAuth.Incoming():
 			go s.StatsServer.Handle(msg)
 		case <-time.Tick(1 * time.Hour):
 			go ms.Register()

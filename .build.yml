@@ -10,22 +10,17 @@ environment:
   GOPATH: $HOME
 secrets:
   - 41a695fb-4229-450d-9aa4-5499f6bcea81 # ssh key
-  - 055bbc32-4b46-4556-83c9-2927c0846daa # stats.p1x.pw admin key
+  - 055bbc32-4b46-4556-83c9-2927c0846daa # stats.p1x.pw admin key: ~/.statsauth_admin_key
 tasks:
-  - prepare_gopath: |
-      mkdir -p src/github.com/sauerbraten
-      mv waiter src/github.com/sauerbraten/
   - version: |
-      cd src/github.com/sauerbraten/waiter
+      cd waiter
       sed -i "s/<filled in by CI service>/$(git rev-parse --short HEAD)/" config.json
   - build: |
-      cd src/github.com/sauerbraten/waiter/cmd/waiter
-      go get
-      go build
+      cd waiter
+      make all
   - deploy: |
-      cd src/github.com/sauerbraten/waiter
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq bans.json config.json users.json ci@$DEPLOY:~/waiter/
-      cd cmd/waiter
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq waiter ~/.statsauth_admin_key ci@$DEPLOY:~/waiter/
+      cd waiter
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/waiter'
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq waiter bans.json config.json users.json ~/.statsauth_admin_key ci@$DEPLOY:~/waiter/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall waiter || true'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd waiter; export STATSAUTH_ADMIN_NAME=p1x.pw STATSAUTH_ADMIN_KEY=$(cat .statsauth_admin_key); nohup ./waiter >> log.txt 2>&1 &'

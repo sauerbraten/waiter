@@ -1,4 +1,8 @@
-all:
+.PHONY: all server tools clean
+
+all: server tools
+
+server:
 	go build ./cmd/waiter
 
 tools:

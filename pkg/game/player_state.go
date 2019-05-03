@@ -14,7 +14,7 @@ type PlayerState struct {
 
 	// fields that reset at spawn
 	LastSpawnAttempt time.Time
-	QuadTimeLeft     int32 // in milliseconds
+	QuadTimeLeft     time.Duration
 	LastShot         time.Time
 	GunReloadEnd     time.Time
 	// reset at spawn to value depending on mode

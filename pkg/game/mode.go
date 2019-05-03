@@ -15,7 +15,6 @@ type Mode interface {
 	Spawn(*Player) // sets armour, ammo, and health
 	HandleFrag(fragger, victim *Player)
 	HandlePacket(*Player, nmc.ID, *protocol.Packet) bool
-	// CleanUp()
 }
 
 // no spawn timeout

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/maitred/pkg/auth"
-	mserver "github.com/sauerbraten/maitred/pkg/client"
+	"github.com/sauerbraten/maitred/v2/pkg/auth"
+	mserver "github.com/sauerbraten/maitred/v2/pkg/client"
 
 	"github.com/sauerbraten/waiter/internal/relay"
 	"github.com/sauerbraten/waiter/pkg/bans"

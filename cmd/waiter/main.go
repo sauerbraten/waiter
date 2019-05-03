@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/sauerbraten/jsonfile"
-	"github.com/sauerbraten/maitred/pkg/auth"
-	mserver "github.com/sauerbraten/maitred/pkg/client"
+	"github.com/sauerbraten/maitred/v2/pkg/auth"
+	mserver "github.com/sauerbraten/maitred/v2/pkg/client"
 
 	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/enet"
@@ -110,8 +110,12 @@ func main() {
 	}
 	if statsAuth != nil {
 		go statsAuth.Start()
-		s.StatsServer = mserver.NewAdmin(statsAuth)
-		providers[conf.StatsServerAuthDomain] = s.StatsServer
+		s.StatsServer, err = mserver.NewAdmin(statsAuth)
+		if err != nil {
+			log.Println("could not create stats auth admin client:", err)
+		} else {
+			providers[conf.StatsServerAuthDomain] = s.StatsServer
+		}
 	}
 	s.AuthManager = auth.NewManager(providers)
 

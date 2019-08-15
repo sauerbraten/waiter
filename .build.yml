@@ -12,17 +12,19 @@ sources:
 environment:
   DEPLOY: p1x.pw
   GOPATH: $HOME
+  CGO_CFLAGS: -I $HOME/enet/include
+  CGO_LDFLAGS: -L$HOME/enet/.libs/
 secrets:
   - 41a695fb-4229-450d-9aa4-5499f6bcea81 # ssh key
   - 055bbc32-4b46-4556-83c9-2927c0846daa # stats.p1x.pw admin key: ~/.statsauth_admin_key
 tasks:
-  - build_enet: |
-      cd enet
-      autoreconf -vfi
-      ./configure && make && make install
   - version: |
       cd waiter
       sed -i "s/<filled in by CI service>/$(git rev-parse --short HEAD)/" config.json
+  - build_enet: |
+      cd enet
+      autoreconf -vfi
+      ./configure && make
   - build: |
       cd waiter
       make all

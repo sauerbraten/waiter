@@ -1,8 +1,8 @@
 [
         {
-	        "name": "pix",
-	        "public_key": "+1ae7012bf8ed0900b66b369fc953bd5252674de9d5fb86bd",
-	        "role": "admin"
+                "name": "pix",
+                "public_key": "+1ae7012bf8ed0900b66b369fc953bd5252674de9d5fb86bd",
+                "role": "admin"
         },
         {
                 "name": "miu",

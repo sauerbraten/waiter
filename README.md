@@ -67,7 +67,7 @@ You can then start the server with `./waiter`. The server requires `config.json`
 
 ## Project Structure
 
-Most functionality is organized into internal packages. [`/cmd/waiter/`](/cmd/waiter/) contains the actual command to start a server, i.e. configuration file parsing, initialization of all components, and handling of incoming packets. Protocol definitions like network message codes can be found in [`pkg/protocol`](/pkg/protocol/).
+All functionality is organized into packages. [`/cmd/waiter/`](/cmd/waiter/) contains the actual command to start a server, i.e. configuration file parsing, initialization of all components, and preliminary handling of incoming packets. Detailed packet handling can be found in [`/pkg/server/`](/pkg/server/) along with other server logic like managing the current game. [`/pkg/game/`](/pkg/game/) has game mode logic like teams, timing, flags, and so on. Protocol definitions (like network message codes) can be found in [`pkg/protocol`](/pkg/protocol/).
 
 Other interesting packages:
 

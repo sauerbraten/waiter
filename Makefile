@@ -11,4 +11,4 @@ tools:
 	go build ./cmd/genauth
 
 clean:
-	rm -f ./waiter ./genauth ./cenc ./cdec
+	rm -f ./waiter ./cenc ./cdec ./genauth

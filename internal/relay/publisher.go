@@ -36,5 +36,3 @@ func (p *Publisher) Publish(args ...interface{}) {
 func (p *Publisher) Close() {
 	close(p.updates)
 }
-
-

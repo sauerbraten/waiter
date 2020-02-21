@@ -49,18 +49,11 @@ Some things are specifically not planned and will likely never be implemented:
 - claiming privileges using `/setmaster 1` (relinquishing them with `/setmaster 0` and sharing master using `/setmaster 1 <cn>` already works)
 
 
-## Installing
-
-Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Run `go install github.com/sauerbraten/waiter/cmd/waiter` to install the `waiter` command in your `$GOPATH/bin` (which should by in your `$PATH`).
-
-The server requires `config.json`, `bans.json` and `users.json` to be placed in the working directory.
-
-
 ## Building
 
-Make sure you have Go installed as well as the ENet development headers (on Fedora, `sudo dnf install enet-devel`). Clone the repository, `cd waiter/cmd/waiter`, then `go build`.
+Make sure you have Go installed as well as the ENet development headers (on Fedora: `sudo dnf install enet-devel`, on macOS: `brew install enet`). Clone the repository, `cd waiter`, then `make all`.
 
-You can then start the server with `./waiter`.
+You can then start the server with `./waiter`. The server requires `config.json`, `bans.json` and `users.json` to be placed in the working directory.
 
 
 ## To Do

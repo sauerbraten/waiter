@@ -49,37 +49,23 @@ func (r *Relay) loop() {
 	for {
 		select {
 		case <-t:
-			if len(r.positions) > 0 {
-				// publish positions
-				r.flush(
-					r.positions,
-					func(uint32, []byte) []byte { return nil },
-					0,
-				)
+			// publish positions
+			r.flush(
+				r.positions,
+				func(uint32, []byte) []byte { return nil },
+				0,
+			)
 
-				// clear positions
-				for cn := range r.positions {
-					delete(r.positions, cn)
-				}
-			}
-
-			if len(r.clientPackets) > 0 {
-				// publish client packets
-				r.flush(
-					r.clientPackets,
-					func(cn uint32, pkt []byte) []byte {
-						p := packet.Encode(nmc.Client, cn)
-						p.PutUint(uint32(len(pkt)))
-						return p
-					},
-					1,
-				)
-
-				// clear client packets
-				for cn := range r.clientPackets {
-					delete(r.clientPackets, cn)
-				}
-			}
+			// publish client packets
+			r.flush(
+				r.clientPackets,
+				func(cn uint32, pkt []byte) []byte {
+					p := packet.Encode(nmc.Client, cn)
+					p.PutUint(uint32(len(pkt)))
+					return p
+				},
+				1,
+			)
 
 		case cn := <-r.incPositionsNotifs:
 			r.receive(cn, r.incPositions, func(pos []byte) {
@@ -103,7 +89,7 @@ func (r *Relay) AddClient(cn uint32, sf sendFunc) (positions *Publisher, packets
 	defer r.μ.Unlock()
 
 	if _, ok := r.send[cn]; ok {
-		// client is already serviced
+		// client is already being serviced
 		return nil, nil
 	}
 
@@ -209,37 +195,9 @@ func (r *Relay) flush(packets map[uint32][]byte, prefix func(uint32, []byte) []b
 		p := combined[offset : (len(combined)/2)-l+offset]
 		r.send[cn](channel, p)
 	}
-}
 
-// Publisher provides methods to send updates to all subscribers of a certain topic.
-type Publisher struct {
-	cn          uint32
-	notifyRelay chan<- uint32
-	updates     chan<- []byte
-}
-
-func newPublisher(cn uint32, notifyRelay chan<- uint32) (*Publisher, <-chan []byte) {
-	updates := make(chan []byte)
-
-	p := &Publisher{
-		cn:          cn,
-		notifyRelay: notifyRelay,
-		updates:     updates,
+	// clear packets
+	for cn := range packets {
+		delete(packets, cn)
 	}
-
-	return p, updates
-}
-
-// Publish notifies p's broker that there is an update on p's topic and blocks until the broker received the notification.
-// Publish then blocks until the broker received the update. Calling Publish() after Close() returns immediately. Use p's
-// Stop channel to know when the broker stopped listening.
-func (p *Publisher) Publish(args ...interface{}) {
-	p.notifyRelay <- p.cn
-	p.updates <- packet.Encode(args...)
-}
-
-// Close tells the broker there will be no more updates coming from p. Calling Publish() after Close() returns immediately.
-// Calling Close() makes the broker unsubscribe all subscribers and telling them updates on the topic have ended.
-func (p *Publisher) Close() {
-	close(p.updates)
 }

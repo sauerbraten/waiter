@@ -36,7 +36,7 @@ ENetEvent serviceHost(ENetHost *host) {
 
 	int e = 0;
 	do {
-		  e = enet_host_service(host, &event, 1); // 0 (= don't block) will hog an entire CPU core at 100%
+		e = enet_host_service(host, &event, 10000);
 	} while (e <= 0 || (event.type == ENET_EVENT_TYPE_RECEIVE && event.packet->dataLength == 0));
 
 	return event;
@@ -46,36 +46,34 @@ import "C"
 
 import (
 	"errors"
-	"time"
 )
 
 func NewHost(laddr string, lport int) (h *Host, err error) {
-	enetHost := C.initServer(C.CString(laddr), C.int(lport))
-	if enetHost == nil {
+	cHost := C.initServer(C.CString(laddr), C.int(lport))
+	if cHost == nil {
 		err = errors.New("an error occured initializing the ENet host in C")
 		return
 	}
 
 	h = &Host{
-		enetHost: enetHost,
-		peers:    map[*C.ENetPeer]*Peer{},
+		cHost: cHost,
+		peers: map[*C.ENetPeer]*Peer{},
 	}
 
 	return
 }
 
 type Host struct {
-	enetHost *C.ENetHost
-	peers    map[*C.ENetPeer]*Peer
+	cHost *C.ENetHost
+	peers map[*C.ENetPeer]*Peer
 }
 
 func (h *Host) Service() <-chan Event {
 	events := make(chan Event)
 	go func() {
 		for {
-			cEvent := C.serviceHost(h.enetHost)
+			cEvent := C.serviceHost(h.cHost)
 			events <- h.eventFromCEvent(&cEvent)
-			time.Sleep(1 * time.Millisecond) // TODO: not sure why, but without this, the server crashes
 		}
 	}()
 	return events

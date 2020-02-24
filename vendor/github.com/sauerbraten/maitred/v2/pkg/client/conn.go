@@ -1,18 +1,19 @@
 package client
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
 type conn struct {
-	addr *net.TCPAddr
+	addr string
 	*protocol.Conn
 	onConnect func()
 }
 
-func newConn(addr *net.TCPAddr, onConnect func(), onDisconnect func(error)) *conn {
+func newConn(addr string, onConnect func(), onDisconnect func(error)) *conn {
 	pConn := protocol.NewConn(onDisconnect)
 
 	return &conn{
@@ -23,7 +24,12 @@ func newConn(addr *net.TCPAddr, onConnect func(), onDisconnect func(error)) *con
 }
 
 func (c *conn) connect() error {
-	conn, err := net.DialTCP("tcp", nil, c.addr)
+	raddr, err := net.ResolveTCPAddr("tcp", c.addr)
+	if err != nil {
+		return fmt.Errorf("resolving %s: %w", c.addr, err)
+	}
+
+	conn, err := net.DialTCP("tcp", nil, raddr)
 	if err != nil {
 		return err
 	}

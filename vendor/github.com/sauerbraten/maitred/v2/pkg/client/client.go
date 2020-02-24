@@ -1,13 +1,10 @@
 package client
 
-import (
-	"github.com/sauerbraten/maitred/v2/pkg/auth"
-)
-
 type Client interface {
-	auth.Provider
-	Register()
+	Start()
+	Register(int)
 	Send(string, ...interface{})
+	Incoming() <-chan string
 	Handle(string)
-	Log(string, ...interface{})
+	Logf(string, ...interface{})
 }

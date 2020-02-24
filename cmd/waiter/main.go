@@ -94,69 +94,42 @@ func main() {
 	ms, authInc, authOut = mserver.NewVanilla(
 		conf.MasterServerAddress,
 		bm,
-		func(c *mserver.VanillaClient) {
-			c.Register(conf.ListenPort)
-		},
-		func(c *mserver.VanillaClient) {
-			s.ReAuthClients("")
-		},
+		func(c *mserver.VanillaClient) { c.Register(conf.ListenPort) },
+		func(c *mserver.VanillaClient) { s.ReAuthClients("") },
 	)
 	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.None)
 	ms.Start()
 
 	// stats auth master server
-	onStatsServerConnected := func(c *mserver.VanillaClient) {
-		c.Register(conf.ListenPort)
-
-		adminName, _adminKey := os.Getenv("STATSAUTH_ADMIN_NAME"), os.Getenv("STATSAUTH_ADMIN_KEY")
-		if adminName != "" && _adminKey != "" {
-			adminKey, err := auth.ParsePrivateKey(_adminKey)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			statsAuthAdmin := mserver.NewAdmin(s.StatsServer, adminName, adminKey)
-			statsAuthAdmin.Upgrade(
-				func() {
-					s.StatsServer = statsAuthAdmin
-					s.Commands.Register(server.RegisterPubkey)
-				},
-				func() {
-					s.Commands.Unregister(server.RegisterPubkey)
-				},
-			)
-		}
-	}
 	statsMS, authInc, authOut := mserver.NewVanilla(
 		conf.StatsServerAddress,
 		nil,
-		onStatsServerConnected,
 		func(c *mserver.VanillaClient) {
-			s.ReAuthClients(conf.StatsServerAuthDomain)
+			c.Register(conf.ListenPort)
+
+			s.StatsServer = mserver.NewStats(
+				c,
+				func(reqID uint32) { s.HandleSuccStats(reqID) },
+				func(reqID uint32, reason string) { s.HandleFailStats(reqID, reason) },
+			)
+
+			adminName, _adminKey := os.Getenv("STATSAUTH_ADMIN_NAME"), os.Getenv("STATSAUTH_ADMIN_KEY")
+			if adminName != "" && _adminKey != "" {
+				adminKey, err := auth.ParsePrivateKey(_adminKey)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				s.StatsServer = mserver.NewAdmin(s.StatsServer, adminName, adminKey)
+				s.StatsServer.(*mserver.AdminClient).Upgrade(
+					func() { s.Commands.Register(server.RegisterPubkey) },
+					func() { s.Commands.Unregister(server.RegisterPubkey) },
+				)
+			}
 		},
+		func(*mserver.VanillaClient) { s.ReAuthClients(conf.StatsServerAuthDomain) },
 	)
 	providers[conf.StatsServerAuthDomain] = auth.NewRemoteProvider(authInc, authOut, role.None)
-	s.StatsServer = mserver.NewStats(
-		statsMS,
-		s.HandleSuccStats,
-		s.HandleFailStats,
-	)
-	s.StatsServer.Start()
-
-	adminName, _adminKey := os.Getenv("STATSAUTH_ADMIN_NAME"), os.Getenv("STATSAUTH_ADMIN_KEY")
-	if adminName != "" && _adminKey != "" {
-		adminKey, err := auth.ParsePrivateKey(_adminKey)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		statsAuthAdmin := mserver.NewAdmin(s.StatsServer, adminName, adminKey)
-		statsAuthAdmin.Upgrade(
-			func() {
-				s.StatsServer = statsAuthAdmin
-				s.Commands.Register(server.RegisterPubkey)
-			},
-			nil,
-		)
-	}
+	statsMS.Start()
 
 	s.AuthManager = auth.NewManager(providers)
 

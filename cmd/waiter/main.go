@@ -98,8 +98,7 @@ func main() {
 			c.Register(conf.ListenPort)
 		},
 		func(c *mserver.VanillaClient) {
-			c.Register(conf.ListenPort)
-			s.ReAuth("")
+			s.ReAuthClients("")
 		},
 	)
 	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.None)
@@ -127,15 +126,13 @@ func main() {
 			)
 		}
 	}
-	onStatsServerReconnected := func(c *mserver.VanillaClient) {
-		onStatsServerConnected(c)
-		s.ReAuth(conf.StatsServerAuthDomain)
-	}
 	statsMS, authInc, authOut := mserver.NewVanilla(
 		conf.StatsServerAddress,
 		nil,
 		onStatsServerConnected,
-		onStatsServerReconnected,
+		func(c *mserver.VanillaClient) {
+			s.ReAuthClients(conf.StatsServerAuthDomain)
+		},
 	)
 	providers[conf.StatsServerAuthDomain] = auth.NewRemoteProvider(authInc, authOut, role.None)
 	s.StatsServer = mserver.NewStats(

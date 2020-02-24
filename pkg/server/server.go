@@ -324,7 +324,7 @@ func (s *Server) HandleFailStats(reqID uint32, reason string) {
 	})
 }
 
-func (s *Server) ReAuth(domain string) {
+func (s *Server) ReAuthClients(domain string) {
 	s.Clients.ForEach(func(c *Client) {
 		if _, ok := c.Authentications[domain]; ok {
 			delete(c.Authentications, domain)

@@ -103,6 +103,8 @@ github.com/sauerbraten/maitred v0.0.0-20190418160937-76158974317d h1:rDcCm2HnMqt
 github.com/sauerbraten/maitred v0.0.0-20190418160937-76158974317d/go.mod h1:cjUXz/BhmETFsIGwveI7HH2ZUA/LSZixv7Sv1EkcG9E=
 github.com/sauerbraten/maitred/v2 v2.0.0 h1:2oH0MpAJyTXofnAvwOc6NdjIiaH8dB3+bA9e+X0Od8s=
 github.com/sauerbraten/maitred/v2 v2.0.0/go.mod h1:JLzHD5e8YXK/qIkhJi1cINU3lDwRD8i7PfbV3spEFjo=
+github.com/sauerbraten/maitred/v2 v2.0.1-0.20200224185905-5b361bcc9c34 h1:NNVZ2X5Fxsym6yYe38d8LyEN9B/b0gPBqyqSi0NE+Ss=
+github.com/sauerbraten/maitred/v2 v2.0.1-0.20200224185905-5b361bcc9c34/go.mod h1:f8BTSHIzbLvVGR1Tco13cnRSJHK6bFnm/BQzB8ysQLc=
 github.com/sauerbraten/waiter v0.0.0-20190404224729-ddb62a3cdaab/go.mod h1:tUExApXkKFw8wk8yVJBsM1Hf/CKCa+/WnDnHcxhXGhU=
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24/go.mod h1:M+9NzErvs504Cn4c5DxATwIqPbtswREoFCre64PpcG4=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

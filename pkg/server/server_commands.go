@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	mserver "github.com/sauerbraten/maitred/v2/pkg/client"
+
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
@@ -36,13 +38,14 @@ func (cmd *ServerCommand) Detailed() string {
 
 type ServerCommands struct {
 	s       *Server
+	byName  map[string]*ServerCommand
 	byAlias map[string]*ServerCommand
-	cmds    []*ServerCommand
 }
 
 func NewCommands(s *Server, cmds ...*ServerCommand) *ServerCommands {
 	sc := &ServerCommands{
 		s:       s,
+		byName:  map[string]*ServerCommand{},
 		byAlias: map[string]*ServerCommand{},
 	}
 	for _, cmd := range cmds {
@@ -52,16 +55,24 @@ func NewCommands(s *Server, cmds ...*ServerCommand) *ServerCommands {
 }
 
 func (sc *ServerCommands) Register(cmd *ServerCommand) {
+	sc.byName[cmd.name] = cmd
 	sc.byAlias[cmd.name] = cmd
 	for _, alias := range cmd.aliases {
 		sc.byAlias[alias] = cmd
 	}
-	sc.cmds = append(sc.cmds, cmd)
+}
+
+func (sc *ServerCommands) Unregister(cmd *ServerCommand) {
+	for _, alias := range cmd.aliases {
+		delete(sc.byAlias, alias)
+	}
+	delete(sc.byAlias, cmd.name)
+	delete(sc.byName, cmd.name)
 }
 
 func (sc *ServerCommands) PrintCommands(c *Client) {
 	helpLines := []string{}
-	for _, cmd := range sc.cmds {
+	for _, cmd := range sc.byName {
 		if c.Role >= cmd.minRole {
 			helpLines = append(helpLines, cmd.String())
 		}
@@ -305,6 +316,11 @@ var RegisterPubkey = &ServerCommand{
 			return
 		}
 
+		statsAuthAdmin, ok := s.StatsServer.(*mserver.AdminClient)
+		if !ok {
+			c.Send(nmc.ServerMessage, cubecode.Error("no admin connection to stats server"))
+		}
+
 		if statsAuth, ok := c.Authentications[s.StatsServerAuthDomain]; ok {
 			c.Send(nmc.ServerMessage, cubecode.Fail("you're already authenticated with "+s.StatsServerAuthDomain+" as "+statsAuth.name))
 			return
@@ -332,7 +348,7 @@ var RegisterPubkey = &ServerCommand{
 			return
 		}
 
-		s.StatsServer.AddAuth(name, pubkey,
+		statsAuthAdmin.AddAuth(name, pubkey,
 			func(err string) {
 				if err != "" {
 					c.Send(nmc.ServerMessage, cubecode.Error("creating your account failed: "+err))

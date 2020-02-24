@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/sauerbraten/jsonfile"
@@ -30,9 +31,6 @@ var (
 
 	// master server
 	ms *mserver.VanillaClient
-
-	// stats server
-	statsAuth *mserver.StatsClient
 
 	// info server
 	is      *infoServer
@@ -76,7 +74,6 @@ func main() {
 		server.ToggleReportStats,
 		server.LookupIPs,
 		server.SetTimeLeft,
-		server.RegisterPubkey,
 	)
 
 	s.GameMode = s.StartMode(conf.FallbackGameMode)
@@ -89,34 +86,81 @@ func main() {
 
 	providers[conf.AuthDomain] = auth.NewInMemoryProvider(users)
 
-	ms, err = mserver.NewVanilla(conf.MasterServerAddress, conf.ListenPort, bm, role.Auth, func() { s.ReAuth("") })
-	if err != nil {
-		log.Println("could not connect to master server:", err)
-	}
-	if ms != nil {
-		go ms.Start()
-		providers[""] = ms.RemoteProvider
-	}
-
-	statsAuth, err = mserver.NewStats(
-		conf.StatsServerAddress,
-		conf.ListenPort,
-		func(reqID uint32) { s.HandleSuccStats(reqID) },
-		func(reqID uint32, reason string) { s.HandleFailStats(reqID, reason) },
-		func() { s.ReAuth(s.StatsServerAuthDomain) },
+	// regular master server
+	var (
+		authInc <-chan string
+		authOut chan<- string
 	)
-	if err != nil {
-		log.Println("could not connect to statsauth server:", err)
-	}
-	if statsAuth != nil {
-		go statsAuth.Start()
-		s.StatsServer, err = mserver.NewAdmin(statsAuth)
-		if err != nil {
-			log.Println("could not create stats auth admin client:", err)
-		} else {
-			providers[conf.StatsServerAuthDomain] = s.StatsServer
+	ms, authInc, authOut = mserver.NewVanilla(
+		conf.MasterServerAddress,
+		bm,
+		func(c *mserver.VanillaClient) {
+			c.Register(conf.ListenPort)
+		},
+		func(c *mserver.VanillaClient) {
+			c.Register(conf.ListenPort)
+			s.ReAuth("")
+		},
+	)
+	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.None)
+	ms.Start()
+
+	// stats auth master server
+	onStatsServerConnected := func(c *mserver.VanillaClient) {
+		c.Register(conf.ListenPort)
+
+		adminName, _adminKey := os.Getenv("STATSAUTH_ADMIN_NAME"), os.Getenv("STATSAUTH_ADMIN_KEY")
+		if adminName != "" && _adminKey != "" {
+			adminKey, err := auth.ParsePrivateKey(_adminKey)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			statsAuthAdmin := mserver.NewAdmin(s.StatsServer, adminName, adminKey)
+			statsAuthAdmin.Upgrade(
+				func() {
+					s.StatsServer = statsAuthAdmin
+					s.Commands.Register(server.RegisterPubkey)
+				},
+				func() {
+					s.Commands.Unregister(server.RegisterPubkey)
+				},
+			)
 		}
 	}
+	onStatsServerReconnected := func(c *mserver.VanillaClient) {
+		onStatsServerConnected(c)
+		s.ReAuth(conf.StatsServerAuthDomain)
+	}
+	statsMS, authInc, authOut := mserver.NewVanilla(
+		conf.StatsServerAddress,
+		nil,
+		onStatsServerConnected,
+		onStatsServerReconnected,
+	)
+	providers[conf.StatsServerAuthDomain] = auth.NewRemoteProvider(authInc, authOut, role.None)
+	s.StatsServer = mserver.NewStats(
+		statsMS,
+		s.HandleSuccStats,
+		s.HandleFailStats,
+	)
+	s.StatsServer.Start()
+
+	adminName, _adminKey := os.Getenv("STATSAUTH_ADMIN_NAME"), os.Getenv("STATSAUTH_ADMIN_KEY")
+	if adminName != "" && _adminKey != "" {
+		adminKey, err := auth.ParsePrivateKey(_adminKey)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		statsAuthAdmin := mserver.NewAdmin(s.StatsServer, adminName, adminKey)
+		statsAuthAdmin.Upgrade(
+			func() {
+				s.StatsServer = statsAuthAdmin
+				s.Commands.Register(server.RegisterPubkey)
+			},
+			nil,
+		)
+	}
+
 	s.AuthManager = auth.NewManager(providers)
 
 	gameInc := host.Service()
@@ -131,11 +175,11 @@ func main() {
 			is.Handle(req)
 		case msg := <-ms.Incoming():
 			go ms.Handle(msg)
-		case msg := <-statsAuth.Incoming():
+		case msg := <-s.StatsServer.Incoming():
 			go s.StatsServer.Handle(msg)
 		case <-time.Tick(1 * time.Hour):
-			go ms.Register()
-			go s.StatsServer.Register()
+			go ms.Register(conf.ListenPort)
+			go s.StatsServer.Register(conf.ListenPort)
 		case f := <-callbacks:
 			f()
 		}

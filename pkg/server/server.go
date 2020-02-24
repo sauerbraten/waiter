@@ -36,7 +36,7 @@ type Server struct {
 	Clients          *ClientManager
 	AuthManager      *auth.Manager
 	BanManager       *bans.BanManager
-	StatsServer      *mserver.AdminClient
+	StatsServer      mserver.Client
 	MapRotation      *maprot.Rotation
 	PendingMapChange *time.Timer
 	callbacks        chan<- func()

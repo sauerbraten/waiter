@@ -7,26 +7,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/chef/pkg/ips"
-	"github.com/sauerbraten/waiter/pkg/bans"
-
 	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
 type VanillaClient struct {
-	bans *bans.BanManager
-
 	*conn
 	pingFailed bool
 
 	authInc chan<- string
 	authOut <-chan string
 
+	bansInc chan<- string
+
 	onReconnect func(*VanillaClient) // executed when the game server reconnects to the remote master server
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func NewVanilla(addr string, bans *bans.BanManager, onConnect, onReconnect func(*VanillaClient)) (c *VanillaClient, authInc <-chan string, authOut chan<- string) {
+func NewVanilla(addr string, onConnect, onReconnect func(*VanillaClient)) (c *VanillaClient, authInc <-chan string, authOut chan<- string, bansInc <-chan string) {
 	if onConnect == nil {
 		onConnect = func(*VanillaClient) {}
 	}
@@ -34,13 +31,13 @@ func NewVanilla(addr string, bans *bans.BanManager, onConnect, onReconnect func(
 		onReconnect = func(*VanillaClient) {}
 	}
 
-	_authInc, _authOut := make(chan string), make(chan string)
+	_authInc, _authOut, _bansInc := make(chan string), make(chan string), make(chan string)
 
 	c = &VanillaClient{
-		bans: bans,
-
 		authInc: _authInc,
 		authOut: _authOut,
+
+		bansInc: _bansInc,
 
 		onReconnect: onReconnect,
 	}
@@ -64,7 +61,7 @@ func NewVanilla(addr string, bans *bans.BanManager, onConnect, onReconnect func(
 
 	c.conn = newConn(addr, _onConnect, onDisconnect)
 
-	return c, _authInc, _authOut
+	return c, _authInc, _authOut, _bansInc
 }
 
 func (c *VanillaClient) Start() {
@@ -127,33 +124,13 @@ func (c *VanillaClient) Handle(msg string) {
 			c.pingFailed = true // stop trying
 		}
 
-	case protocol.ClearBans:
-		if c.bans != nil {
-			c.bans.ClearGlobalBans()
-		}
-
-	case protocol.AddBan:
-		if c.bans != nil {
-			c.handleAddGlobalBan(args)
-		}
+	case protocol.ClearBans, protocol.AddBan:
+		c.bansInc <- msg
 
 	case protocol.ChalAuth, protocol.SuccAuth, protocol.FailAuth:
 		c.authInc <- msg
 
 	default:
-		c.Logf("received and not handled: %v", msg)
+		c.Logf("unhandled message: %v", msg)
 	}
-}
-
-func (c *VanillaClient) handleAddGlobalBan(args string) {
-	var ip string
-	_, err := fmt.Sscanf(args, "%s", &ip)
-	if err != nil {
-		c.Logf("malformed %s message from game server: '%s': %v", protocol.AddBan, args, err)
-		return
-	}
-
-	network := ips.GetSubnet(ip)
-
-	c.bans.AddBan(network, fmt.Sprintf("banned by master server (%s)", c.conn.addr), time.Time{}, true)
 }

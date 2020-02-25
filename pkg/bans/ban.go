@@ -11,7 +11,7 @@ type Ban struct {
 	Network    *net.IPNet
 	Reason     string
 	ExpiryDate time.Time
-	Global     bool
+	Domain     string
 }
 
 // UnmarshalJSON implements json.Unmarshaler for Ban

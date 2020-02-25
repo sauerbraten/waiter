@@ -72,7 +72,7 @@ All functionality is organized into packages. [`/cmd/waiter/`](/cmd/waiter/) con
 Other interesting packages:
 
 - [`pkg/protocol/cubecode`](pkg/protocol/cubecode)
-- [`internal/net/enet`](internal/net/enet)
+- [`pkg/enet`](pkg/enet)
 
 In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for users. While you can use auth keys generated with Sauerbraten's `/genauthkey` command, `genauth` provides better output (`auth.cfg` line for the player, JSON object for this server's `users.json` file).
 

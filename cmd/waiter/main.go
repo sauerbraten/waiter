@@ -27,8 +27,6 @@ var (
 	// ban manager
 	bm *bans.BanManager
 
-	localAuth auth.Provider
-
 	// master server
 	ms *mserver.VanillaClient
 
@@ -51,10 +49,11 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	bm, err = bans.FromFile("bans.json")
+	configuredBans, err := bans.FromFile("bans.json")
 	if err != nil {
 		log.Fatalln(err)
 	}
+	bm = bans.New(configuredBans...)
 
 	var users []*auth.User
 	err = jsonfile.ParseFile("users.json", &users)
@@ -90,20 +89,20 @@ func main() {
 	var (
 		authInc <-chan string
 		authOut chan<- string
+		bansInc <-chan string
 	)
-	ms, authInc, authOut = mserver.NewVanilla(
+	ms, authInc, authOut, bansInc = mserver.NewVanilla(
 		conf.MasterServerAddress,
-		bm,
 		func(c *mserver.VanillaClient) { c.Register(conf.ListenPort) },
 		func(c *mserver.VanillaClient) { s.ReAuthClients("") },
 	)
 	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.None)
+	go bm.Handle(suffixed(bansInc, ""))
 	ms.Start()
 
 	// stats auth master server
-	statsMS, authInc, authOut := mserver.NewVanilla(
+	statsMS, authInc, authOut, bansInc := mserver.NewVanilla(
 		conf.StatsServerAddress,
-		nil,
 		func(c *mserver.VanillaClient) {
 			c.Register(conf.ListenPort)
 
@@ -129,17 +128,16 @@ func main() {
 		func(*mserver.VanillaClient) { s.ReAuthClients(conf.StatsServerAuthDomain) },
 	)
 	providers[conf.StatsServerAuthDomain] = auth.NewRemoteProvider(authInc, authOut, role.None)
+	go bm.Handle(suffixed(bansInc, conf.StatsServerAuthDomain))
 	statsMS.Start()
 
 	s.AuthManager = auth.NewManager(providers)
-
-	gameInc := host.Service()
 
 	log.Println("server running on port", s.Config.ListenPort)
 
 	for {
 		select {
-		case event := <-gameInc:
+		case event := <-host.Service():
 			handleEnetEvent(event)
 		case req := <-infoInc:
 			is.Handle(req)
@@ -175,4 +173,16 @@ func handleEnetEvent(event enet.Event) {
 		}
 		s.HandlePacket(client, event.ChannelID, protocol.Packet(event.Packet.Data))
 	}
+}
+
+func suffixed(inc <-chan string, suffix string) <-chan string {
+	out := make(chan string)
+
+	go func() {
+		for msg := range inc {
+			out <- msg + " " + suffix
+		}
+	}()
+
+	return out
 }

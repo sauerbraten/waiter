@@ -20,6 +20,7 @@ func (b *Ban) UnmarshalJSON(jsonBytes []byte) error {
 		Network    string `json:"network"`
 		Reason     string `json:"reason"`
 		ExpiryDate int64  `json:"expiry_date"`
+		Domain     string `json:"domain,omitempty"`
 	}{}
 	err := json.Unmarshal(jsonBytes, &ban)
 	if err != nil {
@@ -32,6 +33,7 @@ func (b *Ban) UnmarshalJSON(jsonBytes []byte) error {
 	}
 	b.Reason = ban.Reason
 	b.ExpiryDate = time.Unix(ban.ExpiryDate, 0)
+	b.Domain = ban.Domain
 
 	return nil
 }

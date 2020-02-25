@@ -97,7 +97,7 @@ func main() {
 		func(c *mserver.VanillaClient) { s.ReAuthClients("") },
 	)
 	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.None)
-	go bm.Handle(suffixed(bansInc, ""))
+	go bm.Handle(suffixed(bansInc, "sauerbraten.org"))
 	ms.Start()
 
 	// stats auth master server

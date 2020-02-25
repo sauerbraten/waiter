@@ -124,7 +124,7 @@ func (bm *BanManager) handleAddBan(args string) {
 		return
 	}
 
-	bm.AddBan(ips.GetSubnet(ip), fmt.Sprintf("banned by master server (%s)", domain), time.Time{}, domain)
+	bm.AddBan(ips.GetSubnet(ip), fmt.Sprintf("gban from %s", domain), time.Time{}, domain)
 }
 
 func (bm *BanManager) handleClearBans(args string) {

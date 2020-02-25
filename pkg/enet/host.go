@@ -7,7 +7,7 @@ package enet
 #include <enet/enet.h>
 
 
-ENetHost * initServer(const char *addr, int port) {
+ENetHost* initServer(const char *addr, int port) {
 	if (enet_initialize() != 0) {
 		fprintf (stderr, "An error occurred while initializing ENet.\n");
 		return NULL;
@@ -22,21 +22,21 @@ ENetHost * initServer(const char *addr, int port) {
 	// Bind the server to the provided port
 	address.port = port;
 
-	ENetHost * server = enet_host_create(&address, 128, 2, 0, 0);
-	if (server == NULL) {
+	ENetHost* host = enet_host_create(&address, 128, 2, 0, 0);
+	if (host == NULL) {
 		fprintf(stderr, "An error occurred while trying to create an ENet server host.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	return server;
+	return host;
 }
 
-ENetEvent serviceHost(ENetHost *host) {
+ENetEvent serviceHost(ENetHost* host) {
 	ENetEvent event;
 
 	int e = 0;
 	do {
-		e = enet_host_service(host, &event, 2);
+		e = enet_host_service(host, &event, host->peerCount ? 1 : 1000);
 	} while (e <= 0 || (event.type == ENET_EVENT_TYPE_RECEIVE && event.packet->dataLength == 0));
 
 	return event;
@@ -48,19 +48,16 @@ import (
 	"errors"
 )
 
-func NewHost(laddr string, lport int) (h *Host, err error) {
+func NewHost(laddr string, lport int) (*Host, error) {
 	cHost := C.initServer(C.CString(laddr), C.int(lport))
 	if cHost == nil {
-		err = errors.New("an error occured initializing the ENet host in C")
-		return
+		return nil, errors.New("an error occured initializing the ENet host in C")
 	}
 
-	h = &Host{
+	return &Host{
 		cHost: cHost,
 		peers: map[*C.ENetPeer]*Peer{},
-	}
-
-	return
+	}, nil
 }
 
 type Host struct {

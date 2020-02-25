@@ -135,9 +135,13 @@ func main() {
 
 	log.Println("server running on port", s.Config.ListenPort)
 
+	// don't put these inside the for loop below!
+	enetInc := host.Service()
+	reRegisterTicker := time.Tick(1 * time.Hour)
+
 	for {
 		select {
-		case event := <-host.Service():
+		case event := <-enetInc:
 			handleEnetEvent(event)
 		case req := <-infoInc:
 			is.Handle(req)
@@ -145,7 +149,7 @@ func main() {
 			go ms.Handle(msg)
 		case msg := <-s.StatsServer.Incoming():
 			go s.StatsServer.Handle(msg)
-		case <-time.Tick(1 * time.Hour):
+		case <-reRegisterTicker:
 			go ms.Register(conf.ListenPort)
 			go s.StatsServer.Register(conf.ListenPort)
 		case f := <-callbacks:

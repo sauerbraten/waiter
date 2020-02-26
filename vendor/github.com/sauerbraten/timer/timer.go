@@ -17,7 +17,6 @@ const (
 type Timer struct {
 	t  *time.Timer
 	C  <-chan time.Time
-	c  chan time.Time
 	fn func()
 
 	l         *sync.Mutex // to synchronize access to the fields below
@@ -31,8 +30,10 @@ type Timer struct {
 // It returns a Timer that can be used to cancel the call using its Stop method,
 // or pause using its Pause method
 func AfterFunc(d time.Duration, f func()) *Timer {
-	t := new(Timer)
-	t.duration = d
+	t := &Timer{
+		duration: d,
+		l:        new(sync.Mutex),
+	}
 	t.fn = func() {
 		t.state = stateExpired
 		f()
@@ -45,13 +46,14 @@ func AfterFunc(d time.Duration, f func()) *Timer {
 // or pause using its Pause method
 func NewTimer(d time.Duration) *Timer {
 	c := make(chan time.Time, 1)
-	t := new(Timer)
-	t.C = c
-	t.c = c
-	t.duration = d
+	t := &Timer{
+		C:        c,
+		duration: d,
+		l:        new(sync.Mutex),
+	}
 	t.fn = func() {
 		t.state = stateExpired
-		t.c <- time.Now()
+		c <- time.Now()
 	}
 	return t
 }
@@ -102,9 +104,15 @@ func (t *Timer) Stop() bool {
 }
 
 // TimeLeft returns the duration left to run before the timer expires.
+// TimeLeft is safe to be called on a nil timer and will return 0 in that case.
 func (t *Timer) TimeLeft() time.Duration {
+	if t == nil {
+		return 0
+	}
+
 	t.l.Lock()
 	defer t.l.Unlock()
+
 	switch t.state {
 	case stateIdle:
 		return t.duration

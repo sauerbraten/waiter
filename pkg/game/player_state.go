@@ -100,11 +100,10 @@ func (ps *PlayerState) Reset() {
 	if ps.State != playerstate.Spectator {
 		ps.State = playerstate.Dead
 	}
-	ps.MaxHealth = 100
 
 	ps.LifeSequence = 0
 	ps.LastDeath = time.Time{}
-
+	ps.MaxHealth = 100
 	ps.Frags = 0
 	ps.Deaths = 0
 	ps.Teamkills = 0

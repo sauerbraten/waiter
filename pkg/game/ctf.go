@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ivahaev/timer"
+	"github.com/sauerbraten/timer"
 
 	"github.com/sauerbraten/waiter/pkg/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"

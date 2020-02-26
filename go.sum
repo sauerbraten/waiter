@@ -60,8 +60,6 @@ github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2z
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
-github.com/ivahaev/timer v0.0.0-20160404172014-c2bc30753c64 h1:TXUeRZH/XkA++eHZqgZrmCCF4CI4n/fSyrI0eRj0Q+E=
-github.com/ivahaev/timer v0.0.0-20160404172014-c2bc30753c64/go.mod h1:VTWGBUSzvBl14TRpHnLd4Zt0MEjS2FpJZ9Rf43pKo6o=
 github.com/jackc/fake v0.0.0-20150926172116-812a484cc733/go.mod h1:WrMFNQdiFJ80sQsxDoMokWK1W5TQtxBFNpzWTD84ibQ=
 github.com/jackc/pgx v3.2.0+incompatible/go.mod h1:0ZGrqGqkRlliWnWB4zKnWtjbSWbGkVEFm4TeybAXq+I=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
@@ -99,6 +97,8 @@ github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6 h1:t8t1qFy+UZ
 github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6/go.mod h1:pcalAADtEjWDv9vefUiKfVm6eu9ushOKLSIOrxeSWcI=
 github.com/sauerbraten/maitred/v2 v2.0.1-0.20200225134802-4db1920ff53d h1:TsDk1WWkFG3f9yoxv6wG/xeDeJVNaX6czV1doNgs7AQ=
 github.com/sauerbraten/maitred/v2 v2.0.1-0.20200225134802-4db1920ff53d/go.mod h1:cMGGwNHTjnhq6bgVy3mZD5tHuzqrWWvCxPxAAovzHYg=
+github.com/sauerbraten/timer v0.0.0-20200226110358-5e5d975789e1 h1:17gTgCJY0YeZCl6jRWglx7Hfs3BdSTAh7H2MtCGChco=
+github.com/sauerbraten/timer v0.0.0-20200226110358-5e5d975789e1/go.mod h1:P4fYpcZXe7/pBl3UvZAyETLSsT/UOZNyT/kUeqpKsJo=
 github.com/sauerbraten/waiter v0.0.0-20190404224729-ddb62a3cdaab/go.mod h1:tUExApXkKFw8wk8yVJBsM1Hf/CKCa+/WnDnHcxhXGhU=
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24/go.mod h1:M+9NzErvs504Cn4c5DxATwIqPbtswREoFCre64PpcG4=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

@@ -1,6 +1,9 @@
 package timer
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 const (
 	stateIdle = iota
@@ -12,13 +15,15 @@ const (
 // the current time will be sent on C, unless the Timer was created by AfterFunc.
 // A Timer must be created with NewTimer or AfterFunc.
 type Timer struct {
-	C         <-chan time.Time
-	c         chan time.Time
-	duration  time.Duration
+	t  *time.Timer
+	C  <-chan time.Time
+	c  chan time.Time
+	fn func()
+
+	l         *sync.Mutex // to synchronize access to the fields below
 	state     int
-	fn        func()
+	duration  time.Duration
 	startedAt time.Time
-	t         *time.Timer
 }
 
 // AfterFunc waits after calling its Start method for the duration
@@ -54,6 +59,8 @@ func NewTimer(d time.Duration) *Timer {
 // Pause pauses current timer until Start method will be called.
 // Next Start call will wait rest of duration.
 func (t *Timer) Pause() bool {
+	t.l.Lock()
+	defer t.l.Unlock()
 	if t.state != stateActive {
 		return false
 	}
@@ -62,13 +69,14 @@ func (t *Timer) Pause() bool {
 		return false
 	}
 	t.state = stateIdle
-	dur := time.Now().Sub(t.startedAt)
-	t.duration = t.duration - dur
+	t.duration -= time.Now().Sub(t.startedAt)
 	return true
 }
 
 // Start starts Timer that will send the current time on its channel after at least duration d.
 func (t *Timer) Start() bool {
+	t.l.Lock()
+	defer t.l.Unlock()
 	if t.state != stateIdle {
 		return false
 	}
@@ -82,6 +90,8 @@ func (t *Timer) Start() bool {
 // false if the timer has already expired or been stopped.
 // Stop does not close the channel, to prevent a read from the channel succeeding incorrectly.
 func (t *Timer) Stop() bool {
+	t.l.Lock()
+	defer t.l.Unlock()
 	if t.state != stateActive {
 		return false
 	}
@@ -89,4 +99,20 @@ func (t *Timer) Stop() bool {
 	t.state = stateExpired
 	t.t.Stop()
 	return true
+}
+
+// TimeLeft returns the duration left to run before the timer expires.
+func (t *Timer) TimeLeft() time.Duration {
+	t.l.Lock()
+	defer t.l.Unlock()
+	switch t.state {
+	case stateIdle:
+		return t.duration
+	case stateActive:
+		return time.Now().Sub(t.startedAt)
+	case stateExpired:
+		return 0
+	default:
+		panic("unhandled timer state")
+	}
 }

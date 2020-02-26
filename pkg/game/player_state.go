@@ -3,6 +3,8 @@ package game
 import (
 	"time"
 
+	"github.com/sauerbraten/timer"
+
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/protocol/armour"
 	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
@@ -14,7 +16,7 @@ type PlayerState struct {
 
 	// fields that reset at spawn
 	LastSpawnAttempt time.Time
-	QuadTimeLeft     time.Duration
+	QuadTimer        *timer.Timer
 	LastShot         time.Time
 	GunReloadEnd     time.Time
 	// reset at spawn to value depending on mode
@@ -58,7 +60,10 @@ func (ps *PlayerState) Spawn() {
 	ps.LifeSequence = (ps.LifeSequence + 1) % 128
 
 	ps.LastSpawnAttempt = time.Now()
-	ps.QuadTimeLeft = 0
+	if ps.QuadTimer != nil {
+		ps.QuadTimer.Stop()
+	}
+	ps.QuadTimer = nil
 	ps.LastShot = time.Time{}
 	ps.GunReloadEnd = time.Time{}
 }

@@ -146,7 +146,7 @@ func (s *Server) SendWelcome(c *Client) {
 	p = append(p, nmc.Resume)
 	for _, client := range s.Clients.cs {
 		if client != c && client.Peer != nil {
-			p = append(p, client.CN, client.State, client.Frags, client.Flags, client.QuadTimeLeft, client.ToWire())
+			p = append(p, client.CN, client.State, client.Frags, client.Flags, client.QuadTimer.TimeLeft(), client.ToWire())
 		}
 	}
 	p = append(p, -1)

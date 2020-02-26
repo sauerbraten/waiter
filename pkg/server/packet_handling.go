@@ -273,7 +273,6 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 			s.Kick(client, victim, reason)
 
 		case nmc.MasterMode:
-			log.Println(p)
 			_mm, ok := p.GetInt()
 			if !ok {
 				log.Println("could not read mastermode from mastermode packet:", p)
@@ -318,10 +317,13 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 					s.GameMode.HandleFrag(&spectator.Player, &spectator.Player)
 				}
 				s.GameMode.Leave(&spectator.Player)
+				s.Clock.Leave(&spectator.Player)
 				spectator.State = playerstate.Spectator
 			} else {
 				spectator.State = playerstate.Dead
-				s.GameMode.Join(&spectator.Player)
+				if teamedMode, ok := s.GameMode.(game.TeamMode); ok {
+					teamedMode.Join(&spectator.Player)
+				}
 				// todo: checkmap
 			}
 			s.Clients.Broadcast(nmc.Spectator, spectator.CN, toggle)
@@ -360,7 +362,7 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 			}
 
 			log.Println(client, "forced", modeID, "on", mapname)
-			s.ChangeMap(modeID, mapname)
+			s.StartGame(s.StartMode(modeID), mapname)
 
 		case nmc.Ping:
 			// client pinging server → send pong
@@ -428,7 +430,7 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 				return
 			}
 
-			teamMode, ok := s.GameMode.(game.Teamed)
+			teamMode, ok := s.GameMode.(game.TeamMode)
 			if !ok {
 				return
 			}
@@ -453,7 +455,7 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 				return
 			}
 
-			teamMode, ok := s.GameMode.(game.Teamed)
+			teamMode, ok := s.GameMode.(game.TeamMode)
 			if !ok {
 				return
 			}
@@ -539,18 +541,11 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 					return
 				}
 			}
-			timedMode, isTimedMode := s.GameMode.(game.TimedMode)
-			if !isTimedMode {
-				return
-			}
 			if pause == 1 {
-				timedMode.Pause(&client.Player)
+				s.Clock.Pause(&client.Player)
 			} else {
-				timedMode.Resume(&client.Player)
+				s.Clock.Resume(&client.Player)
 			}
-
-		case nmc.ItemList:
-			// TODO: process and broadcast itemlist so clients are ok
 
 		case nmc.ServerCommand:
 			cmd, ok := p.GetString()
@@ -561,9 +556,12 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 			s.Commands.Handle(client, cmd)
 
 		default:
-			ok := s.GameMode.HandlePacket(&client.Player, packetType, &p)
-			if !ok {
-				log.Println("received", packetType, p, "on channel", channelID)
+			handled := false
+			if mode, ok := s.GameMode.(game.HandlesPackets); ok {
+				handled = mode.HandlePacket(&client.Player, packetType, &p)
+			}
+			if !handled {
+				log.Println("unhandled packet", packetType, p, "received on channel", channelID)
 				return
 			}
 		}

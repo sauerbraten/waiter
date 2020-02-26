@@ -20,7 +20,6 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
-	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
@@ -92,9 +91,7 @@ func (s *Server) AuthRequiredBecause(c *Client) disconnectreason.ID {
 func (s *Server) Connect(peer *enet.Peer) {
 	log.Println("connecting:", peer)
 	client := s.Clients.Add(peer)
-	log.Println("added to clients as", client)
 	client.Positions, client.Packets = s.relay.AddClient(client.CN, client.Peer.Send)
-	log.Println("added to relay")
 	client.Send(
 		nmc.ServerInfo,
 		client.CN,
@@ -159,11 +156,12 @@ func (s *Server) Join(c *Client) {
 		s.Spawn(c)
 	}
 
-	s.GameMode.Join(&c.Player)                  // may set client's team
-	s.SendWelcome(c)                            // tells client about her team
-	typ, initData := s.GameMode.Init(&c.Player) // may send additional welcome info like flags
-	if typ != nmc.None {
-		c.Send(typ, initData...)
+	if teamedMode, ok := s.GameMode.(game.TeamMode); ok {
+		teamedMode.Join(&c.Player) // may set client's team
+	}
+	s.SendWelcome(c) // tells client about her team
+	if flagMode, ok := s.GameMode.(game.FlagMode); ok {
+		c.Send(nmc.InitFlags, flagMode.FlagsInitPacket()...)
 	}
 	s.Clients.InformOthersOfJoin(c)
 
@@ -197,7 +195,7 @@ func (s *Server) UniqueName(p *game.Player) string {
 
 func (s *Server) Spawn(client *Client) {
 	client.Spawn()
-	s.GameMode.Spawn(&client.Player)
+	s.GameMode.Spawn(&client.PlayerState)
 }
 
 func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
@@ -212,29 +210,25 @@ func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
 
 	client.Packets.Publish(nmc.ConfirmSpawn, client.ToWire())
 
-	s.GameMode.ConfirmSpawn(&client.Player)
+	if clock, competitive := s.GameMode.(game.Competitive); competitive {
+		clock.Spawned(&client.Player)
+	}
 }
 
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
 	s.GameMode.Leave(&client.Player)
-	log.Println("client left game mode")
+	s.Clock.Leave(&client.Player)
 	s.relay.RemoveClient(client.CN)
-	log.Println("client removed from relay")
 	s.Clients.Disconnect(client, reason)
-	log.Println("client removed from clients")
 	s.Clients.ForEach(func(c *Client) { log.Printf("%#v\n", c) })
 	s.host.Disconnect(client.Peer, reason)
-	log.Println("client's peer disconnected")
 	client.Reset()
-	log.Println("client reset")
-	log.Printf("%#v\n", client)
 	if len(s.Clients.PrivilegedUsers()) == 0 {
 		s.Unsupervised()
 	}
 	if s.Clients.NumberOfClientsConnected() == 0 {
 		s.Empty()
 	}
-	log.Println("server.Disconnect ended")
 }
 
 func (s *Server) Kick(client *Client, victim *Client, reason string) {
@@ -264,10 +258,7 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 }
 
 func (s *Server) Unsupervised() {
-	timedMode, isTimedMode := s.GameMode.(game.TimedMode)
-	if isTimedMode {
-		timedMode.Resume(nil)
-	}
+	s.Clock.Resume(nil)
 	s.MasterMode = mastermode.Open
 	s.KeepTeams = false
 	s.CompetitiveMode = false
@@ -276,18 +267,16 @@ func (s *Server) Unsupervised() {
 
 func (s *Server) Empty() {
 	s.MapRotation.ClearQueue()
-	if s.GameMode.ID() != s.FallbackGameMode {
-		s.ChangeMap(s.FallbackGameMode, s.MapRotation.NextMap(s.FallbackGameMode, s.GameMode.ID(), s.Map))
-	}
+	s.StartGame(s.StartMode(s.FallbackGameModeID), s.Map)
 }
 
 func (s *Server) Intermission() {
-	s.GameMode.End()
+	s.Clock.Stop()
 
-	nextMap := s.MapRotation.NextMap(s.GameMode.ID(), s.GameMode.ID(), s.Map)
+	nextMap := s.MapRotation.NextMap(s.GameMode, s.GameMode, s.Map)
 
 	s.PendingMapChange = time.AfterFunc(10*time.Second, func() {
-		s.ChangeMap(s.GameMode.ID(), nextMap)
+		s.StartGame(s.StartMode(s.GameMode.ID()), nextMap)
 	})
 
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
@@ -295,6 +284,17 @@ func (s *Server) Intermission() {
 	if s.StatsServer != nil && s.ReportStats && s.NumClients() > 0 {
 		s.ReportEndgameStats()
 	}
+}
+
+// Returns the number of connected clients playgin (i.e. joined and not spectating)
+func (s *Server) NumberOfPlayers() (n int) {
+	s.Clients.ForEach(func(c *Client) {
+		if c.Peer == nil || !c.Joined || c.State == playerstate.Spectator {
+			return
+		}
+		n++
+	})
+	return
 }
 
 func (s *Server) ReportEndgameStats() {
@@ -333,10 +333,14 @@ func (s *Server) ReAuthClients(domain string) {
 	})
 }
 
-func (s *Server) ChangeMap(mode gamemode.ID, mapname string) {
-	// cancel pending timers
-	if s.GameMode != nil {
-		s.GameMode.CleanUp()
+func (s *Server) StartGame(mode game.Mode, mapname string) {
+	if s.Clock != nil {
+		s.Clock.CleanUp()
+	}
+	if s.CompetitiveMode {
+		s.Clock = game.NewCompetitiveClock(s, mode)
+	} else {
+		s.Clock = game.NewCasualClock(s, mode)
 	}
 
 	// stop any pending map change
@@ -344,12 +348,19 @@ func (s *Server) ChangeMap(mode gamemode.ID, mapname string) {
 		s.PendingMapChange.Stop()
 	}
 
-	s.Map = mapname
-	s.GameMode = s.StartMode(mode)
+	if mapname == "" {
+		mapname = s.MapRotation.NextMap(mode, s.GameMode, s.Map)
+	}
 
-	s.ForEach(s.GameMode.Join)
-	s.Clients.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo())
-	s.GameMode.Start()
+	s.Map = mapname
+	s.GameMode = mode
+
+	if teamedMode, ok := s.GameMode.(game.TeamMode); ok {
+		s.ForEachPlayer(teamedMode.Join)
+	}
+
+	s.Clients.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedsMapInfo())
+	s.Clock.Start()
 	s.MapChange()
 
 	s.Clients.Broadcast(nmc.ServerMessage, s.MessageOfTheDay)
@@ -486,7 +497,7 @@ func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapo
 	}
 }
 
-func (s *Server) ForEach(f func(p *game.Player)) {
+func (s *Server) ForEachPlayer(f func(p *game.Player)) {
 	s.Clients.ForEach(func(c *Client) {
 		f(&c.Player)
 	})

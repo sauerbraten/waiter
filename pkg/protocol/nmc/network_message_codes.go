@@ -30,9 +30,9 @@ const (
 	MapChange
 	VoteMap
 	TeamInfo
-	ITEMSPAWN
-	ITEMPICKUP
-	ITEMACC
+	PickupSpawn
+	PickupTry
+	PickupAck // = ITEMACC
 	Teleport
 	JumpPad
 	Ping // 30
@@ -41,8 +41,8 @@ const (
 	TimeLeft // = TIMEUP
 	ForceIntermission
 	ServerMessage
-	ItemList
-	Resume
+	PickupList
+	PlayerStateList // = RESUME
 	EDITMODE
 	EDITENT
 	EDITF // 40
@@ -81,7 +81,7 @@ const (
 	RecordDemo
 	StopDemo
 	ClearDemos
-	TakeFlag
+	TouchFlag
 	ReturnFlag
 	ResetFlag
 	InvisibleFlag
@@ -106,9 +106,9 @@ const (
 	BOTBALANCE
 	MapCRC
 	CHECKMAPS   // 100
-	ChangeName  // SWITCHNAME
-	ChangeModel // SWITCHMODEL
-	ChangeTeam  // SWITCHTEAM
+	ChangeName  // = SWITCHNAME
+	ChangeModel // = SWITCHMODEL
+	ChangeTeam  // = SWITCHTEAM
 	INITTOKENS
 	TAKETOKEN
 	EXPIRETOKENS
@@ -135,13 +135,13 @@ var ServerOnlyNMCs = []ID{
 	SpawnState,
 	ForceDeath,
 	TeamInfo,
-	ITEMACC,
-	ITEMSPAWN,
+	PickupSpawn,
+	PickupAck,
 	TimeLeft,
 	Leave,
 	CurrentMaster,
 	Pong,
-	Resume,
+	PlayerStateList,
 	BaseScore,
 	BaseInfo,
 	BASEREGEN,

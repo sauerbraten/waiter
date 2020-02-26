@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 )
 
@@ -34,8 +35,8 @@ func (r *Rotation) QueuedMaps() []string {
 
 func (r *Rotation) ClearQueue() { r.queue = r.queue[:0] }
 
-func (r *Rotation) NextMap(mode, currentMode gamemode.ID, currentMap string) string {
-	if mode == currentMode {
+func (r *Rotation) NextMap(requested, current game.Mode, currentMap string) string {
+	if current != nil && requested.ID() == current.ID() {
 		if len(r.queue) > 0 {
 			mapp := r.queue[0]
 			r.queue = r.queue[1:]
@@ -55,9 +56,9 @@ func (r *Rotation) NextMap(mode, currentMode gamemode.ID, currentMap string) str
 		return pool[r.rng.Intn(len(pool))]
 	}
 
-	if gamemode.IsCTF(mode) {
+	if _, ok := requested.(game.CTFMode); ok {
 		return nextMap(r.pools.CTF)
-	} else if gamemode.IsCapture(mode) {
+	} else if _, ok := requested.(game.CaptureMode); ok {
 		return nextMap(r.pools.Capture)
 	} else {
 		return nextMap(r.pools.Deathmatch)

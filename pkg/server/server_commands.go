@@ -8,7 +8,6 @@ import (
 
 	mserver "github.com/sauerbraten/maitred/v2/pkg/client"
 
-	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
@@ -281,12 +280,6 @@ var SetTimeLeft = &ServerCommand{
 			return
 		}
 
-		timedMode, isTimedMode := s.GameMode.(game.TimedMode)
-		if !isTimedMode {
-			c.Send(nmc.ServerMessage, cubecode.Fail("not running a timed mode"))
-			return
-		}
-
 		d, err := time.ParseDuration(args[0])
 		if err != nil {
 			c.Send(nmc.ServerMessage, cubecode.Error("could not parse duration: "+err.Error()))
@@ -300,7 +293,7 @@ var SetTimeLeft = &ServerCommand{
 			s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s set the time remaining to %s", s.Clients.UniqueName(c), d)))
 		}
 
-		timedMode.SetTimeLeft(d)
+		s.Clock.SetTimeLeft(d)
 	},
 }
 

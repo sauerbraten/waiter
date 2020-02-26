@@ -75,11 +75,8 @@ func main() {
 		server.SetTimeLeft,
 	)
 
-	s.GameMode = s.StartMode(conf.FallbackGameMode)
-	s.Map = s.MapRotation.NextMap(conf.FallbackGameMode, conf.FallbackGameMode, "")
-	s.GameMode.Start()
-	s.Unsupervised()
 	s.Empty()
+	s.Unsupervised()
 
 	is, infoInc = StartListeningForInfoRequests(s)
 

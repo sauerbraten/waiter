@@ -3,12 +3,12 @@ package packet
 import (
 	"log"
 	"net"
-	"time"
 
 	"github.com/sauerbraten/waiter/pkg/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/armour"
 	"github.com/sauerbraten/waiter/pkg/protocol/disconnectreason"
+	"github.com/sauerbraten/waiter/pkg/protocol/entity"
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
@@ -55,6 +55,9 @@ func Encode(args ...interface{}) protocol.Packet {
 		case armour.ID:
 			p.PutInt(int32(v))
 
+		case entity.ID:
+			p.PutInt(int32(v))
+
 		case gamemode.ID:
 			p.PutInt(int32(v))
 
@@ -84,9 +87,6 @@ func Encode(args ...interface{}) protocol.Packet {
 
 		case net.IP:
 			p = append(p, v...)
-
-		case time.Duration:
-			p.PutInt(int32(v / time.Second))
 
 		case bool:
 			if v {

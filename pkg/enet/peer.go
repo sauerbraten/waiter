@@ -91,12 +91,14 @@ func (p *Peer) Send(channel uint8, payload []byte) {
 		nmc.InitFlags,
 		nmc.DropFlag,
 		nmc.ReturnFlag,
-		nmc.TakeFlag,
+		nmc.TouchFlag,
 		nmc.ScoreFlag,
 		nmc.ResetFlag,
 		nmc.Spectator,
 		nmc.TeamChatMessage,
-		nmc.Client:
+		nmc.Client,
+		nmc.PickupSpawn,
+		nmc.PickupAck:
 	// do nothing
 	default:
 		log.Println("sending", payload, "to", p.Address.String())

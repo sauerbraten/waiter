@@ -1,56 +1,73 @@
 package game
 
 import (
+	"time"
+
 	"github.com/sauerbraten/waiter/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 )
 
 type Mode interface {
+	HasTimers
 	ID() gamemode.ID
-	NeedMapInfo() bool
-	Join(*Player)
-	Init(*Player) (nmc.ID, []interface{}) // may return an init packet to send to the player
+	NeedsMapInfo() bool
+	Leave(*Player)
 	CanSpawn(*Player) bool
-	Spawn(*Player) // sets armour, ammo, and health
+	Spawn(*PlayerState) // sets armour, ammo, and health
 	HandleFrag(fragger, victim *Player)
+}
+
+type HandlesPackets interface {
 	HandlePacket(*Player, nmc.ID, *protocol.Packet) bool
 }
 
-// no spawn timeout
-type noSpawnWaitMode struct{}
+type noSpawnWait struct{}
 
-func (*noSpawnWaitMode) CanSpawn(*Player) bool { return true }
+func (*noSpawnWait) CanSpawn(*Player) bool { return true }
 
-// no pick-ups, no flags, no bases
-type noItemsMode struct{}
+type fiveSecondsSpawnWait struct{}
 
-func (*noItemsMode) NeedMapInfo() bool { return false }
+func (*fiveSecondsSpawnWait) CanSpawn(p *Player) bool {
+	return p.LastDeath.IsZero() || time.Since(p.LastDeath) > 5*time.Second
+}
 
-func (*noItemsMode) Init(*Player) (nmc.ID, []interface{}) { return nmc.None, nil }
-
-func (*noItemsMode) HandlePacket(*Player, nmc.ID, *protocol.Packet) bool { return false }
-
+// simple frag handling
 type teamlessMode struct {
 	s Server
 }
 
-func newTeamlessMode(s Server) teamlessMode {
-	return teamlessMode{
+func withoutTeams(s Server) *teamlessMode {
+	return &teamlessMode{
 		s: s,
 	}
 }
 
-func (*teamlessMode) Join(*Player) {}
-
-func (*teamlessMode) Leave(*Player) {}
-
-func (tlm *teamlessMode) HandleFrag(actor, victim *Player) {
+func (m *teamlessMode) HandleFrag(actor, victim *Player) {
 	victim.Die()
 	if actor == victim {
 		actor.Frags--
 	} else {
 		actor.Frags++
 	}
-	tlm.s.Broadcast(nmc.Died, victim.CN, actor.CN, actor.Frags, actor.Team.Frags)
+	m.s.Broadcast(nmc.Died, victim.CN, actor.CN, actor.Frags, actor.Team.Frags)
 }
+
+func (m *teamlessMode) Leave(*Player) {}
+
+type HasTimers interface {
+	Pause()
+	Resume()
+	Leave(*Player)
+	CleanUp()
+}
+
+type noTimers struct{}
+
+func (*noTimers) Pause() {}
+
+func (*noTimers) Resume() {}
+
+func (*noTimers) Leave(*Player) {}
+
+func (*noTimers) CleanUp() {}

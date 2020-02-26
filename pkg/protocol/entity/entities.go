@@ -1,7 +1,9 @@
 package entity
 
+type ID int32
+
 const (
-	_ int32 = iota
+	NotUsed ID = iota
 	LIGHT
 	MAPMODEL
 	PLAYERSTART
@@ -9,20 +11,20 @@ const (
 	PARTICLES
 	MAPSOUND
 	SPOTLIGHT
-	PU_SHOTGUN // 8
-	PU_MINIGUN
-	PU_ROCKETLAUNCHER
-	PU_RIFLE
-	PU_GRENADELAUNCHER
-	PU_PISTOL
-	PU_HEALTH
-	PU_BOOST
-	PU_GREENARMOUR
-	PU_YELLOWARMOUR
-	PU_QUAD
-	TELEPORT
-	TELEDEST
-	MONSTER
+	PickupShotgun // 8
+	PickupMinigun
+	PickupRocketLauncher
+	PickupRifle
+	PickupGrenadeLauncher
+	PickupPistol
+	PickupHealth
+	PickupBoost
+	PickupGreenArmour
+	PickupYellowArmor
+	PickupQuadDamage
+	Teleport
+	Teledest
+	Monster
 	CARROT
 	JUMPPAD
 	BASE

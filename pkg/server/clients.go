@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sauerbraten/waiter/internal/net/packet"
 	"github.com/sauerbraten/waiter/pkg/enet"
@@ -103,12 +104,14 @@ func (cm *ClientManager) Relay(from *Client, typ nmc.ID, args ...interface{}) {
 // Sends 'welcome' information to a newly joined client like map, mode, time left, other players, etc.
 func (s *Server) SendWelcome(c *Client) {
 	typ, p := nmc.Welcome, []interface{}{
-		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedMapInfo(), // currently played mode & map
+		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedsMapInfo(), // currently played mode & map
 	}
 
-	timedMode, timed := s.GameMode.(game.TimedMode)
-	if timed {
-		p = append(p, nmc.TimeLeft, timedMode.TimeLeft()) // time left in this round
+	p = append(p, nmc.TimeLeft, int32(s.Clock.TimeLeft()/time.Second)) // time left in this round
+
+	if pickupMode, ok := s.GameMode.(game.PickupMode); ok && !s.GameMode.NeedsMapInfo() {
+		p = append(p, nmc.PickupList)
+		p = append(p, pickupMode.PickupsInitPacket()...)
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level
@@ -117,13 +120,13 @@ func (s *Server) SendWelcome(c *Client) {
 		p = append(p, pupTyp, pup)
 	}
 
-	if timed && timedMode.Paused() {
+	if s.Clock.Paused() {
 		p = append(p, nmc.PauseGame, 1, -1)
 	}
 
-	if teamMode, ok := s.GameMode.(game.Teamed); ok {
+	if teamMode, ok := s.GameMode.(game.TeamMode); ok {
 		p = append(p, nmc.TeamInfo)
-		teamMode.ForEach(func(t *game.Team) {
+		teamMode.ForEachTeam(func(t *game.Team) {
 			if t.Frags > 0 {
 				p = append(p, t.Name, t.Frags)
 			}
@@ -143,10 +146,10 @@ func (s *Server) SendWelcome(c *Client) {
 	}
 
 	// send other players' state (frags, flags, etc.)
-	p = append(p, nmc.Resume)
+	p = append(p, nmc.PlayerStateList)
 	for _, client := range s.Clients.cs {
 		if client != c && client.Peer != nil {
-			p = append(p, client.CN, client.State, client.Frags, client.Flags, client.QuadTimer.TimeLeft(), client.ToWire())
+			p = append(p, client.CN, client.State, client.Frags, client.Flags, int32(client.QuadTimer.TimeLeft()/time.Millisecond), client.ToWire())
 		}
 	}
 	p = append(p, -1)

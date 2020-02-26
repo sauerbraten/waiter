@@ -58,6 +58,19 @@ func NewTimer(d time.Duration) *Timer {
 	return t
 }
 
+// Start starts Timer that will send the current time on its channel after at least duration d.
+func (t *Timer) Start() bool {
+	t.l.Lock()
+	defer t.l.Unlock()
+	if t.state != stateIdle {
+		return false
+	}
+	t.startedAt = time.Now()
+	t.state = stateActive
+	t.t = time.AfterFunc(t.duration, t.fn)
+	return true
+}
+
 // Pause pauses current timer until Start method will be called.
 // Next Start call will wait rest of duration.
 func (t *Timer) Pause() bool {
@@ -75,17 +88,12 @@ func (t *Timer) Pause() bool {
 	return true
 }
 
-// Start starts Timer that will send the current time on its channel after at least duration d.
-func (t *Timer) Start() bool {
+// Paused returns true if the timer is in idle state, either because Start() hasn't been called yet
+// or because Pause() was called.
+func (t *Timer) Paused() bool {
 	t.l.Lock()
 	defer t.l.Unlock()
-	if t.state != stateIdle {
-		return false
-	}
-	t.startedAt = time.Now()
-	t.state = stateActive
-	t.t = time.AfterFunc(t.duration, t.fn)
-	return true
+	return t.state == stateIdle
 }
 
 // Stop prevents the Timer from firing. It returns true if the call stops the timer,
@@ -117,7 +125,7 @@ func (t *Timer) TimeLeft() time.Duration {
 	case stateIdle:
 		return t.duration
 	case stateActive:
-		return time.Now().Sub(t.startedAt)
+		return t.duration - time.Now().Sub(t.startedAt)
 	case stateExpired:
 		return 0
 	default:

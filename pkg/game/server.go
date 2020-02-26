@@ -10,6 +10,7 @@ type Server interface {
 	GameDuration() time.Duration
 	Broadcast(nmc.ID, ...interface{})
 	Intermission()
-	ForEach(func(*Player))
+	ForEachPlayer(func(*Player))
 	UniqueName(*Player) string
+	NumberOfPlayers() int
 }

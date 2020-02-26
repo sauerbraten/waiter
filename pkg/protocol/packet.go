@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/sauerbraten/waiter/pkg/geom"
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 )
 
@@ -134,4 +135,16 @@ func (p *Packet) GetString() (s string, ok bool) {
 		}
 		s += string(cubecode.ToUnicode(cpoint))
 	}
+}
+
+func (p *Packet) GetVector() (*geom.Vector, bool) {
+	xyz := [3]float64{}
+	for i := range xyz {
+		coord, ok := p.GetInt()
+		if !ok {
+			return nil, false
+		}
+		xyz[i] = float64(coord)
+	}
+	return geom.NewVector(xyz[0], xyz[1], xyz[2]), true
 }

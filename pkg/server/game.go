@@ -1,36 +1,37 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/sauerbraten/waiter/pkg/game"
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 )
 
-func (s *Server) StartMode(id gamemode.ID) game.TimedMode {
-	casual := game.NewCasual(s)
-	var t game.Timed = &casual
-	if s.CompetitiveMode {
-		comp := game.NewCompetitivelyTimed(s, casual)
-		t = &comp
-	}
-
+func (s *Server) StartMode(id gamemode.ID) game.Mode {
 	switch id {
+	case gamemode.FFA:
+		return game.NewFFA(s)
 	case gamemode.Insta:
-		return game.NewInsta(s, t)
+		return game.NewInsta(s)
 	case gamemode.InstaTeam:
-		return game.NewInstaTeam(s, s.KeepTeams, t)
+		return game.NewInstaTeam(s, s.KeepTeams)
 	case gamemode.Effic:
-		return game.NewEffic(s, t)
+		return game.NewEffic(s)
+	case gamemode.Teamplay:
+		return game.NewTeamplay(s, s.KeepTeams)
 	case gamemode.EfficTeam:
-		return game.NewEfficTeam(s, s.KeepTeams, t)
+		return game.NewEfficTeam(s, s.KeepTeams)
 	case gamemode.Tactics:
-		return game.NewTactics(s, t)
+		return game.NewTactics(s)
 	case gamemode.TacticsTeam:
-		return game.NewTacticsTeam(s, s.KeepTeams, t)
+		return game.NewTacticsTeam(s, s.KeepTeams)
+	case gamemode.CTF:
+		return game.NewCTF(s, s.KeepTeams)
 	case gamemode.InstaCTF:
-		return game.NewInstaCTF(s, s.KeepTeams, t)
+		return game.NewInstaCTF(s, s.KeepTeams)
 	case gamemode.EfficCTF:
-		return game.NewEfficCTF(s, s.KeepTeams, t)
+		return game.NewEfficCTF(s, s.KeepTeams)
 	default:
-		return nil
+		panic(fmt.Sprintf("unhandled gamemode ID %d", id))
 	}
 }

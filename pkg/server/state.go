@@ -8,8 +8,9 @@ import (
 )
 
 type State struct {
+	Clock      game.Clock
 	MasterMode mastermode.ID
-	GameMode   game.TimedMode // server only supports timed modes atm
+	GameMode   game.Mode
 	Map        string
 	UpSince    time.Time
 	NumClients func() int // number of clients connected

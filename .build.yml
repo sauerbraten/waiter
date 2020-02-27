@@ -9,8 +9,8 @@ packages:
   - make
   - rsync
 sources:
-  - https://github.com/sauerbraten/waiter.git
-  - https://github.com/lsalzman/enet.git
+  - https://github.com/sauerbraten/waiter
+  - https://github.com/lsalzman/enet
 environment:
   DEPLOY: p1x.pw
   GOFLAGS: '-mod=vendor'
@@ -31,6 +31,7 @@ tasks:
       make all
   - deploy: |
       cd waiter
+      if [[ $GITHUB_REF != "refs/heads/master" ]]; then exit 0; fi # only deploy master branch
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/waiter'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq waiter bans.json config.json users.json ~/.statsauth_admin_key ci@$DEPLOY:~/waiter/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall waiter || true'

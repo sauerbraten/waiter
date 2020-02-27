@@ -9,8 +9,8 @@ A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 
 What works:
 
-- insta, insta team, effic, effic team, tactics, tactics team
-- insta ctf, effic ctf
+- ffa, insta, insta team, effic, effic team, tactics, tactics team
+- ctf, insta ctf, effic ctf
 - chat, team chat
 - changing weapon, shooting, killing, suiciding, spawning
 - global auth (`/auth` and `/authkick`)
@@ -34,9 +34,7 @@ These can be used either as `#cmd bla foo` or `/servcmd cmd bla foo`:
 
 Pretty much everything else is not yet implemented:
 
-- spawning pick ups (ammo, armour, quad, ...)
-- picking up those pick ups
-- any modes requiring items (e.g. ffa) or bases (capture) or tokens (collect)
+- any modes requiring bases (capture) or tokens (collect)
 - demo recording
 - `/checkmaps` (will compare against server-side hash, not majority)
 - overtime (& maybe golden goal)
@@ -58,10 +56,9 @@ You can then start the server with `./waiter`. The server requires `config.json`
 
 ## To Do
 
-- implement ffa (item pick ups), capture and regen capture (capture base events)
+- capture and regen capture (capture base events)
 - intermission stats (depending on mode)
 - #stats command
-- competitive mode (auto-pause on leave, specs muted for players, ...)
 - store frags, deaths, etc. in case a player re-connects
 
 

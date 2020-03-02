@@ -1,16 +1,12 @@
-image: alpine/latest
+image: alpine/edge
 packages:
-  - autoconf
-  - automake
-  - g++
+  - enet
   - git
   - go
-  - libtool
   - make
   - rsync
 sources:
   - https://github.com/sauerbraten/waiter
-  - https://github.com/lsalzman/enet
 environment:
   DEPLOY: p1x.pw
   GOFLAGS: '-mod=vendor'
@@ -21,12 +17,7 @@ tasks:
   - version: |
       cd waiter
       sed -i "s/<filled in by CI service>/$(git rev-parse --short HEAD)/" config.json
-  - build_enet: |
-      cd enet
-      autoreconf -vfi
-      ./configure && make
   - build: |
-      export CGO_CFLAGS="-I $HOME/enet/include" CGO_LDFLAGS="-L$HOME/enet/.libs/"
       cd waiter
       make all
   - deploy: |

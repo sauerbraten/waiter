@@ -56,6 +56,7 @@ func New(host *enet.Host, conf *Config, banManager *bans.BanManager, commands ..
 		host:   host,
 		Config: conf,
 		State: &State{
+			MasterMode: mastermode.Auth,
 			UpSince:    time.Now(),
 			NumClients: clients.NumberOfClientsConnected,
 		},
@@ -259,7 +260,7 @@ func (s *Server) AuthKick(client *Client, rol role.ID, domain, name string, vict
 
 func (s *Server) Unsupervised() {
 	s.Clock.Resume(nil)
-	s.MasterMode = mastermode.Open
+	s.MasterMode = mastermode.Auth
 	s.KeepTeams = false
 	s.CompetitiveMode = false
 	s.ReportStats = true
@@ -369,6 +370,10 @@ func (s *Server) StartGame(mode game.Mode, mapname string) {
 func (s *Server) SetMasterMode(c *Client, mm mastermode.ID) {
 	if mm < mastermode.Open || mm > mastermode.Private {
 		log.Println("invalid mastermode", mm, "requested")
+		return
+	}
+	if mm == mastermode.Open {
+		c.Send(nmc.ServerMessage, cubecode.Fail("'open' mode is not supported by this server"))
 		return
 	}
 	if c.Role == role.None {

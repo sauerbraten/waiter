@@ -98,7 +98,7 @@ func main() {
 	ms.Start()
 
 	// stats auth master server
-	statsMS, authInc, authOut, bansInc := mserver.NewVanilla(
+	s.StatsServer, authInc, authOut, bansInc = mserver.NewVanilla(
 		conf.StatsServerAddress,
 		func(c *mserver.VanillaClient) {
 			c.Register(conf.ListenPort)
@@ -126,7 +126,7 @@ func main() {
 	)
 	providers[conf.StatsServerAuthDomain] = auth.NewRemoteProvider(authInc, authOut, role.None)
 	go bm.Handle(suffixed(bansInc, conf.StatsServerAuthDomain))
-	statsMS.Start()
+	s.StatsServer.Start()
 
 	s.AuthManager = auth.NewManager(providers)
 

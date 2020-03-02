@@ -1,6 +1,6 @@
 image: alpine/edge
 packages:
-  - enet
+  - enet-dev
   - git
   - go
   - make

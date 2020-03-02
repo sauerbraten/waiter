@@ -93,7 +93,7 @@ func main() {
 		func(c *mserver.VanillaClient) { c.Register(conf.ListenPort) },
 		func(c *mserver.VanillaClient) { s.ReAuthClients("") },
 	)
-	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.None)
+	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.Auth)
 	go bm.Handle(suffixed(bansInc, "sauerbraten.org"))
 	ms.Start()
 

@@ -283,7 +283,9 @@ func (s *Server) Intermission() {
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
 
 	if s.StatsServer != nil && s.ReportStats && s.NumClients() > 0 {
-		s.ReportEndgameStats()
+		if _, ok := s.StatsServer.(*mserver.StatsClient); ok {
+			s.ReportEndgameStats()
+		}
 	}
 }
 

@@ -149,7 +149,7 @@ func (s *Server) SendWelcome(c *Client) {
 	p = append(p, nmc.PlayerStateList)
 	for _, client := range s.Clients.cs {
 		if client != c && client.Peer != nil {
-			p = append(p, client.CN, client.State, client.Frags, client.Flags, int32(client.QuadTimer.TimeLeft()/time.Millisecond), client.ToWire())
+			p = append(p, client.CN, client.State, client.Frags, client.Flags, client.Deaths, int32(client.QuadTimer.TimeLeft()/time.Millisecond), client.ToWire())
 		}
 	}
 	p = append(p, -1)

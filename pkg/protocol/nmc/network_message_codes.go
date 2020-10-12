@@ -55,67 +55,70 @@ const (
 	REPLACE
 	DELCUBE
 	REMIP
-	NEWMAP // 50
+	EDITVSLOT // 50
+	UNDO
+	REDO
+	NEWMAP
 	GETMAP
 	SENDMAP
 	CLIPBOARD
 	EDITVAR
 	MasterMode
 	Kick
-	ClearBans
+	ClearBans // 60
 	CurrentMaster
 	Spectator
-	SetMaster // 60
+	SetMaster
 	SetTeam
 	Bases
 	BaseInfo
 	BaseScore
 	REPAMMO
 	BASEREGEN
-	ANNOUNCE
+	ANNOUNCE // 70
 	ListDemos
 	SendDemoList
-	GetDemo // 70
+	GetDemo
 	SendDemo
 	DemoPlayback
 	RecordDemo
 	StopDemo
 	ClearDemos
 	TouchFlag
-	ReturnFlag
+	ReturnFlag // 80
 	ResetFlag
 	InvisibleFlag
-	TryDropFlag // 80
+	TryDropFlag
 	DropFlag
 	ScoreFlag
 	InitFlags
 	TeamChatMessage
 	Client
 	AuthTry
-	AuthKick
+	AuthKick // 90
 	AuthChallenge
 	AuthAnswer
-	RequestAuth // 90
+	RequestAuth
 	PauseGame
 	GAMESPEED
 	ADDBOT
 	DELBOT
 	INITAI
 	FROMAI
-	BOTLIMIT
+	BOTLIMIT // 100
 	BOTBALANCE
 	MapCRC
-	CHECKMAPS   // 100
+	CHECKMAPS
 	ChangeName  // = SWITCHNAME
 	ChangeModel // = SWITCHMODEL
 	ChangeTeam  // = SWITCHTEAM
 	INITTOKENS
 	TAKETOKEN
 	EXPIRETOKENS
-	DROPTOKENS
+	DROPTOKENS // 110
 	DEPOSITTOKENS
 	STEALTOKENS
-	ServerCommand // 110
+	ServerCommand
 	DEMOPACKET
 	//NUMMSG
 )

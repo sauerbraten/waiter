@@ -4,6 +4,9 @@ A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 
     /connect p1x.pw
 
+## SVN
+
+There's an SVN-compatible version in the [**protocol-260**](https://github.com/sauerbraten/waiter/tree/protocol-260/) branch.
 
 ## Features
 
@@ -46,13 +49,11 @@ Some things are specifically not planned and will likely never be implemented:
 - coop edit mode (including `/sendmap` and `/getmap`)
 - claiming privileges using `/setmaster 1` (relinquishing them with `/setmaster 0` and sharing master using `/setmaster 1 <cn>` already works)
 
-
 ## Building
 
 Make sure you have Go installed as well as the ENet development headers (on Fedora: `sudo dnf install enet-devel`, on macOS: `brew install enet`). Clone the repository, `cd waiter`, then `make all`.
 
 You can then start the server with `./waiter`. The server requires `config.json`, `bans.json` and `users.json` to be placed in the working directory.
-
 
 ## To Do
 
@@ -60,7 +61,6 @@ You can then start the server with `./waiter`. The server requires `config.json`
 - intermission stats (depending on mode)
 - #stats command
 - store frags, deaths, etc. in case a player re-connects
-
 
 ## Project Structure
 
@@ -72,7 +72,6 @@ Other interesting packages:
 - [`pkg/enet`](pkg/enet)
 
 In [`cmd/genauth`](cmd/genauth), there is a command to generate auth keys for users. While you can use auth keys generated with Sauerbraten's `/genauthkey` command, `genauth` provides better output (`auth.cfg` line for the player, JSON object for this server's `users.json` file).
-
 
 ## Why?
 

@@ -1,3 +1,3 @@
 package protocol
 
-const Version = 259
+const Version = 260

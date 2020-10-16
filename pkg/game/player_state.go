@@ -113,8 +113,8 @@ func (ps *PlayerState) Pickup(p *timedPickup) {
 	}
 	switch p.Typ {
 	case entity.PickupBoost:
-		ps.MaxHealth = min(ps.MaxHealth+p.Amount, p.MaxAmount)
-		fallthrough
+		ps.MaxHealth = min(ps.MaxHealth+p.Amount, p.MaxAmount) // add 50 to max health
+		ps.Health = min(ps.Health+(2*p.Amount), ps.MaxHealth)  // add 100 to health
 	case entity.PickupHealth:
 		ps.Health = min(ps.Health+p.Amount, ps.MaxHealth)
 	case entity.PickupGreenArmour:

@@ -21,8 +21,8 @@ tasks:
       cd waiter
       make all
   - deploy: |
-      cd waiter
       if [[ $GITHUB_REF != "refs/heads/master" ]]; then exit 0; fi # only deploy master branch
+      cd waiter
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/waiter'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq waiter bans.json config.json users.json ~/.statsauth_admin_key ci@$DEPLOY:~/waiter/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd waiter; echo STATSAUTH_ADMIN_NAME=p1x.pw > .env; echo STATSAUTH_ADMIN_KEY=$(cat .statsauth_admin_key) >> .env; sudo systemctl restart waiter'

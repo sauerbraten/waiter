@@ -13,7 +13,7 @@
 	"listen_address": "0.0.0.0",
 
 	// listen port
-	"listen_port": 28785,
+	"listen_port": 38785,
 
 	// server description
 	"server_description": "p1x.pw @ <filled in by CI service>",

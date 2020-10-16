@@ -19,7 +19,7 @@ var Pickups map[ID]Pickup = map[ID]Pickup{
 	PickupGrenadeLauncher: Pickup{PickupGrenadeLauncher, sound.PickUpAmmo, 10, 30},
 	PickupPistol:          Pickup{PickupPistol, sound.PickUpAmmo, 30, 120},
 	PickupHealth:          Pickup{PickupHealth, sound.PickUpHealth, 25, 100},
-	PickupBoost:           Pickup{PickupBoost, sound.PickUpHealth, 10, 1000},
+	PickupBoost:           Pickup{PickupBoost, sound.PickUpHealth, 50, 200},
 	PickupGreenArmour:     Pickup{PickupGreenArmour, sound.PickUpArmour, 100, 100},
 	PickupYellowArmor:     Pickup{PickupYellowArmor, sound.PickUpArmour, 200, 200},
 	PickupQuadDamage:      Pickup{PickupQuadDamage, sound.PickUpQuaddamage, 20000, 30000},

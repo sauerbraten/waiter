@@ -22,7 +22,7 @@ type ServerCommand struct {
 }
 
 func (cmd *ServerCommand) String() string {
-	return fmt.Sprintf("%s %s", cubecode.Green(cmd.name), cmd.argsFormat)
+	return fmt.Sprintf("%s %s", cubecode.Green("#"+cmd.name), cmd.argsFormat)
 }
 
 func (cmd *ServerCommand) Detailed() string {
@@ -79,24 +79,28 @@ func (sc *ServerCommands) PrintCommands(c *Client) {
 
 func (sc *ServerCommands) Handle(c *Client, msg string) {
 	parts := strings.Split(strings.TrimSpace(msg), " ")
-	commandName, args := parts[0], parts[1:]
+	command, args := parts[0], parts[1:]
 
-	switch commandName {
+	switch command {
 	case "help", "commands":
 		if len(args) == 0 {
 			sc.PrintCommands(c)
 			return
 		}
-		if cmd, ok := sc.byAlias[args[0]]; ok {
+		name := args[0]
+		if strings.HasPrefix(name, "#") {
+			name = name[1:]
+		}
+		if cmd, ok := sc.byAlias[name]; ok {
 			c.Send(nmc.ServerMessage, cmd.Detailed())
 		} else {
-			c.Send(nmc.ServerMessage, cubecode.Fail("unknown command '"+args[0]+"'"))
+			c.Send(nmc.ServerMessage, cubecode.Fail("unknown command '"+name+"'"))
 		}
 
 	default:
-		cmd, ok := sc.byAlias[commandName]
+		cmd, ok := sc.byAlias[command]
 		if !ok {
-			c.Send(nmc.ServerMessage, cubecode.Fail("unknown command '"+commandName+"'"))
+			c.Send(nmc.ServerMessage, cubecode.Fail("unknown command '"+command+"'"))
 			return
 		}
 
@@ -317,7 +321,7 @@ var RegisterPubkey = &ServerCommand{
 		}
 
 		if len(args) < 1 {
-			c.Send(nmc.ServerMessage, cubecode.Fail("you have to include a public key: /servcmd register [name] <pubkey>"))
+			c.Send(nmc.ServerMessage, cubecode.Fail(fmt.Sprintf("follow the instructions at https://%s/gen/%s", s.StatsServerAuthDomain, c.Name)))
 			return
 		}
 
@@ -325,7 +329,7 @@ var RegisterPubkey = &ServerCommand{
 		if len(args) < 2 {
 			gauth, ok := c.Authentications[""]
 			if !ok {
-				c.Send(nmc.ServerMessage, cubecode.Fail("you have to claim gauth (to use your gauth name) or provide a name: /servcmd register [name] <pubkey>"))
+				c.Send(nmc.ServerMessage, cubecode.Fail("you have to claim gauth (to use your gauth name) or provide a name: #register [name] <pubkey>"))
 				return
 			}
 			name, pubkey = gauth.name, args[0]
@@ -334,7 +338,7 @@ var RegisterPubkey = &ServerCommand{
 		}
 
 		if pubkey == "" {
-			c.Send(nmc.ServerMessage, cubecode.Fail("you have to provide your public key: /servcmd register [name] <pubkey>"))
+			c.Send(nmc.ServerMessage, cubecode.Fail("you have to provide your public key: #register [name] <pubkey>"))
 			return
 		}
 

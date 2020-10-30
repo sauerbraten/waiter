@@ -9,6 +9,7 @@ import (
 
 	"github.com/sauerbraten/maitred/v2/pkg/auth"
 	mserver "github.com/sauerbraten/maitred/v2/pkg/client"
+	mprotocol "github.com/sauerbraten/maitred/v2/pkg/protocol"
 
 	"github.com/sauerbraten/waiter/internal/relay"
 	"github.com/sauerbraten/waiter/pkg/bans"
@@ -35,7 +36,8 @@ type Server struct {
 	Clients          *ClientManager
 	AuthManager      *auth.Manager
 	BanManager       *bans.BanManager
-	StatsServer      mserver.Client
+	StatsServer      *mserver.Client
+	StatsServerAdmin *mserver.Admin
 	MapRotation      *maprot.Rotation
 	PendingMapChange *time.Timer
 	callbacks        chan<- func()
@@ -283,7 +285,7 @@ func (s *Server) Intermission() {
 	s.Clients.Broadcast(nmc.ServerMessage, "next up: "+nextMap)
 
 	if s.StatsServer != nil && s.ReportStats && s.NumClients() > 0 {
-		if _, ok := s.StatsServer.(*mserver.StatsClient); ok {
+		if s.StatsServer.HasExtension(mprotocol.SuccStats) {
 			s.ReportEndgameStats()
 		}
 	}

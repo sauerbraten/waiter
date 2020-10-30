@@ -28,7 +28,7 @@ var (
 	bm *bans.BanManager
 
 	// master server
-	ms *mserver.VanillaClient
+	ms *mserver.Client
 
 	// info server
 	is      *infoServer
@@ -88,22 +88,22 @@ func main() {
 		authOut chan<- string
 		bansInc <-chan string
 	)
-	ms, authInc, authOut, bansInc = mserver.NewVanilla(
+	ms, authInc, authOut, bansInc = mserver.New(
 		conf.MasterServerAddress,
-		func(c *mserver.VanillaClient) { c.Register(conf.ListenPort) },
-		func(c *mserver.VanillaClient) { s.ReAuthClients("") },
+		func(c *mserver.Client) { c.Register(conf.ListenPort) },
+		func(c *mserver.Client) { s.ReAuthClients("") },
 	)
 	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.Auth)
 	go bm.Handle(suffixed(bansInc, "sauerbraten.org"))
 	ms.Start()
 
 	// stats auth master server
-	s.StatsServer, authInc, authOut, bansInc = mserver.NewVanilla(
+	s.StatsServer, authInc, authOut, bansInc = mserver.New(
 		conf.StatsServerAddress,
-		func(c *mserver.VanillaClient) {
+		func(c *mserver.Client) {
 			c.Register(conf.ListenPort)
 
-			s.StatsServer = mserver.NewStats(
+			mserver.ExtendWithStats(
 				c,
 				func(reqID uint32) { s.HandleSuccStats(reqID) },
 				func(reqID uint32, reason string) { s.HandleFailStats(reqID, reason) },
@@ -115,14 +115,16 @@ func main() {
 				if err != nil {
 					log.Fatalln(err)
 				}
-				s.StatsServer = mserver.NewAdmin(s.StatsServer, adminName, adminKey)
-				s.StatsServer.(*mserver.AdminClient).Upgrade(
-					func() { s.Commands.Register(server.RegisterPubkey) },
+				mserver.NewAdmin(s.StatsServer, adminName, adminKey,
+					func(ac *mserver.Admin) {
+						s.StatsServerAdmin = ac
+						s.Commands.Register(server.RegisterPubkey)
+					},
 					func() { s.Commands.Unregister(server.RegisterPubkey) },
 				)
 			}
 		},
-		func(*mserver.VanillaClient) { s.ReAuthClients(conf.StatsServerAuthDomain) },
+		func(*mserver.Client) { s.ReAuthClients(conf.StatsServerAuthDomain) },
 	)
 	providers[conf.StatsServerAuthDomain] = auth.NewRemoteProvider(authInc, authOut, role.None)
 	go bm.Handle(suffixed(bansInc, conf.StatsServerAuthDomain))

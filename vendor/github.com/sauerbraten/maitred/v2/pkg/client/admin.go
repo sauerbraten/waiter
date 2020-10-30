@@ -8,91 +8,73 @@ import (
 	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
-type AdminClient struct {
-	Client
+type Admin struct {
+	*Client
 	name      string
 	privKey   auth.PrivateKey
 	ids       *protocol.IDCycle
 	callbacks map[uint32]func(string)
 }
 
-func NewAdmin(c Client, name string, privKey auth.PrivateKey) *AdminClient {
-	if ac, ok := c.(*AdminClient); ok {
-		return ac
-	}
-
-	return &AdminClient{
+func NewAdmin(c *Client, name string, privKey auth.PrivateKey, onSuccess func(*Admin), onFailure func()) *Admin {
+	ac := &Admin{
 		Client:    c,
 		name:      name,
 		privKey:   privKey,
 		ids:       new(protocol.IDCycle),
 		callbacks: map[uint32]func(string){},
 	}
-}
 
-func (c *AdminClient) Upgrade(onSuccess, onFailure func()) {
-	c.Logf("trying to upgrade to admin connection")
-	reqID := c.ids.Next()
-	c.callbacks[reqID] = func(reason string) {
+	extensions := map[string]func(string){
+		protocol.ChalAdmin:   ac.handleChalAdmin,
+		protocol.SuccAdmin:   ac.handleSuccAdmin,
+		protocol.FailAdmin:   ac.handleFailAdmin,
+		protocol.SuccAddAuth: ac.handleSuccAddAuth,
+		protocol.FailAddAuth: ac.handleFailAddAuth,
+		protocol.SuccDelAuth: ac.handleSuccDelAuth,
+		protocol.FailDelAuth: ac.handleFailDelAuth,
+	}
+
+	for cmd, handler := range extensions {
+		c.RegisterExtension(cmd, handler)
+	}
+
+	ac.Logf("trying to upgrade to admin connection")
+	reqID := ac.ids.Next()
+	ac.callbacks[reqID] = func(reason string) {
 		if reason == "" {
-			c.Logf("successfully upgraded connection to admin connection")
+			ac.Logf("successfully upgraded connection to admin connection")
 			if onSuccess != nil {
-				onSuccess()
+				onSuccess(ac)
 			}
 			return
 		}
-		c.Logf("upgrading connection to admin connection failed: %s", reason)
+		ac.Logf("upgrading connection to admin connection failed: %s", reason)
+		for cmd := range extensions {
+			c.UnregisterExtension(cmd)
+		}
 		if onFailure != nil {
 			onFailure()
 		}
 	}
-	c.Client.Send("%s %d %s", protocol.ReqAdmin, reqID, c.name)
+	ac.Client.Send("%s %d %s", protocol.ReqAdmin, reqID, ac.name)
+
+	return ac
 }
 
-func (c *AdminClient) AddAuth(name, pubkey string, callback func(string)) {
+func (c *Admin) AddAuth(name, pubkey string, callback func(string)) {
 	reqID := c.ids.Next()
 	c.callbacks[reqID] = callback
 	c.Send("%s %d %s %s", protocol.AddAuth, reqID, name, pubkey)
 }
 
-func (c *AdminClient) DelAuth(name string, callback func(string)) {
+func (c *Admin) DelAuth(name string, callback func(string)) {
 	reqID := c.ids.Next()
 	c.callbacks[reqID] = callback
 	c.Send("%s %d %s", protocol.DelAuth, reqID, name)
 }
 
-func (c *AdminClient) Handle(msg string) {
-	cmd := strings.Split(msg, " ")[0]
-	args := strings.TrimSpace(msg[len(cmd):])
-
-	switch cmd {
-	case protocol.ChalAdmin:
-		c.handleChalAdmin(args)
-
-	case protocol.SuccAdmin:
-		c.handleSuccAdmin(args)
-
-	case protocol.FailAdmin:
-		c.handleFailAdmin(args)
-
-	case protocol.SuccAddAuth:
-		c.handleSuccAddAuth(args)
-
-	case protocol.FailAddAuth:
-		c.handleFailAddAuth(args)
-
-	case protocol.SuccDelAuth:
-		c.handleSuccDelAuth(args)
-
-	case protocol.FailDelAuth:
-		c.handleFailDelAuth(args)
-
-	default:
-		c.Client.Handle(msg)
-	}
-}
-
-func (c *AdminClient) handleChalAdmin(args string) {
+func (c *Admin) handleChalAdmin(args string) {
 	var reqID uint32
 	var challenge string
 	_, err := fmt.Sscanf(args, "%d %s", &reqID, &challenge)
@@ -110,7 +92,7 @@ func (c *AdminClient) handleChalAdmin(args string) {
 	c.Client.Send("%s %d %s", protocol.ConfAdmin, reqID, answer)
 }
 
-func (c *AdminClient) handleSuccAdmin(args string) {
+func (c *Admin) handleSuccAdmin(args string) {
 	var reqID uint32
 	_, err := fmt.Sscanf(args, "%d", &reqID)
 	if err != nil {
@@ -123,7 +105,7 @@ func (c *AdminClient) handleSuccAdmin(args string) {
 	}
 }
 
-func (c *AdminClient) handleFailAdmin(args string) {
+func (c *Admin) handleFailAdmin(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 
 	var reqID uint32
@@ -140,7 +122,7 @@ func (c *AdminClient) handleFailAdmin(args string) {
 	}
 }
 
-func (c *AdminClient) handleSuccAddAuth(args string) {
+func (c *Admin) handleSuccAddAuth(args string) {
 	var reqID uint32
 	_, err := fmt.Sscanf(args, "%d", &reqID)
 	if err != nil {
@@ -153,7 +135,7 @@ func (c *AdminClient) handleSuccAddAuth(args string) {
 	}
 }
 
-func (c *AdminClient) handleFailAddAuth(args string) {
+func (c *Admin) handleFailAddAuth(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 
 	var reqID uint32
@@ -170,7 +152,7 @@ func (c *AdminClient) handleFailAddAuth(args string) {
 	}
 }
 
-func (c *AdminClient) handleSuccDelAuth(args string) {
+func (c *Admin) handleSuccDelAuth(args string) {
 	var reqID uint32
 	_, err := fmt.Sscanf(args, "%d", &reqID)
 	if err != nil {
@@ -183,7 +165,7 @@ func (c *AdminClient) handleSuccDelAuth(args string) {
 	}
 }
 
-func (c *AdminClient) handleFailDelAuth(args string) {
+func (c *Admin) handleFailDelAuth(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 
 	var reqID uint32

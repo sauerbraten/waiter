@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	mserver "github.com/sauerbraten/maitred/v2/pkg/client"
-
 	"github.com/sauerbraten/waiter/pkg/protocol/cubecode"
 	"github.com/sauerbraten/waiter/pkg/protocol/mastermode"
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
@@ -309,8 +307,7 @@ var RegisterPubkey = &ServerCommand{
 			return
 		}
 
-		statsAuthAdmin, ok := s.StatsServer.(*mserver.AdminClient)
-		if !ok {
+		if s.StatsServerAdmin == nil {
 			c.Send(nmc.ServerMessage, cubecode.Error("no admin connection to stats server"))
 		}
 
@@ -341,7 +338,7 @@ var RegisterPubkey = &ServerCommand{
 			return
 		}
 
-		statsAuthAdmin.AddAuth(name, pubkey,
+		s.StatsServerAdmin.AddAuth(name, pubkey,
 			func(err string) {
 				if err != "" {
 					c.Send(nmc.ServerMessage, cubecode.Error("creating your account failed: "+err))

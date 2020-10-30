@@ -95,8 +95,8 @@ github.com/sauerbraten/cubecode v0.0.0-20191118162217-05ee938b0ef7/go.mod h1:+ca
 github.com/sauerbraten/extinfo v0.0.0-20190220141329-a4ae380e7098/go.mod h1:XHlJGWp1c5K8QS++uVYpUZbW/rj12vjrqbAL5pEjyGU=
 github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6 h1:t8t1qFy+UZB6/+QUBR1Jo/vjm1AATLRw4r4HhTZea2g=
 github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6/go.mod h1:pcalAADtEjWDv9vefUiKfVm6eu9ushOKLSIOrxeSWcI=
-github.com/sauerbraten/maitred/v2 v2.0.1-0.20200225134802-4db1920ff53d h1:TsDk1WWkFG3f9yoxv6wG/xeDeJVNaX6czV1doNgs7AQ=
-github.com/sauerbraten/maitred/v2 v2.0.1-0.20200225134802-4db1920ff53d/go.mod h1:cMGGwNHTjnhq6bgVy3mZD5tHuzqrWWvCxPxAAovzHYg=
+github.com/sauerbraten/maitred/v2 v2.0.1-0.20201030233054-5b5d626a6e8f h1:YGr1WEGT8s9ZX60K49QesPq7QJ06b2JRZ3wAFkL+UeU=
+github.com/sauerbraten/maitred/v2 v2.0.1-0.20201030233054-5b5d626a6e8f/go.mod h1:cMGGwNHTjnhq6bgVy3mZD5tHuzqrWWvCxPxAAovzHYg=
 github.com/sauerbraten/timer v0.0.0-20200229222506-392f4104f146 h1:7noQZBwc1FhiSEeT8lJd4Zx6rtc29iMSxU+2Ijc/e4g=
 github.com/sauerbraten/timer v0.0.0-20200229222506-392f4104f146/go.mod h1:kpY+fYYBsUQAY0+TGbmNRjInW9hQ7frptaXKCAkzPM0=
 github.com/sauerbraten/waiter v0.0.0-20190404224729-ddb62a3cdaab/go.mod h1:tUExApXkKFw8wk8yVJBsM1Hf/CKCa+/WnDnHcxhXGhU=

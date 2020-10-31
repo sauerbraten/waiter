@@ -73,6 +73,7 @@ func main() {
 		server.ToggleReportStats,
 		server.LookupIPs,
 		server.SetTimeLeft,
+		server.CheckAuthStatus,
 	)
 
 	s.Empty()

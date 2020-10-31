@@ -239,13 +239,13 @@ var ToggleReportStats = &ServerCommand{
 
 var LookupIPs = &ServerCommand{
 	name:        "ip",
-	argsFormat:  "name|cn...",
+	argsFormat:  "[name|cn]...",
 	aliases:     []string{"ips"},
-	description: "prints the IP of the player(s) identified by their name or cn",
+	description: "prints the IP of the player(s) identified by their name or cn, or your own when called with no argument",
 	minRole:     role.Admin,
 	f: func(s *Server, c *Client, args []string) {
 		if len(args) < 1 {
-			return
+			args = []string{c.Name}
 		}
 		for _, query := range args {
 			var target *Client
@@ -269,7 +269,7 @@ var LookupIPs = &ServerCommand{
 
 var SetTimeLeft = &ServerCommand{
 	name:        "settime",
-	argsFormat:  "[Xm]Ys",
+	argsFormat:  "[Xm][Ys]",
 	aliases:     []string{"time", "settimeleft", "settimeremaining", "timeleft", "timeremaining"},
 	description: "sets the time remaining to play to X minutes and Y seconds",
 	minRole:     role.Admin,
@@ -349,5 +349,51 @@ var RegisterPubkey = &ServerCommand{
 				c.Send(nmc.ServerMessage, "type '/autoauth 1', then '/reconnect' to try out your new key")
 			},
 		)
+	},
+}
+
+var CheckAuthStatus = &ServerCommand{
+	name:        "auth",
+	argsFormat:  "[name|cn]...",
+	aliases:     []string{"checkauth", "authstatus", "auths"},
+	description: "prints the auth status of the player(s) identified by their name or cn, or your own when called with no argument",
+	minRole:     role.Auth,
+	f: func(s *Server, c *Client, args []string) {
+		if len(args) < 1 {
+			args = []string{c.Name}
+		}
+
+		for _, query := range args {
+			var target *Client
+			// try CN
+			cn, err := strconv.Atoi(query)
+			if err == nil {
+				target = s.Clients.GetClientByCN(uint32(cn))
+			}
+			if err != nil || target == nil {
+				target = s.Clients.FindClientByName(query)
+			}
+
+			if target != nil {
+				if len(c.Authentications) == 0 {
+					c.Send(nmc.ServerMessage, fmt.Sprintf("%s has not authenticated", s.Clients.UniqueName(target)))
+					continue
+				}
+				auths := []string{}
+				// always put gauth first
+				if auth, ok := c.Authentications[""]; ok {
+					auths = append(auths, fmt.Sprintf("'%s'", cubecode.Magenta(auth.name)))
+				}
+				for domain, auth := range c.Authentications {
+					if domain == "" {
+						continue
+					}
+					auths = append(auths, fmt.Sprintf("'%s' [%s]", cubecode.Magenta(auth.name), cubecode.Green(domain)))
+				}
+				c.Send(nmc.ServerMessage, fmt.Sprintf("%s authenticated as %s", s.Clients.UniqueName(target), strings.Join(auths, ", ")))
+			} else {
+				c.Send(nmc.ServerMessage, fmt.Sprintf("could not find a client matching '%s'", query))
+			}
+		}
 	},
 }

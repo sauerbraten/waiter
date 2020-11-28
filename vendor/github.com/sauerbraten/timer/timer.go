@@ -96,6 +96,24 @@ func (t *Timer) Paused() bool {
 	return t.state == stateIdle
 }
 
+// SetTimeLeft adjusts the point in time the timer will fire to duration d from now.
+// It returns false if the timer already expired, true otherwise.
+func (t *Timer) SetTimeLeft(d time.Duration) bool {
+	t.l.Lock()
+	defer t.l.Unlock()
+	if t.state == stateExpired {
+		return false
+	} else if t.state == stateActive {
+		t.t.Stop()
+	}
+	t.duration = d
+	if t.state == stateActive {
+		t.startedAt = time.Now()
+		t.t = time.AfterFunc(d, t.fn)
+	}
+	return true
+}
+
 // Stop prevents the Timer from firing. It returns true if the call stops the timer,
 // false if the timer has already expired or been stopped.
 // Stop does not close the channel, to prevent a read from the channel succeeding incorrectly.
@@ -105,10 +123,8 @@ func (t *Timer) Stop() bool {
 	if t.state != stateActive {
 		return false
 	}
-	t.startedAt = time.Now()
 	t.state = stateExpired
-	t.t.Stop()
-	return true
+	return t.t.Stop()
 }
 
 // TimeLeft returns the duration left to run before the timer expires.

@@ -9,6 +9,6 @@ github.com/sauerbraten/jsonfile
 github.com/sauerbraten/maitred/v2/pkg/auth
 github.com/sauerbraten/maitred/v2/pkg/client
 github.com/sauerbraten/maitred/v2/pkg/protocol
-# github.com/sauerbraten/timer v0.0.0-20200229222506-392f4104f146
+# github.com/sauerbraten/timer v0.0.0-20201128180232-f3955e0fba74
 ## explicit
 github.com/sauerbraten/timer

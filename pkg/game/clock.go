@@ -41,7 +41,7 @@ func NewCasualClock(s Server, m HasTimers) *casualClock {
 
 func (c *casualClock) Start() {
 	go c.t.Start()
-	log.Println("started", c.s.GameDuration(), "game timer, time left:", c.t.TimeLeft())
+	log.Println("started game timer, time left:", c.t.TimeLeft())
 	c.s.Broadcast(nmc.TimeLeft, int32(c.t.TimeLeft()/time.Second))
 }
 
@@ -79,6 +79,7 @@ func (c *casualClock) Leave(*Player) {}
 
 func (c *casualClock) Stop() {
 	c.s.Broadcast(nmc.TimeLeft, 0)
+	log.Println("stopping game timer, time left:", c.t.TimeLeft())
 	c.t.Stop()
 }
 
@@ -91,13 +92,15 @@ func (c *casualClock) TimeLeft() time.Duration {
 }
 
 func (c *casualClock) SetTimeLeft(d time.Duration) {
-	c.t.Stop()
-	c.t = timer.AfterFunc(d, c.s.Intermission)
-	go c.t.Start()
+	log.Println("setting game timer to", d)
+	if !c.t.SetTimeLeft(d) {
+		log.Println("game timer had already expired")
+	}
 	c.s.Broadcast(nmc.TimeLeft, int32(d/time.Second))
 }
 
 func (c *casualClock) CleanUp() {
+	c.t.Stop()
 	c.modeTimers.CleanUp()
 }
 

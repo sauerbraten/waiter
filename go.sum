@@ -97,8 +97,8 @@ github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6 h1:t8t1qFy+UZ
 github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6/go.mod h1:pcalAADtEjWDv9vefUiKfVm6eu9ushOKLSIOrxeSWcI=
 github.com/sauerbraten/maitred/v2 v2.0.1-0.20201030233054-5b5d626a6e8f h1:YGr1WEGT8s9ZX60K49QesPq7QJ06b2JRZ3wAFkL+UeU=
 github.com/sauerbraten/maitred/v2 v2.0.1-0.20201030233054-5b5d626a6e8f/go.mod h1:cMGGwNHTjnhq6bgVy3mZD5tHuzqrWWvCxPxAAovzHYg=
-github.com/sauerbraten/timer v0.0.0-20200229222506-392f4104f146 h1:7noQZBwc1FhiSEeT8lJd4Zx6rtc29iMSxU+2Ijc/e4g=
-github.com/sauerbraten/timer v0.0.0-20200229222506-392f4104f146/go.mod h1:kpY+fYYBsUQAY0+TGbmNRjInW9hQ7frptaXKCAkzPM0=
+github.com/sauerbraten/timer v0.0.0-20201128180232-f3955e0fba74 h1:2tsKwFwp7sMUJ7rz67uQCYuoOnDTeupJ6irMCpoKfCA=
+github.com/sauerbraten/timer v0.0.0-20201128180232-f3955e0fba74/go.mod h1:kpY+fYYBsUQAY0+TGbmNRjInW9hQ7frptaXKCAkzPM0=
 github.com/sauerbraten/waiter v0.0.0-20190404224729-ddb62a3cdaab/go.mod h1:tUExApXkKFw8wk8yVJBsM1Hf/CKCa+/WnDnHcxhXGhU=
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24/go.mod h1:M+9NzErvs504Cn4c5DxATwIqPbtswREoFCre64PpcG4=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

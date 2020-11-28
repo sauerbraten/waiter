@@ -361,8 +361,9 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 				return
 			}
 
-			log.Println(client, "forced", modeID, "on", mapname)
 			s.StartGame(s.StartMode(modeID), mapname)
+			s.Broadcast(nmc.ServerMessage, fmt.Sprintf("%s forced %s on %s", s.Clients.UniqueName(client), modeID, mapname))
+			log.Println(client, "forced", modeID, "on", mapname)
 
 		case nmc.Ping:
 			// client pinging server → send pong

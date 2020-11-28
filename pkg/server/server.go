@@ -351,6 +351,7 @@ func (s *Server) StartGame(mode game.Mode, mapname string) {
 	// stop any pending map change
 	if s.PendingMapChange != nil {
 		s.PendingMapChange.Stop()
+		s.PendingMapChange = nil
 	}
 
 	if mapname == "" {
@@ -364,7 +365,7 @@ func (s *Server) StartGame(mode game.Mode, mapname string) {
 		s.ForEachPlayer(teamedMode.Join)
 	}
 
-	s.Clients.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedsMapInfo())
+	s.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedsMapInfo())
 	s.Clock.Start()
 	s.MapChange()
 

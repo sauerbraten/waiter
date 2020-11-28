@@ -16,7 +16,7 @@ secrets:
 tasks:
   - version: |
       cd waiter
-      sed -i "s/<filled in by CI service>/$(git rev-parse --short HEAD)/" config.json
+      sed -i "s/<git-dev>/$(git rev-parse --short HEAD)/" config.json
   - build: |
       cd waiter
       make all

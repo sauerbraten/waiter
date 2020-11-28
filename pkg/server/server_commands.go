@@ -290,9 +290,9 @@ var SetTimeLeft = &ServerCommand{
 
 		if d == 0 {
 			d = 1 * time.Second // 0 forces intermission without updating the client's game timer
-			s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s forced intermission", s.Clients.UniqueName(c))))
+			s.Broadcast(nmc.ServerMessage, fmt.Sprintf("%s forced intermission", s.Clients.UniqueName(c)))
 		} else {
-			s.Broadcast(nmc.ServerMessage, cubecode.Orange(fmt.Sprintf("%s set the time remaining to %s", s.Clients.UniqueName(c), d)))
+			s.Broadcast(nmc.ServerMessage, fmt.Sprintf("%s set the time remaining to %s", s.Clients.UniqueName(c), d))
 		}
 
 		s.Clock.SetTimeLeft(d)

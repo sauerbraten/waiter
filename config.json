@@ -13,7 +13,7 @@
 	"listen_address": "0.0.0.0",
 
 	// listen port
-	"listen_port": 38785,
+	"listen_port": 28785,
 
 	// auth key domain
 	"auth_domain": "p1x.pw",

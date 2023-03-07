@@ -2,12 +2,6 @@
 
 A game server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
 
-    /connect p1x.pw
-
-## SVN
-
-There's an SVN-compatible version in the [**protocol-260**](https://github.com/sauerbraten/waiter/tree/protocol-260/) branch.
-
 ## Features
 
 What works:

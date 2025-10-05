@@ -59,7 +59,7 @@ func (s *Server) handleAuthRequest(client *Client, domain string, name string, o
 	)
 }
 
-func (s *Server) handleAuthAnswer(client *Client, domain string, reqID uint32, answ string) {
+func (s *Server) handleAuthAnswer(_ *Client, domain string, reqID uint32, answ string) {
 	s.AuthManager.CheckAnswer(reqID, domain, answ)
 }
 

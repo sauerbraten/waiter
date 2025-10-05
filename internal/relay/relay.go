@@ -1,7 +1,6 @@
 package relay
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -69,11 +68,7 @@ func (r *Relay) loop() {
 
 		case cn := <-r.incPositionsNotifs:
 			r.receive(cn, r.incPositions, func(pos []byte) {
-				if len(pos) == 0 {
-					delete(r.positions, cn)
-				} else {
-					r.positions[cn] = pos
-				}
+				r.positions[cn] = pos
 			})
 
 		case cn := <-r.incClientPacketsNotifs:
@@ -107,10 +102,6 @@ func (r *Relay) AddClient(cn uint32, sf sendFunc) (positions *Publisher, packets
 func (r *Relay) RemoveClient(cn uint32) error {
 	r.μ.Lock()
 	defer r.μ.Unlock()
-
-	if _, ok := r.send[cn]; !ok {
-		return errors.New("no such client")
-	}
 
 	delete(r.incPositions, cn)
 	delete(r.positions, cn)
@@ -174,7 +165,7 @@ func (r *Relay) flush(packets map[uint32][]byte, prefix func(uint32, []byte) []b
 	for cn := range r.send {
 		order = append(order, cn)
 		pkt := packets[cn]
-		if pkt == nil {
+		if len(pkt) == 0 {
 			continue
 		}
 		pkt = append(prefix(cn, pkt), pkt...)

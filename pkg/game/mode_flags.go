@@ -12,13 +12,8 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol/playerstate"
 )
 
-type FlagMode interface {
-	NeedsMapInfo() bool
-	FlagsInitPacket() []interface{}
-}
-
-type flagMode interface {
-	TeamMode
+// methods implemented by the specialization, e.g. ctf or collect
+type specificFlagMode interface {
 	CanSpawn(*Player) bool
 	InitFlags([]*flag) bool
 	TouchFlag(*Player, *flag)
@@ -38,29 +33,23 @@ type flag struct {
 	pendingReset  *timer.Timer
 }
 
-type handlesFlags struct {
-	s Server
-	flagMode
+// flagMode takes a specific flag mode and adds some methods common to all specific flag modes.
+type flagMode struct {
+	specificFlagMode
 	flags []*flag
 }
 
-var (
-	_ FlagMode  = &handlesFlags{}
-	_ HasTimers = &handlesFlags{}
-)
-
-func handlingFlags(fm flagMode) *handlesFlags {
-	return &handlesFlags{
-		flagMode: fm,
+func handlingFlags(fm specificFlagMode) *flagMode {
+	return &flagMode{
+		specificFlagMode: fm,
 	}
 }
 
-func (m *handlesFlags) NeedsMapInfo() bool {
-	log.Println("flag init asked:", len(m.flags))
+func (m *flagMode) NeedsMapInfo() bool {
 	return len(m.flags) == 0
 }
 
-func (m *handlesFlags) HandlePacket(p *Player, packetType nmc.ID, pkt *protocol.Packet) bool {
+func (m *flagMode) HandlePacket(p *Player, packetType nmc.ID, pkt *protocol.Packet) bool {
 	switch packetType {
 	case nmc.InitFlags:
 		m.initFlags(pkt)
@@ -78,7 +67,7 @@ func (m *handlesFlags) HandlePacket(p *Player, packetType nmc.ID, pkt *protocol.
 	return true
 }
 
-func (m *handlesFlags) initFlags(pkt *protocol.Packet) {
+func (m *flagMode) initFlags(pkt *protocol.Packet) {
 	numFlags, ok := pkt.GetInt()
 	if !ok {
 		log.Println("could not read number of flags from initflags packet (packet too short):", pkt)
@@ -119,7 +108,7 @@ func (m *handlesFlags) initFlags(pkt *protocol.Packet) {
 	}
 }
 
-func (m *handlesFlags) touchFlag(p *Player, pkt *protocol.Packet) {
+func (m *flagMode) touchFlag(p *Player, pkt *protocol.Packet) {
 	if p.State != playerstate.Alive {
 		return
 	}
@@ -150,7 +139,7 @@ func (m *handlesFlags) touchFlag(p *Player, pkt *protocol.Packet) {
 	m.TouchFlag(p, f)
 }
 
-func (m *handlesFlags) dropAllFlags(p *Player) {
+func (m *flagMode) dropAllFlags(p *Player) {
 	for _, f := range m.flags {
 		if f != nil && f.carrier == p {
 			m.DropFlag(p, f)
@@ -158,8 +147,8 @@ func (m *handlesFlags) dropAllFlags(p *Player) {
 	}
 }
 
-func (m *handlesFlags) FlagsInitPacket() []interface{} {
-	q := []interface{}{}
+func (m *flagMode) InitPlayer() []any {
+	q := []any{nmc.InitFlags}
 
 	for _, f := range m.flags {
 		if f.team == nil {
@@ -192,39 +181,45 @@ func (m *handlesFlags) FlagsInitPacket() []interface{} {
 	return q
 }
 
-func (m *handlesFlags) HandleFrag(actor, victim *Player) {
+func (m *flagMode) HandleFrag(actor, victim *Player) {
 	m.dropAllFlags(victim)
-	m.flagMode.HandleFrag(actor, victim)
 }
 
-func (m *handlesFlags) Pause() {
+func (m *flagMode) ChangeTeam(p *Player, newTeamName string, forced bool) {
+	m.dropAllFlags(p)
+}
+
+func (m *flagMode) Leave(p *Player) {
+	m.dropAllFlags(p)
+}
+
+func (m *flagMode) Pause() {
 	for _, f := range m.flags {
-		if f == nil || f.pendingReset == nil || f.pendingReset.TimeLeft() == 0 {
+		if f == nil || f.pendingReset == nil {
 			continue
 		}
 		f.pendingReset.Pause()
 	}
 }
 
-func (m *handlesFlags) Resume() {
+func (m *flagMode) Resume() {
 	for _, f := range m.flags {
-		if f == nil || f.pendingReset == nil || f.pendingReset.TimeLeft() == 0 {
+		if f == nil || f.pendingReset == nil {
 			continue
 		}
 		f.pendingReset.Start()
 	}
 }
 
-func (m *handlesFlags) Leave(p *Player) {
-	m.dropAllFlags(p)
-	m.flagMode.Leave(p)
-}
-
-func (m *handlesFlags) CleanUp() {
+func (m *flagMode) Stop() {
 	for _, f := range m.flags {
 		if f == nil || f.pendingReset == nil {
 			continue
 		}
 		f.pendingReset.Stop()
 	}
+}
+
+func (m *flagMode) CleanUp() {
+	clear(m.flags)
 }

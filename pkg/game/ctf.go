@@ -8,46 +8,28 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 )
 
-type CTFMode = FlagMode
-
-type ctfMode = handlesFlags
-
-func newCTFMode(s Server, keepTeams bool) *ctfMode {
-	good, evil := NewTeam("good"), NewTeam("evil")
-	return handlingFlags(
-		newCTF(
-			s,
-			withTeams(s, false, keepTeams, good, evil),
-			good,
-			evil,
-		),
-	)
-}
-
 type CTF struct {
 	ctfSpawnState
-	*ctfMode
+	*teamMode
+	*flagMode
 	*handlesPickups
 }
 
-// assert interface implementations at compile time
-var (
-	_ Mode       = &CTF{}
-	_ HasTimers  = &CTF{}
-	_ TeamMode   = &CTF{}
-	_ FlagMode   = &CTF{}
-	_ PickupMode = &CTF{}
-)
-
 func NewCTF(s Server, keepTeams bool) *CTF {
+	good, evil := NewTeam("good"), NewTeam("evil")
 	return &CTF{
-		ctfMode:        newCTFMode(s, keepTeams),
+		teamMode:       withTeams(s, false, keepTeams, good, evil),
+		flagMode:       handlingFlags(newCTF(s, good, evil)),
 		handlesPickups: handlingPickups(s),
 	}
 }
 
 func (m *CTF) NeedsMapInfo() bool {
-	return m.handlesPickups.NeedsMapInfo() || m.ctfMode.NeedsMapInfo()
+	return m.handlesPickups.NeedsMapInfo() || m.flagMode.NeedsMapInfo()
+}
+
+func (m *CTF) InitPlayer() []any {
+	return append(m.handlesPickups.InitPlayer(), m.flagMode.InitPlayer()...)
 }
 
 func (m *CTF) HandlePacket(p *Player, packetType nmc.ID, pkt *protocol.Packet) bool {
@@ -55,7 +37,7 @@ func (m *CTF) HandlePacket(p *Player, packetType nmc.ID, pkt *protocol.Packet) b
 	case nmc.InitFlags,
 		nmc.TouchFlag,
 		nmc.TryDropFlag:
-		return m.ctfMode.HandlePacket(p, packetType, pkt)
+		return m.flagMode.HandlePacket(p, packetType, pkt)
 	case nmc.PickupList,
 		nmc.PickupTry:
 		return m.handlesPickups.HandlePacket(p, packetType, pkt)
@@ -65,18 +47,38 @@ func (m *CTF) HandlePacket(p *Player, packetType nmc.ID, pkt *protocol.Packet) b
 	}
 }
 
+func (m *CTF) HandleFrag(fragger *Player, victim *Player) {
+	m.flagMode.HandleFrag(fragger, victim)
+	m.teamMode.HandleFrag(fragger, victim)
+}
+
+func (m *CTF) Leave(p *Player) {
+	m.flagMode.Leave(p)
+	m.teamMode.Leave(p)
+}
+
+func (m *CTF) ChangeTeam(p *Player, newTeamName string, forced bool) {
+	m.flagMode.ChangeTeam(p, newTeamName, forced)
+	m.teamMode.ChangeTeam(p, newTeamName, forced)
+}
+
 func (m *CTF) Pause() {
-	m.ctfMode.Pause()
+	m.flagMode.Pause()
 	m.handlesPickups.Pause()
 }
 
 func (m *CTF) Resume() {
-	m.ctfMode.Resume()
+	m.flagMode.Resume()
 	m.handlesPickups.Resume()
 }
 
+func (m *CTF) Stop() {
+	m.flagMode.Stop()
+	m.handlesPickups.Stop()
+}
+
 func (m *CTF) CleanUp() {
-	m.ctfMode.CleanUp()
+	m.flagMode.CleanUp()
 	m.handlesPickups.CleanUp()
 }
 
@@ -84,42 +86,62 @@ func (*CTF) ID() gamemode.ID { return gamemode.CTF }
 
 type EfficCTF struct {
 	efficSpawnState
-	*ctfMode
+	*teamMode
+	*flagMode
 }
 
-// assert interface implementations at compile time
-var (
-	_ Mode      = &EfficCTF{}
-	_ HasTimers = &EfficCTF{}
-	_ TeamMode  = &EfficCTF{}
-	_ FlagMode  = &EfficCTF{}
-)
-
 func NewEfficCTF(s Server, keepTeams bool) *EfficCTF {
+	good, evil := NewTeam("good"), NewTeam("evil")
 	return &EfficCTF{
-		ctfMode: newCTFMode(s, keepTeams),
+		teamMode: withTeams(s, false, keepTeams, good, evil),
+		flagMode: handlingFlags(newCTF(s, good, evil)),
 	}
+}
+
+func (m *EfficCTF) HandleFrag(fragger *Player, victim *Player) {
+	m.flagMode.HandleFrag(fragger, victim)
+	m.teamMode.HandleFrag(fragger, victim)
+}
+
+func (m *EfficCTF) Leave(p *Player) {
+	m.flagMode.Leave(p)
+	m.teamMode.Leave(p)
+}
+
+func (m *EfficCTF) ChangeTeam(p *Player, newTeamName string, forced bool) {
+	m.flagMode.ChangeTeam(p, newTeamName, forced)
+	m.teamMode.ChangeTeam(p, newTeamName, forced)
 }
 
 func (*EfficCTF) ID() gamemode.ID { return gamemode.EfficCTF }
 
 type InstaCTF struct {
 	instaSpawnState
-	*ctfMode
+	*teamMode
+	*flagMode
 }
 
-// assert interface implementations at compile time
-var (
-	_ Mode      = &InstaCTF{}
-	_ HasTimers = &InstaCTF{}
-	_ TeamMode  = &InstaCTF{}
-	_ FlagMode  = &InstaCTF{}
-)
-
 func NewInstaCTF(s Server, keepTeams bool) *InstaCTF {
+	good, evil := NewTeam("good"), NewTeam("evil")
 	return &InstaCTF{
-		ctfMode: newCTFMode(s, keepTeams),
+		teamMode: withTeams(s, false, keepTeams, good, evil),
+		flagMode: handlingFlags(newCTF(s, good, evil)),
 	}
+}
+
+func (m *InstaCTF) HandleFrag(fragger *Player, victim *Player) {
+	m.flagMode.HandleFrag(fragger, victim)
+	m.teamMode.HandleFrag(fragger, victim)
+}
+
+func (m *InstaCTF) Leave(p *Player) {
+	m.flagMode.Leave(p)
+	m.teamMode.Leave(p)
+}
+
+func (m *InstaCTF) ChangeTeam(p *Player, newTeamName string, forced bool) {
+	m.flagMode.ChangeTeam(p, newTeamName, forced)
+	m.teamMode.ChangeTeam(p, newTeamName, forced)
 }
 
 func (*InstaCTF) ID() gamemode.ID { return gamemode.InstaCTF }

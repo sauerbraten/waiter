@@ -8,10 +8,24 @@ import (
 )
 
 type State struct {
-	Clock      game.Clock
+	Clock      Clock
 	MasterMode mastermode.ID
 	GameMode   game.Mode
 	Map        string
 	UpSince    time.Time
 	NumClients func() int // number of clients connected
+}
+
+type Clock interface {
+	Start()
+	Pause(*game.Player)
+	Paused() bool
+	Resume(*game.Player)
+	Stop()
+	Ended() bool
+	TimeLeft() time.Duration
+	SetTimeLeft(time.Duration)
+	Join(*game.Player)
+	Spawned(*game.Player)
+	Leave(*game.Player)
 }

@@ -70,7 +70,7 @@ func (cm *ClientManager) FindClientByName(name string) *Client {
 }
 
 // Send a packet to a client's team, but not the client himself, over the specified channel.
-func (cm *ClientManager) SendToTeam(c *Client, typ nmc.ID, args ...interface{}) {
+func (cm *ClientManager) SendToTeam(c *Client, typ nmc.ID, args ...any) {
 	excludeSelfAndOtherTeams := func(_c *Client) bool {
 		return _c == c || _c.Team != c.Team
 	}
@@ -78,11 +78,11 @@ func (cm *ClientManager) SendToTeam(c *Client, typ nmc.ID, args ...interface{}) 
 }
 
 // Sends a packet to all clients currently in use.
-func (cm *ClientManager) Broadcast(typ nmc.ID, args ...interface{}) {
+func (cm *ClientManager) Broadcast(typ nmc.ID, args ...any) {
 	cm.broadcast(nil, typ, args...)
 }
 
-func (cm *ClientManager) broadcast(exclude func(*Client) bool, typ nmc.ID, args ...interface{}) {
+func (cm *ClientManager) broadcast(exclude func(*Client) bool, typ nmc.ID, args ...any) {
 	for _, c := range cm.cs {
 		if c.Peer == nil || (exclude != nil && exclude(c)) {
 			continue
@@ -97,21 +97,22 @@ func exclude(c *Client) func(*Client) bool {
 	}
 }
 
-func (cm *ClientManager) Relay(from *Client, typ nmc.ID, args ...interface{}) {
+func (cm *ClientManager) Relay(from *Client, typ nmc.ID, args ...any) {
 	cm.broadcast(exclude(from), typ, args...)
 }
 
 // Sends 'welcome' information to a newly joined client like map, mode, time left, other players, etc.
 func (s *Server) SendWelcome(c *Client) {
-	typ, p := nmc.Welcome, []interface{}{
+	typ, p := nmc.Welcome, []any{
 		nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedsMapInfo(), // currently played mode & map
 	}
 
 	p = append(p, nmc.TimeLeft, int32(s.Clock.TimeLeft()/time.Second)) // time left in this round
 
-	if pickupMode, ok := s.GameMode.(game.PickupMode); ok && !s.GameMode.NeedsMapInfo() {
-		p = append(p, nmc.PickupList)
-		p = append(p, pickupMode.PickupsInitPacket()...)
+	if !s.GameMode.NeedsMapInfo() {
+		if pkt := s.GameMode.InitPlayer(); len(pkt) > 0 {
+			p = append(p, s.GameMode.InitPlayer()...)
+		}
 	}
 
 	// send list of clients which have privilege higher than PRIV_NONE and their respecitve privilege level
@@ -211,7 +212,7 @@ func (cm *ClientManager) PrivilegedUsers() (privileged []*Client) {
 }
 
 func (s *Server) PrivilegedUsersPacket() (typ nmc.ID, p protocol.Packet, noPrivilegedUsers bool) {
-	q := []interface{}{s.MasterMode}
+	q := []any{s.MasterMode}
 
 	s.Clients.ForEach(func(c *Client) {
 		if c.Role > role.None {

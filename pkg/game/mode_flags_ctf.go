@@ -10,7 +10,6 @@ import (
 )
 
 type ctf struct {
-	*teamMode
 	s           Server
 	initialized bool
 	good        *Team
@@ -19,14 +18,11 @@ type ctf struct {
 	evilFlag    *flag
 }
 
-var _ flagMode = &ctf{}
-
-func newCTF(s Server, m *teamMode, good, evil *Team) *ctf {
+func newCTF(s Server, good, evil *Team) *ctf {
 	return &ctf{
-		s:        s,
-		teamMode: m,
-		good:     good,
-		evil:     evil,
+		s:    s,
+		good: good,
+		evil: evil,
 	}
 }
 
@@ -71,6 +67,7 @@ func (m *ctf) TouchFlag(p *Player, f *flag) {
 	} else if !f.dropTime.IsZero() {
 		// player touches her own, dropped flag
 		f.pendingReset.Stop()
+		f.pendingReset = nil
 		m.returnFlag(f)
 		m.s.Broadcast(nmc.ReturnFlag, p.CN, f.index, f.version)
 		return

@@ -18,7 +18,7 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol/weapon"
 )
 
-func Encode(args ...interface{}) protocol.Packet {
+func Encode(args ...any) protocol.Packet {
 	if len(args) == 0 {
 		return nil
 	}

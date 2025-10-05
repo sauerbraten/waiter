@@ -2,6 +2,7 @@ package maprot
 
 import (
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/sauerbraten/waiter/pkg/game"
@@ -56,23 +57,19 @@ func (r *Rotation) NextMap(requested, current game.Mode, currentMap string) stri
 		return pool[r.rng.Intn(len(pool))]
 	}
 
-	if _, ok := requested.(game.CTFMode); ok {
+	switch requested.ID() {
+	case gamemode.CTF, gamemode.InstaCTF, gamemode.EfficCTF:
 		return nextMap(r.pools.CTF)
-	} else if _, ok := requested.(game.CaptureMode); ok {
+	case gamemode.Capture, gamemode.RegenCapture:
 		return nextMap(r.pools.Capture)
-	} else {
+	default:
 		return nextMap(r.pools.Deathmatch)
 	}
 }
 
 func (r *Rotation) InPool(mode gamemode.ID, mapp string) bool {
 	inPool := func(pool []string) bool {
-		for _, m := range pool {
-			if m == mapp {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(pool, mapp)
 	}
 
 	if gamemode.IsCTF(mode) {
@@ -85,12 +82,7 @@ func (r *Rotation) InPool(mode gamemode.ID, mapp string) bool {
 }
 
 func (r *Rotation) inQueue(mapp string) bool {
-	for _, m := range r.queue {
-		if m == mapp {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.queue, mapp)
 }
 
 func (r *Rotation) QueueMap(currentMode gamemode.ID, mapp string) (err string) {

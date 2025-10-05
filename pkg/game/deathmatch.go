@@ -2,18 +2,32 @@ package game
 
 import (
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
+	"github.com/sauerbraten/waiter/pkg/protocol/nmc"
 )
 
 type deathmatch struct {
-	*teamlessMode
-	noSpawnWait
+	s Server
 }
 
-func newDeathmatch(m *teamlessMode) *deathmatch {
+func newDeathmatch(s Server) *deathmatch {
 	return &deathmatch{
-		teamlessMode: m,
+		s: s,
 	}
 }
+
+func (m *deathmatch) HandleFrag(actor, victim *Player) {
+	victim.Die()
+	if actor == victim {
+		actor.Frags--
+	} else {
+		actor.Frags++
+	}
+	m.s.Broadcast(nmc.Died, victim.CN, actor.CN, actor.Frags, actor.Team.Frags)
+}
+
+func (*deathmatch) Join(*Player)          {}
+func (*deathmatch) CanSpawn(*Player) bool { return true }
+func (*deathmatch) Leave(*Player)         {}
 
 type FFA struct {
 	*deathmatch
@@ -21,15 +35,9 @@ type FFA struct {
 	*handlesPickups
 }
 
-// assert interface implementations at compile time
-var (
-	_ Mode       = &FFA{}
-	_ PickupMode = &FFA{}
-)
-
 func NewFFA(s Server) *FFA {
 	return &FFA{
-		deathmatch:     newDeathmatch(withoutTeams(s)),
+		deathmatch:     newDeathmatch(s),
 		handlesPickups: handlingPickups(s),
 	}
 }
@@ -40,15 +48,11 @@ type Effic struct {
 	*deathmatch
 	efficSpawnState
 	noMapInfo
-	noTimers
 }
-
-// assert interface implementations at compile time
-var _ Mode = &Effic{}
 
 func NewEffic(s Server) *Effic {
 	return &Effic{
-		deathmatch: newDeathmatch(withoutTeams(s)),
+		deathmatch: newDeathmatch(s),
 	}
 }
 
@@ -58,15 +62,11 @@ type Insta struct {
 	*deathmatch
 	instaSpawnState
 	noMapInfo
-	noTimers
 }
-
-// assert interface implementations at compile time
-var _ Mode = &Insta{}
 
 func NewInsta(s Server) *Insta {
 	return &Insta{
-		deathmatch: newDeathmatch(withoutTeams(s)),
+		deathmatch: newDeathmatch(s),
 	}
 }
 
@@ -76,111 +76,82 @@ type Tactics struct {
 	*deathmatch
 	tacticsSpawnState
 	noMapInfo
-	noTimers
 }
-
-// assert interface implementations at compile time
-var _ Mode = &Tactics{}
 
 func NewTactics(s Server) *Tactics {
 	return &Tactics{
-		deathmatch: newDeathmatch(withoutTeams(s)),
+		deathmatch: newDeathmatch(s),
 	}
 }
 
 func (*Tactics) ID() gamemode.ID { return gamemode.Tactics }
 
-type teamDeatchmatchMode struct {
+type teamDeathmatchMode struct {
 	*teamMode
-	noSpawnWait
 }
 
-func newTeamDeathmatchMode(s Server, keepTeams bool) *teamDeatchmatchMode {
-	return &teamDeatchmatchMode{
+func newTeamDeathmatchMode(s Server, keepTeams bool) *teamDeathmatchMode {
+	return &teamDeathmatchMode{
 		teamMode: withTeams(s, true, keepTeams, NewTeam("good"), NewTeam("evil")),
 	}
 }
 
+func (*teamDeathmatchMode) CanSpawn(*Player) bool { return true }
+
+func (*teamDeathmatchMode) InitPacket() []any { return nil }
+
 type Teamplay struct {
-	*teamDeatchmatchMode
+	*teamDeathmatchMode
 	ffaSpawnState
 	*handlesPickups
 }
 
-// assert interface implementations at compile time
-var (
-	_ Mode       = &Teamplay{}
-	_ TeamMode   = &Teamplay{}
-	_ PickupMode = &Teamplay{}
-)
-
 func NewTeamplay(s Server, keepTeams bool) *Teamplay {
 	return &Teamplay{
-		teamDeatchmatchMode: newTeamDeathmatchMode(s, keepTeams),
-		handlesPickups:      handlingPickups(s),
+		teamDeathmatchMode: newTeamDeathmatchMode(s, keepTeams),
+		handlesPickups:     handlingPickups(s),
 	}
 }
 
 func (*Teamplay) ID() gamemode.ID { return gamemode.Teamplay }
 
 type EfficTeam struct {
-	*teamDeatchmatchMode
+	*teamDeathmatchMode
 	efficSpawnState
 	noMapInfo
-	noTimers
 }
-
-// assert interface implementations at compile time
-var (
-	_ Mode     = &EfficTeam{}
-	_ TeamMode = &EfficTeam{}
-)
 
 func NewEfficTeam(s Server, keepTeams bool) *EfficTeam {
 	return &EfficTeam{
-		teamDeatchmatchMode: newTeamDeathmatchMode(s, keepTeams),
+		teamDeathmatchMode: newTeamDeathmatchMode(s, keepTeams),
 	}
 }
 
 func (*EfficTeam) ID() gamemode.ID { return gamemode.EfficTeam }
 
 type InstaTeam struct {
-	*teamDeatchmatchMode
+	*teamDeathmatchMode
 	instaSpawnState
 	noMapInfo
-	noTimers
 }
-
-// assert interface implementations at compile time
-var (
-	_ Mode     = &InstaTeam{}
-	_ TeamMode = &InstaTeam{}
-)
 
 func NewInstaTeam(s Server, keepTeams bool) *InstaTeam {
 	return &InstaTeam{
-		teamDeatchmatchMode: newTeamDeathmatchMode(s, keepTeams),
+		teamDeathmatchMode: newTeamDeathmatchMode(s, keepTeams),
 	}
 }
 
 func (*InstaTeam) ID() gamemode.ID { return gamemode.InstaTeam }
 
 type TacticsTeam struct {
-	*teamDeatchmatchMode
+	*teamDeathmatchMode
 	tacticsSpawnState
 	noMapInfo
-	noTimers
 }
-
-// assert interface implementations at compile time
-var (
-	_ Mode     = &TacticsTeam{}
-	_ TeamMode = &TacticsTeam{}
-)
 
 func NewTacticsTeam(s Server, keepTeams bool) *TacticsTeam {
 	return &TacticsTeam{
-		teamDeatchmatchMode: newTeamDeathmatchMode(s, keepTeams),
+		teamDeathmatchMode: newTeamDeathmatchMode(s, keepTeams),
 	}
 }
 

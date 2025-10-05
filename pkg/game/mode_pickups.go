@@ -13,14 +13,10 @@ import (
 )
 
 type PickupMode interface {
-	HandlesPackets
+	HandlePacket(*Player, nmc.ID, *protocol.Packet) bool
 	NeedsMapInfo() bool
-	PickupsInitPacket() []interface{}
+	InitPlayer() []any
 }
-
-type noMapInfo struct{}
-
-func (*noMapInfo) NeedsMapInfo() bool { return false }
 
 type timedPickup struct {
 	id int32
@@ -44,14 +40,14 @@ func handlingPickups(s Server) *handlesPickups {
 
 func (m *handlesPickups) spawnDelayed(p *timedPickup) {
 	delayDependingOnNumPlayers := func() time.Duration {
-		numPlayers := m.s.NumberOfPlayers()
-		if numPlayers < 3 {
+		switch n := m.s.NumberOfPlayers(); {
+		case n < 3:
 			return 4
-		}
-		if numPlayers > 4 {
+		default:
+			return 3
+		case n > 4:
 			return 2
 		}
-		return 3
 	}
 
 	var delay time.Duration
@@ -76,10 +72,11 @@ func (m *handlesPickups) spawnDelayed(p *timedPickup) {
 	default:
 		panic(fmt.Sprintf("unhandled entity type %d pickup.delay", p.Typ))
 	}
+
 	p.pendingSpawn = timer.AfterFunc(delay*time.Second, func() {
 		m.s.Broadcast(nmc.PickupSpawn, p.id)
 	})
-	go p.pendingSpawn.Start()
+	p.pendingSpawn.Start()
 }
 
 func (m *handlesPickups) NeedsMapInfo() bool {
@@ -133,6 +130,8 @@ func (m *handlesPickups) HandlePacket(p *Player, packetType nmc.ID, pkt *protoco
 }
 
 func (m *handlesPickups) initPickups(pkt *protocol.Packet) {
+	log.Println("init pickups received from client")
+
 	const maxPickups = 10_000
 
 	for len(*pkt) > 0 {
@@ -174,8 +173,8 @@ func (m *handlesPickups) initPickups(pkt *protocol.Packet) {
 	}
 }
 
-func (m *handlesPickups) PickupsInitPacket() []interface{} {
-	q := []interface{}{}
+func (m *handlesPickups) InitPlayer() []any {
+	q := []any{nmc.PickupList}
 	for id, p := range m.pickups {
 		if p.pendingSpawn.TimeLeft() == 0 {
 			q = append(q, id, p.Typ)
@@ -196,11 +195,15 @@ func (m *handlesPickups) Resume() {
 	}
 }
 
-func (m *handlesPickups) CleanUp() {
-	for id, p := range m.pickups {
-		if p.pendingSpawn != nil {
-			p.pendingSpawn.Stop()
+func (m *handlesPickups) Stop() {
+	for _, f := range m.pickups {
+		if f == nil || f.pendingSpawn == nil {
+			continue
 		}
-		delete(m.pickups, id)
+		f.pendingSpawn.Stop()
 	}
+}
+
+func (m *handlesPickups) CleanUp() {
+	clear(m.pickups)
 }

@@ -321,9 +321,8 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 				spectator.State = playerstate.Spectator
 			} else {
 				spectator.State = playerstate.Dead
-				if teamedMode, ok := s.GameMode.(game.TeamMode); ok {
-					teamedMode.Join(&spectator.Player)
-				}
+				s.Clock.Join(&spectator.Player)
+				s.GameMode.Join(&spectator.Player)
 				// todo: checkmap
 			}
 			s.Clients.Broadcast(nmc.Spectator, spectator.CN, toggle)
@@ -557,10 +556,7 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, p protocol.Packet
 			s.Commands.Handle(client, cmd)
 
 		default:
-			handled := false
-			if mode, ok := s.GameMode.(game.HandlesPackets); ok {
-				handled = mode.HandlePacket(&client.Player, packetType, &p)
-			}
+			handled := s.GameMode.HandlePacket(&client.Player, packetType, &p)
 			if !handled {
 				log.Println("unhandled packet", packetType, p, "received on channel", channelID)
 				return

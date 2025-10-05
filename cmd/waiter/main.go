@@ -96,7 +96,7 @@ func main() {
 	)
 	providers[""] = auth.NewRemoteProvider(authInc, authOut, role.Auth)
 	go bm.Handle(suffixed(bansInc, "sauerbraten.org"))
-	ms.Start()
+	go ms.Start()
 
 	// stats auth master server
 	s.StatsServer, authInc, authOut, bansInc = mserver.New(
@@ -129,7 +129,7 @@ func main() {
 	)
 	providers[conf.StatsServerAuthDomain] = auth.NewRemoteProvider(authInc, authOut, role.None)
 	go bm.Handle(suffixed(bansInc, conf.StatsServerAuthDomain))
-	s.StatsServer.Start()
+	go s.StatsServer.Start()
 
 	s.AuthManager = auth.NewManager(providers)
 

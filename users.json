@@ -1,47 +1,47 @@
 [
-        {
-                "name": "pix",
-                "public_key": "+1ae7012bf8ed0900b66b369fc953bd5252674de9d5fb86bd",
-                "role": "admin"
-        },
-        {
-                "name": "miu",
-                "public_key": "+ae6b173130fb836b5260ae11e30bee912e1ab0b35916c843",
-                "role": "admin"
-        },
-        {
-                "name": "Tagger",
-                "public_key": "+a1e915b99c0a2cc5a1b3590377e04bdc490f46fab7a7fc00",
-                "role": "admin"
-        },
-        {
-                "name": "Ignis",
-                "public_key": "+1e67875ae6107de18f006bebc34e9e44f795e35e67e4d9ca",
-                "role": "admin"
-        },
-        {
-                "name": "Alli",
-                "public_key": "+1f1820a79067e18d3f5de01b14cb7b4ff04609976dccc0cf",
-                "role": "admin"
-        },
-        {
-                "name": "Agalloch",
-                "public_key": "+8c70ece0fdc0c5500bd1ca1c0628b427fc068fbd4cceda8",
-                "role": "admin"
-        },
-        {
-                "name": "Frosty",
-                "public_key": "+99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2",
-                "role": "master"
-        },
-        {
-                "name": "Murrr",
-                "public_key": "-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f",
-                "role": "master"
-        },
-        {
-                "name": "Redon",
-                "public_key": "-efa043131ca8e8f68ed98cfcc069ee2d8fac00f0a5b523f7",
-                "role": "master"
-        }
+  {
+    "name": "p1x",
+    "public_key": "+20583e094f995020f8104a6e788dcacb2201749ca405ea6e",
+    "role": "admin"
+  },
+  {
+    "name": "miu",
+    "public_key": "+ae6b173130fb836b5260ae11e30bee912e1ab0b35916c843",
+    "role": "admin"
+  },
+  {
+    "name": "Tagger",
+    "public_key": "+a1e915b99c0a2cc5a1b3590377e04bdc490f46fab7a7fc00",
+    "role": "admin"
+  },
+  {
+    "name": "Ignis",
+    "public_key": "+1e67875ae6107de18f006bebc34e9e44f795e35e67e4d9ca",
+    "role": "admin"
+  },
+  {
+    "name": "Alli",
+    "public_key": "+1f1820a79067e18d3f5de01b14cb7b4ff04609976dccc0cf",
+    "role": "admin"
+  },
+  {
+    "name": "Agalloch",
+    "public_key": "+8c70ece0fdc0c5500bd1ca1c0628b427fc068fbd4cceda8",
+    "role": "admin"
+  },
+  {
+    "name": "Frosty",
+    "public_key": "+99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2",
+    "role": "master"
+  },
+  {
+    "name": "Murrr",
+    "public_key": "-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f",
+    "role": "master"
+  },
+  {
+    "name": "Redon",
+    "public_key": "-efa043131ca8e8f68ed98cfcc069ee2d8fac00f0a5b523f7",
+    "role": "master"
+  }
 ]

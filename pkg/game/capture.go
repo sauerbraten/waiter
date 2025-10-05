@@ -1,18 +1,15 @@
 package game
 
-type CaptureMode interface {
-	TeamMode
-	Bases(*Team) []int32
-}
-
-type captureMode struct {
+type Capture struct {
 	teamMode
 	bases map[*Team][]int32
 }
 
-func (cm *captureMode) Bases(t *Team) []int32 {
-	if bases, ok := cm.bases[t]; ok {
+func (m *Capture) Bases(t *Team) []int32 {
+	if bases, ok := m.bases[t]; ok {
 		return bases
 	}
 	return nil
 }
+
+func (m *Capture) CanSpawn(*Player) bool { return true }

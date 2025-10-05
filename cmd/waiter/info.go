@@ -138,7 +138,7 @@ func (i *infoServer) send(raddr *net.UDPAddr, packets ...protocol.Packet) {
 }
 
 func (i *infoServer) basicInfo(respHeader []byte) protocol.Packet {
-	q := []interface{}{
+	q := []any{
 		respHeader,
 		s.NumClients(),
 	}
@@ -173,7 +173,7 @@ func (i *infoServer) basicInfo(respHeader []byte) protocol.Packet {
 }
 
 func (i *infoServer) uptime(respHeader []byte) protocol.Packet {
-	q := []interface{}{
+	q := []any{
 		respHeader,
 		ExtInfoACK,
 		ExtInfoVersion,
@@ -188,7 +188,7 @@ func (i *infoServer) uptime(respHeader []byte) protocol.Packet {
 }
 
 func (i *infoServer) clientInfo(cn int32, respHeader []byte) (packets []protocol.Packet) {
-	q := []interface{}{
+	q := []any{
 		respHeader,
 		ExtInfoACK,
 		ExtInfoVersion,
@@ -233,7 +233,7 @@ func max(i, j int32) int32 {
 	return j
 }
 
-func (i *infoServer) clientPacket(c *server.Client, header []interface{}) protocol.Packet {
+func (i *infoServer) clientPacket(c *server.Client, header []any) protocol.Packet {
 	q := header
 
 	q = append(q,
@@ -264,7 +264,7 @@ func (i *infoServer) clientPacket(c *server.Client, header []interface{}) protoc
 }
 
 func (i *infoServer) teamScores(respHeader []byte) protocol.Packet {
-	q := []interface{}{
+	q := []any{
 		respHeader,
 		ExtInfoACK,
 		ExtInfoVersion,
@@ -285,19 +285,19 @@ func (i *infoServer) teamScores(respHeader []byte) protocol.Packet {
 		return packet.Encode(q...)
 	}
 
-	captureMode, isCaptureMode := teamMode.(game.CaptureMode)
+	// captureMode, isCaptureMode := s.GameMode.(*game.Capture)
 
 	for name, team := range teamMode.Teams() {
 		if team.Score <= 0 && len(team.Players) == 0 {
 			continue
 		}
 		q = append(q, name, team.Score)
-		if isCaptureMode {
-			bases := captureMode.Bases(team)
-			q = append(q, len(bases), bases)
-		} else {
-			q = append(q, -1)
-		}
+		// if isCaptureMode {
+		// 	bases := captureMode.Bases(team)
+		// 	q = append(q, len(bases), bases)
+		// } else {
+		q = append(q, -1)
+		// }
 	}
 
 	return packet.Encode(q...)

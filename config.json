@@ -1,98 +1,97 @@
 {
-	// the address of the master server to report to (also the one used for global auth)
-	"master_server_address": "sauerbraten.org:28787",
+  // the address of the master server to report to (also the one used for global auth)
+  "master_server_address": "sauerbraten.org:28787",
 
-	// address of a master server that supports stats reporting
-	"stats_server_address": "stats.p1x.pw:28787",
+  // address of a master server that supports stats reporting
+  "stats_server_address": "stats.p1x.pw:28787",
 
-	// stats server auth domain
-	"stats_server_auth_domain": "stats.p1x.pw",
+  // stats server auth domain
+  "stats_server_auth_domain": "stats.p1x.pw",
 
+  // listen address
+  "listen_address": "0.0.0.0",
 
-	// listen address
-	"listen_address": "0.0.0.0",
+  // listen port
+  "listen_port": 28785,
 
-	// listen port
-	"listen_port": 28785,
+  // auth key domain
+  "auth_domain": "waiter.p1x.pw",
 
-	// auth key domain
-	"auth_domain": "p1x.pw",
+  // server description
+  "server_description": "p1x.pw @ <git-dev>",
 
-	// server description
-	"server_description": "p1x.pw @ <git-dev>",
+  // default game mode (3 = insta, 5 = effic)
+  "fallback_game_mode": 17,
 
-	// default game mode (3 = insta, 5 = effic)
-	"fallback_game_mode": 17,
+  // maximum number of clients
+  "max_clients": 18,
 
-	// maximum number of clients
-	"max_clients": 18,
+  // wether ot not to send client's IPs via netinfo. when set to true, the first 3 bytes of the IPs will be sent (e.g. 53.253.53.0),
+  // otherwise, "0.0.0.0" will be sent for every client.
+  "send_client_ips_via_extinfo": false,
 
-	// wether ot not to send client's IPs via netinfo. when set to true, the first 3 bytes of the IPs will be sent (e.g. 53.253.53.0),
-	// otherwise, "0.0.0.0" will be sent for every client.
-	"send_client_ips_via_extinfo": false,
+  "message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things are buggy!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
 
-	"message_of_the_day": "\fs\f6you're playing on an unfinished server implementation; most things are buggy!\fr\nvisit github.com/sauerbraten/waiter for more information and source code",
+  "game_duration": "10m",
 
-	"game_duration": "10m",
-
-	"maps": {
-		"deathmatch": [
-			"antel",
-			"anubis",
-			"carbide",
-			"cartel",
-			"catacombs",
-			"conflict",
-			"dispute",
-			"ferguson",
-			"gorge",
-			"hator",
-			"haze",
-			"headroom",
-			"hektik",
-			"helligsted",
-			"hillfort",
-			"horus",
-			"idyll3",
-			"lost_soul",
-			"mood",
-			"rm1",
-			"rm5" // todo: more DM maps
-		],
-		"ctf": [
-			"akimiski",
-			"bklyn",
-			"breakout",
-			"collide",
-			"daemex",
-			"divine",
-			"earthsea",
-			"enigma",
-			"firekeep",
-			"fortress",
-			"kiryu",
-			"metro",
-			"new_energy",
-			"ow",
-			"pandora",
-			"ra",
-			"regal",
-			"risk",
-			"river_keep",
-			"ruebli",
-			"rust",
-			"stadium",
-			"tatooine",
-			"triforts",
-			"tubes"
-		],
-		"capture": [
-			// todo: only new capture maps
-			"nevil_c",
-			"nmp4",
-			"nmp8",
-			"nmp9",
-			"serenity"
-		]
-	}
+  "maps": {
+    "deathmatch": [
+      "antel",
+      "anubis",
+      "carbide",
+      "cartel",
+      "catacombs",
+      "conflict",
+      "dispute",
+      "ferguson",
+      "gorge",
+      "hator",
+      "haze",
+      "headroom",
+      "hektik",
+      "helligsted",
+      "hillfort",
+      "horus",
+      "idyll3",
+      "lost_soul",
+      "mood",
+      "rm1",
+      "rm5" // todo: more DM maps
+    ],
+    "ctf": [
+      "akimiski",
+      "bklyn",
+      "breakout",
+      "collide",
+      "daemex",
+      "divine",
+      "earthsea",
+      "enigma",
+      "firekeep",
+      "fortress",
+      "kiryu",
+      "metro",
+      "new_energy",
+      "ow",
+      "pandora",
+      "ra",
+      "regal",
+      "risk",
+      "river_keep",
+      "ruebli",
+      "rust",
+      "stadium",
+      "tatooine",
+      "triforts",
+      "tubes"
+    ],
+    "capture": [
+      // todo: only new capture maps
+      "nevil_c",
+      "nmp4",
+      "nmp8",
+      "nmp9",
+      "serenity"
+    ]
+  }
 }

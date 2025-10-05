@@ -68,6 +68,6 @@ func (c *Client) String() string {
 	return fmt.Sprintf("%s (%d)", c.Name, c.CN)
 }
 
-func (c *Client) Send(typ nmc.ID, args ...interface{}) {
+func (c *Client) Send(typ nmc.ID, args ...any) {
 	c.Peer.Send(1, packet.Encode(typ, packet.Encode(args...)))
 }

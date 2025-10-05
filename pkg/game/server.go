@@ -8,7 +8,7 @@ import (
 
 type Server interface {
 	GameDuration() time.Duration
-	Broadcast(nmc.ID, ...interface{})
+	Broadcast(nmc.ID, ...any)
 	Intermission()
 	ForEachPlayer(func(*Player))
 	UniqueName(*Player) string

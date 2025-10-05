@@ -153,7 +153,7 @@ func Valid(gm ID) bool {
 
 func IsCTF(gm ID) bool {
 	switch gm {
-	case InstaCTF, EfficCTF:
+	case CTF, InstaCTF, EfficCTF:
 		return true
 	default:
 		return false
@@ -166,5 +166,32 @@ func IsCapture(gm ID) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func IsCollect(gm ID) bool {
+	switch gm {
+	case Collect, InstaCollect, EfficCollect:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsHold(gm ID) bool {
+	switch gm {
+	case Hold, InstaHold, EfficHold:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsTeam(gm ID) bool {
+	switch gm {
+	case FFA, CoopEdit, Insta, Effic, Tactics:
+		return false
+	default:
+		return true
 	}
 }

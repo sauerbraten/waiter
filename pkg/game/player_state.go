@@ -75,10 +75,7 @@ func (ps *PlayerState) SelectWeapon(id weapon.ID) (weapon.Weapon, bool) {
 }
 
 func (ps *PlayerState) applyDamage(damage int32) {
-	damageToArmour := damage * armour.Absorption(ps.ArmourType) / 100
-	if damageToArmour > ps.Armour {
-		damageToArmour = ps.Armour
-	}
+	damageToArmour := min(damage*armour.Absorption(ps.ArmourType)/100, ps.Armour)
 	ps.Armour -= damageToArmour
 	damage -= damageToArmour
 	ps.Health -= damage
@@ -130,7 +127,7 @@ func (ps *PlayerState) Pickup(p *timedPickup) {
 			ps.QuadTimer.Stop()
 		}
 		ps.QuadTimer = timer.NewTimer(newTimeLeft)
-		go ps.QuadTimer.Start()
+		ps.QuadTimer.Start()
 	default:
 		ps.Ammo[weapon.ID(p.Typ-7)] = min(ps.Ammo[weapon.ID(p.Typ-7)]+p.Amount, p.MaxAmount)
 	}

@@ -157,15 +157,10 @@ func (s *Server) Join(c *Client) {
 	} else {
 		c.State = playerstate.Dead
 		s.Spawn(c)
+		s.GameMode.Join(&c.Player) // may set client's team
 	}
 
-	if teamedMode, ok := s.GameMode.(game.TeamMode); ok {
-		teamedMode.Join(&c.Player) // may set client's team
-	}
 	s.SendWelcome(c) // tells client about her team
-	if flagMode, ok := s.GameMode.(game.FlagMode); ok {
-		c.Send(nmc.InitFlags, flagMode.FlagsInitPacket()...)
-	}
 	s.Clients.InformOthersOfJoin(c)
 
 	sessionID := c.SessionID
@@ -188,7 +183,7 @@ func (s *Server) Join(c *Client) {
 	c.Send(nmc.RequestAuth, s.StatsServerAuthDomain)
 }
 
-func (s *Server) Broadcast(typ nmc.ID, args ...interface{}) {
+func (s *Server) Broadcast(typ nmc.ID, args ...any) {
 	s.Clients.Broadcast(typ, args...)
 }
 
@@ -213,17 +208,17 @@ func (s *Server) ConfirmSpawn(client *Client, lifeSequence, _weapon int32) {
 
 	client.Packets.Publish(nmc.ConfirmSpawn, client.ToWire())
 
-	if clock, competitive := s.GameMode.(game.Competitive); competitive {
-		clock.Spawned(&client.Player)
-	}
+	s.Clock.Spawned(&client.Player)
 }
 
 func (s *Server) Disconnect(client *Client, reason disconnectreason.ID) {
-	s.GameMode.Leave(&client.Player)
-	s.Clock.Leave(&client.Player)
+	if client.State != playerstate.Spectator {
+		s.GameMode.Leave(&client.Player)
+		s.Clock.Leave(&client.Player)
+	}
 	s.relay.RemoveClient(client.CN)
 	s.Clients.Disconnect(client, reason)
-	s.Clients.ForEach(func(c *Client) { log.Printf("%#v\n", c) })
+	// s.Clients.ForEach(func(c *Client) { log.Printf("%#v\n", c) })
 	s.host.Disconnect(client.Peer, reason)
 	client.Reset()
 	if len(s.Clients.PrivilegedUsers()) == 0 {
@@ -340,15 +335,9 @@ func (s *Server) ReAuthClients(domain string) {
 
 func (s *Server) StartGame(mode game.Mode, mapname string) {
 	if s.Clock != nil {
-		s.Clock.CleanUp()
-	}
-	if s.CompetitiveMode {
-		s.Clock = game.NewCompetitiveClock(s, mode)
-	} else {
-		s.Clock = game.NewCasualClock(s, mode)
+		s.Clock.Stop()
 	}
 
-	// stop any pending map change
 	if s.PendingMapChange != nil {
 		s.PendingMapChange.Stop()
 		s.PendingMapChange = nil
@@ -363,6 +352,12 @@ func (s *Server) StartGame(mode game.Mode, mapname string) {
 
 	if teamedMode, ok := s.GameMode.(game.TeamMode); ok {
 		s.ForEachPlayer(teamedMode.Join)
+	}
+
+	if s.CompetitiveMode {
+		s.Clock = game.NewCompetitiveClock(s, s.GameMode)
+	} else {
+		s.Clock = game.NewCasualClock(s, s.GameMode)
 	}
 
 	s.Broadcast(nmc.MapChange, s.Map, s.GameMode.ID(), s.GameMode.NeedsMapInfo())
@@ -495,7 +490,7 @@ func (s *Server) applyDamage(attacker, victim *Client, damage int32, wpnID weapo
 	// TODO: setpushed ???
 	if !dir.IsZero() {
 		dir = dir.Scale(geom.DNF)
-		typ, p := nmc.HitPush, []interface{}{victim.CN, wpnID, damage, dir.X(), dir.Y(), dir.Z()}
+		typ, p := nmc.HitPush, []any{victim.CN, wpnID, damage, dir.X(), dir.Y(), dir.Z()}
 		if victim.Health <= 0 {
 			s.Clients.Broadcast(typ, p...)
 		} else {

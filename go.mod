@@ -1,10 +1,10 @@
 module github.com/sauerbraten/waiter
 
-go 1.14
+go 1.25
 
 require (
 	github.com/sauerbraten/chef v0.0.0-20190408121747-3879bec52bab
-	github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6
+	github.com/sauerbraten/jsonfile v0.0.0-20190903091658-ab22968f346e
 	github.com/sauerbraten/maitred/v2 v2.0.1-0.20201030233054-5b5d626a6e8f
 	github.com/sauerbraten/timer v0.0.0-20201128180232-f3955e0fba74
 )

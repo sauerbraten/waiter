@@ -1,14 +1,14 @@
 # github.com/sauerbraten/chef v0.0.0-20190408121747-3879bec52bab
 ## explicit
 github.com/sauerbraten/chef/pkg/ips
-# github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6
-## explicit
+# github.com/sauerbraten/jsonfile v0.0.0-20190903091658-ab22968f346e
+## explicit; go 1.12
 github.com/sauerbraten/jsonfile
 # github.com/sauerbraten/maitred/v2 v2.0.1-0.20201030233054-5b5d626a6e8f
-## explicit
+## explicit; go 1.12
 github.com/sauerbraten/maitred/v2/pkg/auth
 github.com/sauerbraten/maitred/v2/pkg/client
 github.com/sauerbraten/maitred/v2/pkg/protocol
 # github.com/sauerbraten/timer v0.0.0-20201128180232-f3955e0fba74
-## explicit
+## explicit; go 1.14
 github.com/sauerbraten/timer
